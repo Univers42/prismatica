@@ -1,0 +1,70 @@
+# ============================================
+# Prismatica — Standalone Development Stack
+# ============================================
+# For developing prismatica in isolation.
+# Usage: docker compose up -d
+#
+# Services: db (PostgreSQL), mongo (MongoDB), data-api (Express)
+# Frontend: run locally with `cd apps/frontend && pnpm dev`
+# ============================================
+
+services:
+  db:
+    container_name: prismatica-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prismatica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prismatica}
+      POSTGRES_DB: ${POSTGRES_DB:-prismatica}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prismatica}"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  mongo:
+    container_name: prismatica-mongo
+    image: mongo:7-jammy
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  data-api:
+    container_name: prismatica-api
+    build:
+      context: ./apps/data-api
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "${DATA_API_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: development
+      DATA_API_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-prismatica}:${POSTGRES_PASSWORD:-prismatica}@db:5432/${POSTGRES_DB:-prismatica}
+      MONGO_URL: mongodb://mongo:27017/${POSTGRES_DB:-prismatica}
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
+      MODEL_SQL_DIR: /app/Model/sql
+    volumes:
+      - ./apps/data-api/src:/app/src:ro
+      - ./Model:/app/Model:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  mongo_data:

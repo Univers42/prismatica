@@ -1,0 +1,47 @@
+# ============================================
+# Prismatica — .gitignore
+# ============================================
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+*.js.map
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+*.pem
+*.key
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Cache
+.cache/
+.eslintcache
+
+# Docker dev data
+data/
+
+# Test
+coverage/
