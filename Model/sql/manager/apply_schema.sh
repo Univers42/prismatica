@@ -94,14 +94,26 @@ apply_file() {
         return
     fi
 
+    # Transform DDL to be idempotent on-the-fly (no SQL file edits needed):
+    #   CREATE TABLE          → CREATE TABLE IF NOT EXISTS
+    #   CREATE [UNIQUE] INDEX → CREATE [UNIQUE] INDEX IF NOT EXISTS
+    #   CREATE TRIGGER        → CREATE OR REPLACE TRIGGER   (requires PG 14+)
+    # Guards (/IF NOT EXISTS/! and /OR REPLACE/!) prevent double-insertion.
+    local sql
+    sql=$(sed \
+        -e '/IF NOT EXISTS/!s/^CREATE TABLE /CREATE TABLE IF NOT EXISTS /' \
+        -e '/IF NOT EXISTS/!s/^CREATE UNIQUE INDEX /CREATE UNIQUE INDEX IF NOT EXISTS /' \
+        -e '/IF NOT EXISTS/!s/^CREATE INDEX /CREATE INDEX IF NOT EXISTS /' \
+        -e '/OR REPLACE/!s/^CREATE TRIGGER /CREATE OR REPLACE TRIGGER /' \
+        "$path")
+
     printf "  [%2d/%d] " "$CURRENT" "$TOTAL_FILES"
-    if psql "$DB_URL" -f "$path" -v ON_ERROR_STOP=1 > /dev/null 2>&1; then
+    if echo "$sql" | psql "$DB_URL" -v ON_ERROR_STOP=1 > /dev/null 2>&1; then
         echo "OK    $file"
     else
         echo "FAIL  $file"
         FAILED=$((FAILED + 1))
-        # Show the error
-        psql "$DB_URL" -f "$path" -v ON_ERROR_STOP=1 2>&1 | tail -5 || true
+        echo "$sql" | psql "$DB_URL" -v ON_ERROR_STOP=1 2>&1 | tail -5 || true
     fi
 }
 

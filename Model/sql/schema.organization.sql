@@ -104,9 +104,13 @@ COMMENT ON TABLE organizations IS 'Top-level tenant. All resources are scoped un
 -- Deferred FK from schema.user.sql: roles.organization_id → organizations.id
 -- This could not be set inline because schema.user.sql runs first and
 -- organizations did not yet exist when the roles table was created.
-ALTER TABLE roles
-    ADD CONSTRAINT fk_roles_organization
-    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+-- Wrapped in DO block for idempotency (PG16 has no ADD CONSTRAINT IF NOT EXISTS).
+DO $$ BEGIN
+    ALTER TABLE roles
+        ADD CONSTRAINT fk_roles_organization
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ORGANIZATION MEMBERS
