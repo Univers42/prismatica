@@ -11,7 +11,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -ec
 .DEFAULT_GOAL := all
-.PHONY: help all build build-api build-frontend up down logs ps \
+.PHONY: help all build build-api build-frontend up down kill-ports logs ps \
         db-init db-seed db-reset db-status \
         push login clean fclean re dev test help
 
@@ -99,6 +99,19 @@ up:  ## 🐳 Start the full stack (db + mongo + api + frontend)
 	@echo -e "  $(C)ℹ$(N)  Starting containers..."
 	@$(COMPOSE) up -d
 	@echo -e "  $(G)✓$(N)  Stack running"
+
+kill-ports:  ## 🔫 Kill processes holding stack ports (3001 8080 5432 27017)
+	@echo -e "  $(C)ℹ$(N)  Releasing ports 3001 8080 5432 27017..."
+	@for port in 3001 8080 5432 27017; do \
+		pids=$$(ss -tlnp "sport = :$$port" 2>/dev/null | awk 'NR>1{match($$6,/pid=([0-9]+)/,a); if(a[1]) print a[1]}'); \
+		if [ -n "$$pids" ]; then \
+			echo -e "  $(R)→$(N)  port $$port — killing PIDs $$pids"; \
+			echo $$pids | xargs -r kill -9 2>/dev/null || true; \
+		else \
+			echo -e "  $(D)✓$(N)  port $$port — free"; \
+		fi; \
+	done
+	@echo -e "  $(G)✓$(N)  Ports released"
 
 down:  ## 🐳 Stop all containers
 	@$(COMPOSE) down
