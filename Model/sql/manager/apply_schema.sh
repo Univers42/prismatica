@@ -37,6 +37,28 @@ set -euo pipefail
 DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/transcendence}}"
 SQL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# ── Concurrency guard ────────────────────────────────────────
+# Use a PostgreSQL advisory lock so that if the API auto-init and
+# `make db-init` both invoke this script simultaneously, only the
+# first one runs; the second waits then skips (idempotent).
+#
+# Lock ID 73450001 is an arbitrary constant unique to this script.
+# pg_try_advisory_lock returns true if we got the lock, false if
+# another session already holds it.
+LOCK_ID=73450001
+
+got_lock=$(psql "$DB_URL" -Atq -c "SELECT pg_try_advisory_lock($LOCK_ID)" 2>/dev/null || echo "f")
+if [ "$got_lock" != "t" ]; then
+    echo "  ⏳  Another apply_schema.sh is running — waiting for it to finish…"
+    # Block until the other session releases the lock, then release ours
+    psql "$DB_URL" -Atq -c "SELECT pg_advisory_lock($LOCK_ID); SELECT pg_advisory_unlock($LOCK_ID);" >/dev/null 2>&1 || true
+    echo "  ✓  Schema already applied by parallel process — skipping."
+    exit 0
+fi
+
+# Ensure we release the advisory lock on exit (normal or error)
+trap 'psql "$DB_URL" -Atq -c "SELECT pg_advisory_unlock($LOCK_ID)" >/dev/null 2>&1 || true' EXIT
+
 echo "════════════════════════════════════════════════════════════════"
 echo "  APPLY ALL SCHEMAS"
 echo "════════════════════════════════════════════════════════════════"

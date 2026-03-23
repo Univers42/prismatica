@@ -1,13 +1,3 @@
-# ============================================
-# PRISMATICA — MAKEFILE
-# ============================================
-# Usage: make <target>
-# Run 'make help' to see all available targets
-#
-# 🐳 Fully containerized — only Docker required.
-#    `make` builds images, starts the stack, and seeds databases.
-# ============================================
-
 SHELL := /bin/bash
 .SHELLFLAGS := -ec
 .DEFAULT_GOAL := all
@@ -15,25 +5,21 @@ SHELL := /bin/bash
         db-init db-seed db-reset db-status \
         push login clean fclean re dev test help
 
-# ── Docker Hub ───────────────────────────────────────
 DOCKER_USER  ?= dlesieur
 IMAGE_API    := $(DOCKER_USER)/prismatica-api
 IMAGE_FRONT  := $(DOCKER_USER)/prismatica-frontend
 TAG          ?= latest
 
-# ── Compose ──────────────────────────────────────────
 COMPOSE_CMD := $(shell \
 if docker compose version >/dev/null 2>&1; then echo 'docker compose'; \
 elif command -v docker-compose >/dev/null 2>&1; then echo 'docker-compose'; \
 else echo '__NONE__'; fi)
 COMPOSE := $(COMPOSE_CMD) -f docker-compose.yml
 
-# ── Containers ───────────────────────────────────────
 API_CTR   := prismatica-api
 DB_CTR    := prismatica-db
 MONGO_CTR := prismatica-mongo
 
-# ── Colors ───────────────────────────────────────────
 B := \033[1m
 G := \033[0;32m
 Y := \033[1;33m
@@ -42,28 +28,19 @@ C := \033[0;36m
 D := \033[2m
 N := \033[0m
 
-# ============================================
-#  🚀 DEFAULT TARGET
-# ============================================
-
-all: build up db-init  ## 🚀 Build, start, and seed everything
+all: build up db-init
 	@echo ""
 	@echo -e "$(G)╔══════════════════════════════════════════╗$(N)"
-	@echo -e "$(G)║$(N)  ✅  $(B)Prismatica is running!$(N)              $(G)║$(N)"
+	@echo -e "$(G)║$(N)     $(B)Prismatica is running!$(N)              $(G)║$(N)"
 	@echo -e "$(G)╠══════════════════════════════════════════╣$(N)"
 	@echo -e "$(G)║$(N)  Frontend → http://localhost:8080        $(G)║$(N)"
 	@echo -e "$(G)║$(N)  API      → http://localhost:3001        $(G)║$(N)"
 	@echo -e "$(G)╚══════════════════════════════════════════╝$(N)"
 	@echo ""
 
-# ============================================
-#  🐳 BUILD IMAGES
-# ============================================
-
-# Detect buildx for parallel builds + BuildKit cache mounts
 HAS_BUILDX := $(shell docker buildx version >/dev/null 2>&1 && echo 1 || echo 0)
 
-build:  ## 🐳 Build both Docker images (parallel with buildx)
+build:
 ifeq ($(HAS_BUILDX),1)
 	@echo -e "  $(C)ℹ$(N)  Building $(B)both images in parallel$(N) (BuildKit)..."
 	@docker buildx bake -f docker-bake.hcl
@@ -73,7 +50,7 @@ else
 endif
 	@echo -e "  $(G)✓$(N)  All images built"
 
-build-api:  ## 🐳 Build data-api image
+build-api:
 	@echo -e "  $(C)ℹ$(N)  Building $(B)$(IMAGE_API):$(TAG)$(N)..."
 ifeq ($(HAS_BUILDX),1)
 	@docker buildx bake -f docker-bake.hcl api
@@ -81,7 +58,7 @@ else
 	@docker build -f apps/data-api/Dockerfile -t $(IMAGE_API):$(TAG) .
 endif
 
-build-frontend:  ## 🐳 Build frontend image
+build-frontend:
 	@echo -e "  $(C)ℹ$(N)  Building $(B)$(IMAGE_FRONT):$(TAG)$(N)..."
 ifeq ($(HAS_BUILDX),1)
 	@docker buildx bake -f docker-bake.hcl frontend
@@ -91,16 +68,12 @@ else
 		-t $(IMAGE_FRONT):$(TAG) apps/frontend
 endif
 
-# ============================================
-#  🐳 STACK MANAGEMENT
-# ============================================
-
-up:  ## 🐳 Start the full stack (db + mongo + api + frontend)
+up:
 	@echo -e "  $(C)ℹ$(N)  Starting containers..."
 	@$(COMPOSE) up -d
 	@echo -e "  $(G)✓$(N)  Stack running"
 
-kill-ports:  ## 🔫 Kill any container or process holding stack ports (3001 8080 5432 27017)
+kill-ports:
 	@echo -e "  $(C)ℹ$(N)  Releasing ports 3001 8080 5432 27017..."
 	@for port in 3001 8080 5432 27017; do \
 		ctrs=$$(docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null \
@@ -119,26 +92,29 @@ kill-ports:  ## 🔫 Kill any container or process holding stack ports (3001 808
 	done
 	@echo -e "  $(G)✓$(N)  Ports released"
 
-down:  ## 🐳 Stop all containers
+down:
 	@$(COMPOSE) down
 	@echo -e "  $(G)✓$(N)  Stack stopped"
 
-logs:  ## 🐳 Tail all container logs
+logs:
 	@$(COMPOSE) logs -f
 
-ps:  ## 🐳 Show running containers
+ps:
 	@$(COMPOSE) ps
 
-dev:  ## 🚀 Start DB stack + local Vite dev server
+dev:
 	@$(COMPOSE) up -d db mongo data-api
 	@echo -e "  $(C)ℹ$(N)  Databases running. Starting Vite..."
 	@cd apps/frontend && pnpm run dev
 
-# ============================================
-#  🗄️ DATABASE
-# ============================================
-
-db-init:  ## 🗄️ Apply schemas + seeds (PG + Mongo)
+db-init:
+	@echo -e "  $(C)ℹ$(N)  Waiting for API startup to complete..."
+	@for i in $$(seq 1 30); do \
+		STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $(API_CTR) 2>/dev/null) && \
+		[ "$$STATUS" = "healthy" ] && break; \
+		[ $$i -eq 30 ] && echo -e "  $(Y)⚠$(N)  Timeout waiting for API — proceeding anyway" && break; \
+		sleep 2; \
+	done
 	@echo -e "  $(C)ℹ$(N)  Initializing PostgreSQL..."
 	@docker exec $(API_CTR) sh -c "cd /app/Model/sql && bash manager/apply_schema.sh" 2>/dev/null || true
 	@echo -e "  $(C)ℹ$(N)  Seeding PostgreSQL..."
@@ -151,31 +127,27 @@ db-init:  ## 🗄️ Apply schemas + seeds (PG + Mongo)
 	@docker exec $(MONGO_CTR) bash -c "cd /tmp/Model/sql && bash manager/mongo_seed.sh mongodb://localhost:27017 prismatica" 2>/dev/null || true
 	@echo -e "  $(G)✓$(N)  Databases initialized"
 
-db-seed:  ## 🗄️ Re-seed databases
+db-seed:
 	@docker exec $(API_CTR) sh -c "cd /app/Model/sql && bash manager/apply_seeds.sh" 2>/dev/null || true
 	@docker exec $(API_CTR) tar -cf - -C /app Model 2>/dev/null | docker exec -i $(MONGO_CTR) tar -xf - -C /tmp/ 2>/dev/null || true
 	@docker exec $(MONGO_CTR) bash -c "cd /tmp/Model/sql && bash manager/mongo_seed.sh mongodb://localhost:27017 prismatica" 2>/dev/null || true
 	@echo -e "  $(G)✓$(N)  Databases seeded"
 
-db-reset:  ## 🗄️ Reset databases (drop + reinit)
+db-reset:
 	@echo -e "$(R)⚠  This will DROP all data$(N)"
 	@read -p "Are you sure? [y/N] " c && [ "$$c" = "y" ] || exit 1
 	@docker exec $(API_CTR) sh -c "cd /app/Model/sql && bash manager/reset.sh" 2>/dev/null || true
 	@docker exec $(MONGO_CTR) mongosh --quiet --eval 'db.dropDatabase()' mongodb://localhost:27017/prismatica 2>/dev/null || true
 	@$(MAKE) db-init
 
-db-status:  ## 🗄️ Show database status
+db-status: 
 	@docker exec $(DB_CTR) psql -U prismatica -c "SELECT count(*) AS tables FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null || echo "PostgreSQL: not running"
 	@docker exec $(MONGO_CTR) mongosh --quiet --eval "db.getCollectionNames().length + ' collections'" prismatica 2>/dev/null || echo "MongoDB: not running"
 
-# ============================================
-#  📤 DOCKER HUB
-# ============================================
-
-login:  ## 📤 Login to Docker Hub
+login:
 	@docker login -u $(DOCKER_USER)
 
-push: build  ## 📤 Build and push images to Docker Hub
+push: build
 	@echo -e "  $(C)ℹ$(N)  Pushing $(B)$(IMAGE_API):$(TAG)$(N)..."
 	@docker push $(IMAGE_API):$(TAG)
 	@echo -e "  $(C)ℹ$(N)  Pushing $(B)$(IMAGE_FRONT):$(TAG)$(N)..."
@@ -184,38 +156,27 @@ push: build  ## 📤 Build and push images to Docker Hub
 	@echo -e "  $(D)→ https://hub.docker.com/r/$(DOCKER_USER)/prismatica-api$(N)"
 	@echo -e "  $(D)→ https://hub.docker.com/r/$(DOCKER_USER)/prismatica-frontend$(N)"
 
-# ============================================
-#  ✅ QUALITY
-# ============================================
-
-lint:  ## ✅ Lint frontend
+lint:
 	@cd apps/frontend && pnpm exec eslint .
 
-typecheck:  ## ✅ TypeScript type check
+typecheck:
 	@cd apps/frontend && pnpm exec tsc --noEmit
 
-test:  ## 🧪 Run tests
+test:
 	@cd apps/frontend && pnpm test 2>/dev/null || echo "No tests configured"
 
-# ============================================
-#  🧹 CLEANUP
-# ============================================
-
-clean:  ## 🧹 Stop stack and remove containers
+clean:
 	@$(COMPOSE) down -v --remove-orphans 2>/dev/null || true
 	@echo -e "  $(G)✓$(N)  Clean"
 
-fclean: clean  ## 🧹 Full clean (+ remove images)
+fclean: clean
 	@docker rmi $(IMAGE_API):$(TAG) $(IMAGE_FRONT):$(TAG) 2>/dev/null || true
+	@docker buildx prune -f --builder prismatica-builder 2>/dev/null || true
 	@echo -e "  $(G)✓$(N)  Images removed"
 
-re: fclean all  ## 🔄 Full rebuild from scratch
+re: fclean all
 
-# ============================================
-#  ❓ HELP
-# ============================================
-
-help:  ## ❓ Show this help
+help:
 	@echo ""
 	@echo -e "$(B)Prismatica — Available Commands$(N)"
 	@echo ""
