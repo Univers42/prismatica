@@ -1,70 +1,72 @@
+# syntax=docker/dockerfile:1
 # ============================================
 # data-api — Lightweight REST service
 # ============================================
-# Multi-stage build optimized for speed:
-#   Cold build:  ~15-25s (deps cached after first run)
-#   Code change: ~3-5s   (deps layer cached, only TS recompiles)
+# BuildKit-optimized multi-stage build:
+#   Cold build:  ~10-15s (cache mounts persist pnpm/npm stores)
+#   Warm build:  ~2-3s   (all layers cached)
+#   Code change: ~3-5s   (deps cached, only TS recompiles)
 #
 # Build context: prismatica/ root (not apps/data-api/)
-# Build:  docker build -f apps/data-api/Dockerfile .
+# Build:  docker buildx build -f apps/data-api/Dockerfile .
 # ============================================
 
-# ── Stage 1: Dependency base ────────────────
+# ── Stage 1: Install all deps ───────────────
 FROM node:22-alpine AS deps
 
-# Pin pnpm version — avoids slow `corepack prepare pnpm@latest` download
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
-
-# Copy ONLY package files → Docker caches this layer until deps change
 COPY apps/data-api/package.json apps/data-api/pnpm-lock.yaml* ./
 
-# Single install — all deps (dev + prod). Frozen lockfile for speed.
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+# Cache mount keeps pnpm store across builds — no re-download
+RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store \
+    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
-# ── Stage 2: Build TypeScript ───────────────
+# ── Stage 2: Compile TypeScript ─────────────
 FROM deps AS builder
 
 COPY apps/data-api/tsconfig.json ./
 COPY apps/data-api/src/ ./src/
-
 RUN pnpm run build
 
-# ── Stage 3: Production (minimal) ───────────
-FROM node:22-alpine AS production
+# ── Stage 3: Runtime tools (parallel with 1+2) ──
+FROM node:22-alpine AS tools
 
-# bash + psql for SQL scripts, mongosh for MongoDB setup scripts
-RUN apk add --no-cache bash postgresql16-client python3 make g++ \
+# Cache apk + npm across builds; install mongosh then remove build deps
+RUN --mount=type=cache,id=apk,target=/var/cache/apk \
+    --mount=type=cache,id=npm,target=/root/.npm \
+    apk add --no-cache bash postgresql16-client python3 make g++ \
  && npm install -g mongosh --ignore-scripts=false 2>/dev/null \
- && apk del python3 make g++ \
- && rm -rf /root/.npm /tmp/*
+ && apk del python3 make g++
+
+# ── Stage 4: Production image ───────────────
+FROM tools AS production
 
 WORKDIR /app
 
-# Copy compiled JS + package files for prod install
+# Copy compiled output + package manifest
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml* ./
 
-# Prod-only install is fast (~2s) — few direct deps
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# Prod-only install — cached pnpm store makes this near-instant
+ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
-RUN pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
+RUN --mount=type=cache,id=pnpm-api-prod,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile 2>/dev/null || pnpm install --prod
 
-# Include Model schemas for runtime SQL/seed operations
+# Runtime SQL schemas + seeds
 COPY Model/ ./Model/
 
-ENV NODE_ENV=production
-ENV DATA_API_PORT=3001
-ENV MODEL_SQL_DIR=/app/Model/sql
+ENV NODE_ENV=production \
+    DATA_API_PORT=3001 \
+    MODEL_SQL_DIR=/app/Model/sql
 
 EXPOSE 3001
 
-HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
+HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=10 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/health || exit 1
 
 CMD ["node", "dist/index.js"]

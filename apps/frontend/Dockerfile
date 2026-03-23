@@ -1,27 +1,29 @@
+# syntax=docker/dockerfile:1
 # ============================================
 # prismatica/apps/frontend — Production build
 # ============================================
-# Multi-stage: build with Node, serve with nginx.
-# Optimized for fast rebuilds via pnpm store cache.
+# BuildKit-optimized multi-stage: build with Node, serve with nginx.
 #
-# Cold build:  ~20-30s (deps cached after first run)
-# Code change: ~5-8s   (deps layer cached, only Vite rebuilds)
+# Cold build:  ~10-15s (pnpm store cached across builds)
+# Warm build:  ~1-2s   (all layers cached)
+# Code change: ~3-5s   (deps cached, only Vite rebuilds)
 # Image size:  ~25 MB
 # ============================================
 
 # ── Stage 1: Install deps ──────────────────
 FROM node:22-alpine AS deps
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 WORKDIR /app
-
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
-# ── Stage 2: Build ─────────────────────────
+# Cache mount persists pnpm store — deps install is near-instant on rebuild
+RUN --mount=type=cache,id=pnpm-front,target=/pnpm/store \
+    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+
+# ── Stage 2: Vite build ───────────────────
 FROM deps AS builder
 
 COPY tsconfig.json vite.config.ts index.html ./

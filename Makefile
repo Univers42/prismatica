@@ -60,18 +60,36 @@ all: build up db-init  ## 🚀 Build, start, and seed everything
 #  🐳 BUILD IMAGES
 # ============================================
 
-build: build-api build-frontend  ## 🐳 Build both Docker images
+# Detect buildx for parallel builds + BuildKit cache mounts
+HAS_BUILDX := $(shell docker buildx version >/dev/null 2>&1 && echo 1 || echo 0)
+
+build:  ## 🐳 Build both Docker images (parallel with buildx)
+ifeq ($(HAS_BUILDX),1)
+	@echo -e "  $(C)ℹ$(N)  Building $(B)both images in parallel$(N) (BuildKit)..."
+	@docker buildx bake -f docker-bake.hcl
+else
+	@echo -e "  $(Y)⚠$(N)  buildx not found — falling back to sequential builds"
+	@$(MAKE) build-api build-frontend
+endif
 	@echo -e "  $(G)✓$(N)  All images built"
 
 build-api:  ## 🐳 Build data-api image
 	@echo -e "  $(C)ℹ$(N)  Building $(B)$(IMAGE_API):$(TAG)$(N)..."
+ifeq ($(HAS_BUILDX),1)
+	@docker buildx bake -f docker-bake.hcl api
+else
 	@docker build -f apps/data-api/Dockerfile -t $(IMAGE_API):$(TAG) .
+endif
 
 build-frontend:  ## 🐳 Build frontend image
 	@echo -e "  $(C)ℹ$(N)  Building $(B)$(IMAGE_FRONT):$(TAG)$(N)..."
+ifeq ($(HAS_BUILDX),1)
+	@docker buildx bake -f docker-bake.hcl frontend
+else
 	@docker build -f apps/frontend/Dockerfile \
---build-arg VITE_API_URL=/api \
--t $(IMAGE_FRONT):$(TAG) apps/frontend
+		--build-arg VITE_API_URL=/api \
+		-t $(IMAGE_FRONT):$(TAG) apps/frontend
+endif
 
 # ============================================
 #  🐳 STACK MANAGEMENT

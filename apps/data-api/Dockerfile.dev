@@ -1,25 +1,25 @@
+# syntax=docker/dockerfile:1
 # ============================================
 # data-api — Fast dev Dockerfile
 # ============================================
 # No TS compilation at build time: tsx runs TS directly.
 # Source is volume-mounted for hot-reload.
 #
-# Optimized: pnpm store cached, mongosh dropped (use
-# `docker exec prismatica-mongo mongosh` directly).
+# Optimized: BuildKit cache mounts for pnpm store + apk.
 # ============================================
 
 FROM node:22-alpine
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
  && apk add --no-cache bash postgresql16-client
 
 WORKDIR /app
 
-# ── Install deps (cached layer) ─────────────────────
+# ── Install deps (cached via mount) ─────────────────
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+RUN --mount=type=cache,id=pnpm-api-dev,target=/pnpm/store \
+    pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
 # ── Copy source (overridden by volume mount in dev) ──
 COPY tsconfig.json ./

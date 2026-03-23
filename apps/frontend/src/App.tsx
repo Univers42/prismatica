@@ -59,6 +59,9 @@ function useDiscovery() {
   return useQuery<ApiDiscovery>({
     queryKey: ['discovery'],
     queryFn: () => fetchJson<ApiDiscovery>(API),
+    retry: 10,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+    refetchInterval: (query) => (query.state.error ? 5_000 : 60_000),
   });
 }
 

@@ -58,13 +58,19 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prismatica}:${POSTGRES_PASSWORD:-prismatica}@db:5432/${POSTGRES_DB:-prismatica}
       MONGO_URL: mongodb://mongo:27017/${POSTGRES_DB:-prismatica}
       CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-8080}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 10
     depends_on:
       db:
         condition: service_healthy
       mongo:
         condition: service_healthy
 
-  # ── Frontend (nginx) ────────────────────────────
+  # ── Frontend (nginx) ────────────────────────
   frontend:
     container_name: prismatica-frontend
     image: ${DOCKER_USER:-dlesieur}/prismatica-frontend:${TAG:-latest}
@@ -72,7 +78,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     depends_on:
-      - data-api
+      data-api:
+        condition: service_healthy
 
 volumes:
   pg_data:
