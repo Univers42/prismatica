@@ -30,6 +30,9 @@
 
 # ── Docker files (prevent recursion) ──
 docker-compose*.yml
+docker-bake.hcl
+Dockerfile.dev
+Makefile
 
 # ── Documentation ──
 *.md
@@ -40,3 +43,5 @@ LICENSE
 scripts/
 **/*.log
 **/coverage
+**/*.tgz
+**/.cache

@@ -10,9 +10,18 @@
 
 FROM node:22-alpine
 
-ENV PNPM_HOME="/pnpm" PATH="/pnpm:$PATH"
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
- && apk add --no-cache bash postgresql16-client
+LABEL org.opencontainers.image.title="prismatica-api-dev" \
+      org.opencontainers.image.description="Prismatica data-api — development mode" \
+      org.opencontainers.image.source="https://github.com/dlesieur/prismatica"
+
+ENV PNPM_HOME="/pnpm" \
+    PATH="/pnpm:$PATH" \
+    NODE_ENV=development \
+    DATA_API_PORT=3001
+
+RUN --mount=type=cache,id=apk-dev,target=/var/cache/apk \
+    corepack enable && corepack prepare pnpm@9.15.0 --activate \
+ && apk add bash postgresql16-client
 
 WORKDIR /app
 
@@ -25,11 +34,9 @@ RUN --mount=type=cache,id=pnpm-api-dev,target=/pnpm/store \
 COPY tsconfig.json ./
 COPY src/ ./src/
 
-ENV NODE_ENV=development
-ENV DATA_API_PORT=3001
 EXPOSE 3001
 
-HEALTHCHECK --interval=5s --timeout=2s --retries=10 \
+HEALTHCHECK --interval=5s --timeout=2s --start-period=10s --retries=10 \
   CMD wget -qO- http://127.0.0.1:3001/health || exit 1
 
 # tsx watch for hot-reload in dev

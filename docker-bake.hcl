@@ -31,7 +31,8 @@ target "api" {
   context    = "."
   dockerfile = "apps/data-api/Dockerfile"
   tags       = ["${DOCKER_USER}/prismatica-api:${TAG}"]
-  cache-from = ["type=registry,ref=${DOCKER_USER}/prismatica-api:cache"]
+  // Pull inline cache from the production image itself (not a separate :cache tag)
+  cache-from = ["type=registry,ref=${DOCKER_USER}/prismatica-api:${TAG}"]
   cache-to   = ["type=inline"]
   output     = ["type=docker"]
 }
@@ -43,7 +44,8 @@ target "frontend" {
   args = {
     VITE_API_URL = "${VITE_API_URL}"
   }
-  cache-from = ["type=registry,ref=${DOCKER_USER}/prismatica-frontend:cache"]
+  // Pull inline cache from the production image itself (not a separate :cache tag)
+  cache-from = ["type=registry,ref=${DOCKER_USER}/prismatica-frontend:${TAG}"]
   cache-to   = ["type=inline"]
   output     = ["type=docker"]
 }

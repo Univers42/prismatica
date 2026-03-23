@@ -1,5 +1,34 @@
+# ============================================
+# Frontend — Docker Build Context Exclusions
+# ============================================
+
+# ── Dependencies (rebuilt inside container) ──
 node_modules
+.pnpm-store
+
+# ── Build artifacts ──
 dist
-*.log
-.env
+build
+
+# ── Git & IDE ──
 .git
+.gitignore
+.vscode
+.idea
+.DS_Store
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Docker files ──
+Dockerfile
+Dockerfile.*
+
+# ── Misc ──
+*.md
+*.log
+coverage
+.cache
+*.tgz
