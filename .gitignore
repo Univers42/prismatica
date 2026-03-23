@@ -45,3 +45,4 @@ data/
 
 # Test
 coverage/
+nohup.out

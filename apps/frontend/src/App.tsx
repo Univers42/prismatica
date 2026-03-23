@@ -49,7 +49,9 @@ function useHealth() {
   return useQuery<HealthData>({
     queryKey: ['health'],
     queryFn: () => fetchJson<HealthData>('/health'),
-    refetchInterval: 15_000,
+    retry: 5,
+    retryDelay: 2000,
+    refetchInterval: 10_000,
   });
 }
 
@@ -100,7 +102,7 @@ function DataTable({ rows }: { rows: Record<string, unknown>[] }) {
   if (!rows.length) return <p style={{ color: 'var(--prisma-text-secondary, #888)', padding: '1rem' }}>No data found.</p>;
 
   // Determine columns from first row (limit to 6 for readability)
-  const allCols = Object.keys(rows[0]);
+  const allCols = Object.keys(rows[0] ?? {});
   const cols = allCols.slice(0, 6);
 
   function formatCell(val: unknown): string {

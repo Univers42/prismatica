@@ -1,8 +1,42 @@
-node_modules
+# ============================================
+# Prismatica — Docker Build Context Exclusions
+# ============================================
+# Without this file, Docker sends ~316MB of context.
+# With it, only ~2MB is sent (source + Model schemas).
+# ============================================
+
+# ── Dependencies (rebuilt inside container) ──
 **/node_modules
-dist
+**/.pnpm-store
+
+# ── Build artifacts ──
 **/dist
-*.log
-.env
+**/build
+
+# ── Git ──
 .git
-apps/frontend
+.github
+.gitignore
+
+# ── IDE & editor ──
+.vscode
+.idea
+**/.DS_Store
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Docker files (prevent recursion) ──
+docker-compose*.yml
+
+# ── Documentation ──
+*.md
+!README.md
+LICENSE
+
+# ── Scripts & misc ──
+scripts/
+**/*.log
+**/coverage

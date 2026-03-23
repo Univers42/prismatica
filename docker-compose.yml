@@ -2,13 +2,16 @@
 # Prismatica — Standalone Development Stack
 # ============================================
 # For developing prismatica in isolation.
-# Usage: docker compose up -d
 #
-# Services: db (PostgreSQL), mongo (MongoDB), data-api (Express)
-# Frontend: run locally with `cd apps/frontend && pnpm dev`
+# Full stack:  make          (builds images, starts everything)
+# Dev mode:    make dev      (DBs + API in Docker, frontend via Vite locally)
+#
+# Default ports avoid conflicts with other local services:
+#   Frontend → 8080   API → 3001   DB → 5433   Mongo → 27018
 # ============================================
 
 services:
+  # ── PostgreSQL 16 ────────────────────────────────
   db:
     container_name: prismatica-db
     image: postgres:16-alpine
@@ -18,7 +21,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prismatica}
       POSTGRES_DB: ${POSTGRES_DB:-prismatica}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,12 +30,13 @@ services:
       timeout: 2s
       retries: 10
 
+  # ── MongoDB 7 ────────────────────────────────────
   mongo:
     container_name: prismatica-mongo
     image: mongo:7-jammy
     restart: unless-stopped
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+      - "${MONGO_PORT:-27018}:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -41,29 +45,34 @@ services:
       timeout: 2s
       retries: 10
 
+  # ── Data API (Express) ──────────────────────────
   data-api:
     container_name: prismatica-api
-    build:
-      context: ./apps/data-api
-      dockerfile: Dockerfile.dev
+    image: ${DOCKER_USER:-dlesieur}/prismatica-api:${TAG:-latest}
     restart: unless-stopped
     ports:
       - "${DATA_API_PORT:-3001}:3001"
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       DATA_API_PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-prismatica}:${POSTGRES_PASSWORD:-prismatica}@db:5432/${POSTGRES_DB:-prismatica}
       MONGO_URL: mongodb://mongo:27017/${POSTGRES_DB:-prismatica}
-      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
-      MODEL_SQL_DIR: /app/Model/sql
-    volumes:
-      - ./apps/data-api/src:/app/src:ro
-      - ./Model:/app/Model:ro
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-8080}
     depends_on:
       db:
         condition: service_healthy
       mongo:
         condition: service_healthy
+
+  # ── Frontend (nginx) ────────────────────────────
+  frontend:
+    container_name: prismatica-frontend
+    image: ${DOCKER_USER:-dlesieur}/prismatica-frontend:${TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - data-api
 
 volumes:
   pg_data:

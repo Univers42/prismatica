@@ -3,17 +3,17 @@
 # ============================================
 # No TS compilation at build time: tsx runs TS directly.
 # Source is volume-mounted for hot-reload.
-# After initial build (~30s), rebuilds are instant (cached layers).
+#
+# Optimized: pnpm store cached, mongosh dropped (use
+# `docker exec prismatica-mongo mongosh` directly).
 # ============================================
 
 FROM node:22-alpine
 
-# Install pnpm + bash + psql client + mongosh build deps
-RUN corepack enable && corepack prepare pnpm@latest --activate \
- && apk add --no-cache bash postgresql16-client python3 make g++ \
- && npm install -g mongosh --ignore-scripts=false 2>&1 \
- && apk del python3 make g++ \
- && rm -rf /root/.npm /tmp/*
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+ && apk add --no-cache bash postgresql16-client
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ ENV DATA_API_PORT=3001
 EXPOSE 3001
 
 HEALTHCHECK --interval=5s --timeout=2s --retries=10 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
+  CMD wget -qO- http://127.0.0.1:3001/health || exit 1
 
 # tsx watch for hot-reload in dev
 CMD ["pnpm", "run", "dev"]
