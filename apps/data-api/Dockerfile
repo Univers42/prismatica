@@ -38,23 +38,14 @@ COPY apps/data-api/tsconfig.json ./
 COPY apps/data-api/src/ ./src/
 RUN pnpm run build
 
-# ── Stage 3: Runtime tools (parallel with 1+2) ──
-FROM node:22-alpine AS tools
+# ── Stage 3: Production image ───────────────
+# mongosh removed — mongo scripts run inside the mongo container.
+# This saves ~160MB (mongosh + build deps).
+FROM node:22-alpine AS production
 
-# Cache apk + npm stores across builds; install mongosh then strip build deps
+# Only lightweight tools needed at runtime
 RUN --mount=type=cache,id=apk,target=/var/cache/apk \
-    --mount=type=cache,id=npm,target=/root/.npm \
-    apk add \
-        bash \
-        g++ \
-        make \
-        postgresql16-client \
-        python3 \
- && npm install -g mongosh --ignore-scripts=false 2>/dev/null \
- && apk del g++ make python3
-
-# ── Stage 4: Production image ───────────────
-FROM tools AS production
+    apk add bash postgresql16-client
 
 ENV PNPM_HOME="/pnpm" \
     PATH="/pnpm:$PATH" \
