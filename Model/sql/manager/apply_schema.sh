@@ -95,12 +95,14 @@ apply_file() {
     fi
 
     # Transform DDL to be idempotent on-the-fly (no SQL file edits needed):
+    #   CR/CRLF               → LF  (defensive; SQL files should be LF-only)
     #   CREATE TABLE          → CREATE TABLE IF NOT EXISTS
     #   CREATE [UNIQUE] INDEX → CREATE [UNIQUE] INDEX IF NOT EXISTS
     #   CREATE TRIGGER        → CREATE OR REPLACE TRIGGER   (requires PG 14+)
     # Guards (/IF NOT EXISTS/! and /OR REPLACE/!) prevent double-insertion.
     local sql
     sql=$(sed \
+        -e 's/\r//' \
         -e '/IF NOT EXISTS/!s/^CREATE TABLE /CREATE TABLE IF NOT EXISTS /' \
         -e '/IF NOT EXISTS/!s/^CREATE UNIQUE INDEX /CREATE UNIQUE INDEX IF NOT EXISTS /' \
         -e '/IF NOT EXISTS/!s/^CREATE INDEX /CREATE INDEX IF NOT EXISTS /' \

@@ -1,0 +1,24 @@
+# Enforce LF line endings for all text files regardless of OS
+* text=auto eol=lf
+
+# SQL files — always LF (required for correct sed transforms in Docker/Linux)
+*.sql text eol=lf
+
+# Shell scripts — always LF
+*.sh  text eol=lf
+
+# YAML / JSON / TOML / config
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+
+# TypeScript / JavaScript
+*.ts  text eol=lf
+*.tsx text eol=lf
+*.js  text eol=lf
+*.jsx text eol=lf
+
+# Docker
+Dockerfile* text eol=lf
+*.hcl        text eol=lf
