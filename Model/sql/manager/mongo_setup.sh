@@ -12,7 +12,7 @@
 set -euo pipefail
 
 MONGO_URL="${1:-${MONGODB_URL:-mongodb://localhost:27017}}"
-MONGO_DB="${2:-${MONGODB_DB:-transcendence}}"
+MONGO_DB="${2:-${MONGODB_DB:-prismatica}}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "════════════════════════════════════════════════════════════════"

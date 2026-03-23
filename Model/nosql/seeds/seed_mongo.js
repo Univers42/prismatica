@@ -4,15 +4,16 @@
 // Seeds all 13 MongoDB collections with demo data that aligns with the
 // PostgreSQL seeds (users, organizations, ABAC rules).
 //
-// Usage: mongosh mongodb://localhost:27017/transcendence seed_mongo.js
+// Usage: mongosh mongodb://localhost:27017/prismatica seed_mongo.js
 //        — OR —
 //        mongosh --file seed_mongo.js
 //
 // Idempotent: uses updateOne + upsert for all inserts.
 // ============================================================================
 
-const DB_NAME = 'transcendence';
-const db = db.getSiblingDB(DB_NAME); // eslint-disable-line no-undef
+// Use whichever database mongosh was connected to (passed via connection URI).
+// Do NOT hardcode a DB name — the caller (mongo_seed.sh) controls the target.
+const db = db.getSiblingDB(db.getName()); // eslint-disable-line no-undef
 
 print('');
 print('════════════════════════════════════════════════════════════════');

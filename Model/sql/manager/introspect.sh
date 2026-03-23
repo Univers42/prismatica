@@ -9,7 +9,7 @@
 # ============================================================================
 set -euo pipefail
 
-DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/transcendence}}"
+DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/prismatica}}"
 TARGET_TABLE="${2:-}"
 
 echo "════════════════════════════════════════════════════════════════"

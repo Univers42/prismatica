@@ -2,7 +2,7 @@
 # ============================================================================
 # mongo_reset.sh — Drop the MongoDB database
 # ============================================================================
-# Drops the entire transcendence MongoDB database. Used before re-seeding
+# Drops the entire prismatica MongoDB database. Used before re-seeding
 # to ensure a clean state.
 #
 # Usage: ./manager/mongo_reset.sh [MONGODB_URL] [DATABASE_NAME]
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 MONGO_URL="${1:-${MONGODB_URL:-mongodb://localhost:27017}}"
-MONGO_DB="${2:-${MONGODB_DB:-transcendence}}"
+MONGO_DB="${2:-${MONGODB_DB:-prismatica}}"
 
 echo "════════════════════════════════════════════════════════════════"
 echo "  MONGODB RESET — Drop Database"

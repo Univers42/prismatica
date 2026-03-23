@@ -34,7 +34,7 @@
 # ============================================================================
 set -euo pipefail
 
-DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/transcendence}}"
+DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/prismatica}}"
 SQL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ── Concurrency guard ────────────────────────────────────────

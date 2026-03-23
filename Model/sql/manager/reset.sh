@@ -9,7 +9,7 @@
 # ============================================================================
 set -euo pipefail
 
-DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/transcendence}}"
+DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/prismatica}}"
 
 # ── Extract DB name and build a maintenance URL pointing to "postgres" DB ────
 # We need to connect to the default "postgres" database to CREATE the target DB
