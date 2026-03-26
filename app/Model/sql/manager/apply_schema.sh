@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# ============================================================================
+# apply_schema.sh — Apply all schema files in correct dependency order
+# ============================================================================
+# Executes all schema SQL files, then triggers, optimization, and views
+# in the correct order defined by the domain dependency chain.
+#
+# Order:
+#   1. schema.user.sql          (users, roles, permissions, sessions)
+#   2. schema.organization.sql  (organizations, projects, workspaces)
+#   3. schema.billing.sql       (plans, subscriptions, invoices)
+#   4. schema.collection.sql    (collections, fields, relations)
+#   5. schema.dashboard.sql     (dashboards, views, templates)
+#   6. schema.resource.sql      (resources, permissions, versions)
+#   7. schema.connectivity.sql  (connections, sync channels)
+#   8. schema.adapter.sql       (adapters, mappings, executions)
+#   9. schema.system.sql        (webhooks, notifications, policies, files)
+#  10. schema.abac.sql          (enhanced ABAC engine: rules, groups, policies)
+#  11. triggers.utility.sql     (shared trigger functions)
+#  12. triggers.user.sql        (user/auth triggers)
+#  13. triggers.organization.sql
+#  14. triggers.billing.sql
+#  15. triggers.collection.sql
+#  16. triggers.dashboard.sql
+#  17. triggers.resource.sql
+#  18. triggers.connectivity.sql
+#  19. triggers.adapter.sql
+#  20. triggers.system.sql
+#  21. triggers.abac.sql        (ABAC engine triggers)
+#  22. optimization.sql         (indexes)
+#  23. views.sql                (SQL views)
+#
+# Usage: ./manager/apply_schema.sh [DATABASE_URL]
+# ============================================================================
+set -euo pipefail
+
+DB_URL="${1:-${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/prismatica}}"
+SQL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# ── Concurrency guard ────────────────────────────────────────
+# Use a PostgreSQL advisory lock so that if the API auto-init and
+# `make db-init` both invoke this script simultaneously, only the
+# first one runs; the second waits then skips (idempotent).
+#
+# Lock ID 73450001 is an arbitrary constant unique to this script.
+# pg_try_advisory_lock returns true if we got the lock, false if
+# another session already holds it.
+LOCK_ID=73450001
+
+got_lock=$(psql "$DB_URL" -Atq -c "SELECT pg_try_advisory_lock($LOCK_ID)" 2>/dev/null || echo "f")
+if [ "$got_lock" != "t" ]; then
+    echo "  ⏳  Another apply_schema.sh is running — waiting for it to finish…"
+    # Block until the other session releases the lock, then release ours
+    psql "$DB_URL" -Atq -c "SELECT pg_advisory_lock($LOCK_ID); SELECT pg_advisory_unlock($LOCK_ID);" >/dev/null 2>&1 || true
+    echo "  ✓  Schema already applied by parallel process — skipping."
+    exit 0
+fi
+
+# Ensure we release the advisory lock on exit (normal or error)
+trap 'psql "$DB_URL" -Atq -c "SELECT pg_advisory_unlock($LOCK_ID)" >/dev/null 2>&1 || true' EXIT
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  APPLY ALL SCHEMAS"
+echo "════════════════════════════════════════════════════════════════"
+echo "  Target: $DB_URL"
+echo "  SQL Dir: $SQL_DIR"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+# Schema files in dependency order
+SCHEMA_FILES=(
+    "schema.user.sql"
+    "schema.organization.sql"
+    "schema.billing.sql"
+    "schema.collection.sql"
+    "schema.dashboard.sql"
+    "schema.resource.sql"
+    "schema.connectivity.sql"
+    "schema.adapter.sql"
+    "schema.system.sql"
+    "schema.abac.sql"
+)
+
+# Trigger files in dependency order
+TRIGGER_FILES=(
+    "triggers/triggers.utility.sql"
+    "triggers/triggers.user.sql"
+    "triggers/triggers.organization.sql"
+    "triggers/triggers.billing.sql"
+    "triggers/triggers.collection.sql"
+    "triggers/triggers.dashboard.sql"
+    "triggers/triggers.resource.sql"
+    "triggers/triggers.connectivity.sql"
+    "triggers/triggers.adapter.sql"
+    "triggers/triggers.system.sql"
+    "triggers/triggers.abac.sql"
+)
+
+# Post-schema files
+POST_FILES=(
+    "optimization.sql"
+    "views.sql"
+)
+
+TOTAL_FILES=$(( ${#SCHEMA_FILES[@]} + ${#TRIGGER_FILES[@]} + ${#POST_FILES[@]} ))
+CURRENT=0
+FAILED=0
+
+apply_file() {
+    local file="$1"
+    local path="$SQL_DIR/$file"
+    CURRENT=$((CURRENT + 1))
+
+    if [ ! -f "$path" ]; then
+        echo "  [$CURRENT/$TOTAL_FILES] SKIP  $file (not found)"
+        return
+    fi
+
+    # Transform DDL to be idempotent on-the-fly (no SQL file edits needed):
+    #   CR/CRLF               → LF  (defensive; SQL files should be LF-only)
+    #   CREATE TABLE          → CREATE TABLE IF NOT EXISTS
+    #   CREATE [UNIQUE] INDEX → CREATE [UNIQUE] INDEX IF NOT EXISTS
+    #   CREATE TRIGGER        → CREATE OR REPLACE TRIGGER   (requires PG 14+)
+    # Guards (/IF NOT EXISTS/! and /OR REPLACE/!) prevent double-insertion.
+    local sql
+    sql=$(sed \
+        -e 's/\r//' \
+        -e '/IF NOT EXISTS/!s/^CREATE TABLE /CREATE TABLE IF NOT EXISTS /' \
+        -e '/IF NOT EXISTS/!s/^CREATE UNIQUE INDEX /CREATE UNIQUE INDEX IF NOT EXISTS /' \
+        -e '/IF NOT EXISTS/!s/^CREATE INDEX /CREATE INDEX IF NOT EXISTS /' \
+        -e '/OR REPLACE/!s/^CREATE TRIGGER /CREATE OR REPLACE TRIGGER /' \
+        "$path")
+
+    printf "  [%2d/%d] " "$CURRENT" "$TOTAL_FILES"
+    if echo "$sql" | psql "$DB_URL" -v ON_ERROR_STOP=1 > /dev/null 2>&1; then
+        echo "OK    $file"
+    else
+        echo "FAIL  $file"
+        FAILED=$((FAILED + 1))
+        echo "$sql" | psql "$DB_URL" -v ON_ERROR_STOP=1 2>&1 | tail -5 || true
+    fi
+}
+
+echo "── Phase 1: Schema Tables ──"
+for f in "${SCHEMA_FILES[@]}"; do
+    apply_file "$f"
+done
+
+echo ""
+echo "── Phase 2: Triggers ──"
+for f in "${TRIGGER_FILES[@]}"; do
+    apply_file "$f"
+done
+
+echo ""
+echo "── Phase 3: Indexes & Views ──"
+for f in "${POST_FILES[@]}"; do
+    apply_file "$f"
+done
+
+echo ""
+if [ "$FAILED" -eq 0 ]; then
+    echo "✓ All $TOTAL_FILES files applied successfully."
+else
+    echo "✗ $FAILED/$TOTAL_FILES files failed. Check output above."
+    exit 1
+fi
