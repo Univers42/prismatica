@@ -1,0 +1,9 @@
+[submodule "vendor/libcss"]
+	path = vendor/libcss
+	url = git@github.com:Univers42/libcss.git
+[submodule "app/vendor/libcss"]
+	path = app/vendor/libcss
+	url = git@github.com:Univers42/libcss.git
+[submodule "app/src/lib/libcss"]
+	path = app/src/lib/libcss
+	url = git@github.com:Univers42/libcss.git
