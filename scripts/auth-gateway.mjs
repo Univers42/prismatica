@@ -14,11 +14,14 @@
 import { createServer } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
 import net from 'node:net';
 import tls from 'node:tls';
 import { createClient, MiniBaasError } from '@mini-baas/js';
+import { deriveClientIp } from './auth/net-ip.mjs';
+import { enforceStartupGuards } from './auth/guards.mjs';
+import { createStore } from './auth/store.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
 	const path = resolve(process.cwd(), file);
@@ -63,11 +66,21 @@ const config = {
 	requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false' && process.env.PUBLIC_AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
 	osionosBridgeUrl: (process.env.OSIONOS_BRIDGE_URL ?? 'http://localhost:4000/api/auth/bridge/session').replace(/\/$/, ''),
 	osionosBridgeSecret: process.env.OSIONOS_BRIDGE_SHARED_SECRET ?? '',
+	osionosAppUrl: (process.env.PUBLIC_OSIONOS_APP_URL ?? '').replace(/\/$/, ''),
+	trustedProxyHops: Number(process.env.AUTH_TRUSTED_PROXY_HOPS ?? 0),
+	trustCfConnectingIp: process.env.AUTH_TRUST_CF_CONNECTING_IP === 'true',
+	redisUrl: process.env.REDIS_URL ?? process.env.AUTH_REDIS_URL ?? '',
+	loginLockoutThreshold: Number(process.env.AUTH_LOGIN_LOCKOUT_THRESHOLD ?? 10),
+	loginLockoutWindowSec: Number(process.env.AUTH_LOGIN_LOCKOUT_WINDOW_SEC ?? 900),
+	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
 };
 
-const buckets = new Map();
-const signInNoticeBuckets = new Map();
-const mailDomainCache = new Map();
+const store = createStore({ redisUrl: config.redisUrl, logger: console });
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, newsletter: 12, availability: 30 };
+const RATE_WINDOW_SEC = 60;
+const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
+const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
+const SIGN_IN_NOTICE_TTL_SEC = 600;
 const EMAIL_ATEXT = "A-Za-z0-9!#$%&'*+/=?^_`{|}~-";
 const EMAIL_LOCAL_PART = String.raw`(?:[${EMAIL_ATEXT}]+(?:\.[${EMAIL_ATEXT}]+)*|"[^"\r\n]+")`;
 const EMAIL_DOMAIN_LABEL = '(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)';
@@ -95,7 +108,11 @@ function sdkErrorResult(error) {
 }
 
 function clientIp(request) {
-	return (request.headers['cf-connecting-ip'] ?? request.headers['x-forwarded-for'] ?? request.socket.remoteAddress ?? 'unknown').toString().split(',')[0].trim();
+	return deriveClientIp(request, { trustedProxyHops: config.trustedProxyHops, trustCfConnectingIp: config.trustCfConnectingIp });
+}
+
+function keyHash(value) {
+	return createHash('sha256').update(String(value ?? '')).digest('hex').slice(0, 32);
 }
 
 function json(response, status, body, headers = {}) {
@@ -146,22 +163,14 @@ function clearRefreshCookie() {
 	return 'prismatica_refresh=; HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=0';
 }
 
-function rateLimit(ip, action) {
-	const key = `${ip}:${action}`;
-	const now = Date.now();
-	const windowMs = 60_000;
-	const limit = action === 'login' ? 8 : 12;
-	const bucket = buckets.get(key) ?? { count: 0, resetAt: now + windowMs, failures: 0 };
-	if (now > bucket.resetAt) {
-		bucket.count = 0;
-		bucket.resetAt = now + windowMs;
-	}
-	bucket.count += 1;
-	buckets.set(key, bucket);
-	if (bucket.count <= limit) return null;
-	const retryAfter = Math.ceil((bucket.resetAt - now) / 1000) + Math.min(bucket.failures * 2, 30);
-	bucket.failures += 1;
-	return retryAfter;
+async function rateLimit(ip, action) {
+	const limit = RATE_LIMITS[action] ?? 12;
+	const key = `rl:${action}:${ip}`;
+	const count = await store.incrWithTtl(key, RATE_WINDOW_SEC);
+	if (count <= limit) return null;
+	const remainingMs = await store.pttl(key);
+	const baseRetry = remainingMs > 0 ? Math.ceil(remainingMs / 1000) : RATE_WINDOW_SEC;
+	return baseRetry + Math.min((count - limit) * 2, 30);
 }
 
 function emailDomain(email) {
@@ -203,12 +212,13 @@ function isAllowedEmailDomain(email) {
 async function hasDeliverableEmailDomain(email) {
 	if (isAllowedEmailDomain(email)) return true;
 	const domain = emailDomain(email);
-	const cached = mailDomainCache.get(domain);
-	if (cached && cached.expiresAt > Date.now()) return cached.valid;
+	const cacheKey = `mxcache:${domain}`;
+	const cached = await store.get(cacheKey);
+	if (cached !== null) return cached === '1';
 	const timeout = new Promise((resolveTimeout) => globalThis.setTimeout(() => resolveTimeout(false), DNS_LOOKUP_TIMEOUT_MS));
 	const lookup = Promise.allSettled([resolveMx(domain), resolve4(domain), resolve6(domain)]).then((results) => results.some((result) => result.status === 'fulfilled' && Array.isArray(result.value) && result.value.length > 0));
 	const valid = await Promise.race([lookup, timeout]);
-	mailDomainCache.set(domain, { valid, expiresAt: Date.now() + MAIL_DOMAIN_CACHE_MS });
+	await store.set(cacheKey, valid ? '1' : '0', Math.floor(MAIL_DOMAIN_CACHE_MS / 1000));
 	return valid;
 }
 
@@ -432,13 +442,12 @@ function loginAlertContext(request, email, outcome = 'success') {
 	};
 }
 
-function shouldSendSignInNotice(email, outcome) {
+async function shouldSendSignInNotice(email, outcome) {
 	if (outcome === 'success') return true;
-	const key = `${email}:${outcome}`;
-	const now = Date.now();
-	const lastSentAt = signInNoticeBuckets.get(key) ?? 0;
-	if (now - lastSentAt < 10 * 60 * 1000) return false;
-	signInNoticeBuckets.set(key, now);
+	const key = `notice:${outcome}:${keyHash(email)}`;
+	const existing = await store.get(key);
+	if (existing !== null) return false;
+	await store.set(key, '1', SIGN_IN_NOTICE_TTL_SEC);
 	return true;
 }
 
@@ -448,7 +457,7 @@ async function sendLoginSecurityNotification(request, email, outcome = 'success'
 		await audit('login_alert_skipped', request, { email, reason: 'smtp_not_configured' });
 		return;
 	}
-	if (!shouldSendSignInNotice(email, outcome)) {
+	if (!(await shouldSendSignInNotice(email, outcome))) {
 		await audit('login_alert_suppressed', request, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
@@ -679,7 +688,7 @@ function registrationProfile(payload) {
 
 async function protectedAction(request, response, action, handler) {
 	const ip = clientIp(request);
-	const retryAfter = rateLimit(ip, action);
+	const retryAfter = await rateLimit(ip, action);
 	if (retryAfter) {
 		json(response, 429, { message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
 		return;
@@ -848,6 +857,12 @@ async function handleAvailability(request, response) {
 		json(response, 503, { message: 'Registration availability is not configured.' });
 		return;
 	}
+	const ip = clientIp(request);
+	const retryAfter = await rateLimit(ip, 'availability');
+	if (retryAfter) {
+		json(response, 429, { message: 'Too many availability checks. Please slow down.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
 	const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 	const availability = await identityAvailability({
 		email: url.searchParams.get('email') ?? '',
@@ -857,25 +872,43 @@ async function handleAvailability(request, response) {
 }
 
 async function handleLogin(request, response) {
-	await protectedAction(request, response, 'login', async (payload) => {
+	await protectedAction(request, response, 'login', async (payload, ip) => {
 		const email = String(payload.email ?? '').trim().toLowerCase();
 		const password = String(payload.password ?? '');
 		if (!EMAIL_REGEX.test(email) || password.length === 0) {
 			json(response, 422, { message: 'Invalid credentials.' });
 			return;
 		}
+		const lockKey = `lock:login:${keyHash(email)}`;
+		const failKey = `fail:login:${keyHash(email)}`;
+		const lockRemainingMs = await store.pttl(lockKey);
+		if (lockRemainingMs > 0) {
+			await audit('login_locked', request, { email, ip });
+			json(response, 429, { message: 'Too many failed attempts for this account. Try again later or reset your password.' }, { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) });
+			return;
+		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
 		if (!result.response.ok) {
+			const failures = await store.incrWithTtl(failKey, config.loginLockoutWindowSec);
+			if (failures >= config.loginLockoutThreshold) {
+				await store.set(lockKey, '1', config.loginLockoutSec);
+				await store.del(failKey);
+				await audit('login_lockout_triggered', request, { email, failures });
+			}
 			if (await localProfileExists('email', email)) {
 				await sendLoginSecurityNotification(request, email, 'failed').catch(async (error) => {
 					console.error(`[auth-gateway] failed-login security alert failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 					await audit('login_alert_failed', request, { email, outcome: 'failed', error: error instanceof Error ? error.message : 'unknown_error' });
 				});
 			}
-			json(response, result.response.status, { message: humanAuthMessage(result.payload, 'Invalid credentials.') });
+			// Generic message and fixed 401 — never leak whether the email exists,
+			// the lockout counter, or GoTrue internals to an unauthenticated caller.
+			json(response, 401, { message: 'Invalid credentials.' });
 			return;
 		}
+		await store.del(failKey);
+		await store.del(lockKey);
 		await sendLoginSecurityNotification(request, email).catch(async (error) => {
 			console.error(`[auth-gateway] login security alert failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 			await audit('login_alert_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
@@ -928,7 +961,7 @@ async function requestNewsletterOptIn(request, email) {
 
 async function handleNewsletterSubscribe(request, response) {
 	const ip = clientIp(request);
-	const retryAfter = rateLimit(ip, 'newsletter');
+	const retryAfter = await rateLimit(ip, 'newsletter');
 	if (retryAfter) {
 		json(response, 429, { message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
 		return;
@@ -941,6 +974,14 @@ async function handleNewsletterSubscribe(request, response) {
 	}
 	if (!await hasDeliverableEmailDomain(email)) {
 		json(response, 422, { message: 'Use an email domain that can receive mail.' });
+		return;
+	}
+	// Per-target cap: stop the newsletter from being used as an email-bomb
+	// amplifier against a victim's inbox, independent of source IP rotation.
+	const targetCount = await store.incrWithTtl(`rl:newsletter-target:${keyHash(email)}`, NEWSLETTER_TARGET_WINDOW_SEC);
+	if (targetCount > NEWSLETTER_TARGET_LIMIT) {
+		await audit('newsletter_target_throttled', request, { email });
+		json(response, 429, { message: 'Too many confirmation emails were requested for this address. Please check your inbox or try again later.' });
 		return;
 	}
 	const result = await requestNewsletterOptIn(request, email);
@@ -1069,6 +1110,11 @@ async function handleOsionosSession(request, response) {
 		return;
 	}
 	const body = await result.json().catch(() => ({}));
+	if (result.ok && config.osionosAppUrl && typeof body?.redirectUrl === 'string' && !body.redirectUrl.startsWith(config.osionosAppUrl)) {
+		await audit('osionos_bridge_redirect_rejected', request, { email, status: result.status });
+		json(response, 502, { message: 'osionos bridge returned an unexpected redirect target.' });
+		return;
+	}
 	await audit(result.ok ? 'osionos_bridge_success' : 'osionos_bridge_failed', request, { email, status: result.status });
 	json(response, result.status, body);
 }
@@ -1089,6 +1135,8 @@ const routes = new Map([
 	['POST /api/newsletter/confirm', handleNewsletterConfirm],
 	['POST /api/newsletter/unsubscribe', handleNewsletterUnsubscribe],
 ]);
+
+enforceStartupGuards(config, { logger: console });
 
 createServer(async (request, response) => {
 	try {
@@ -1113,5 +1161,5 @@ createServer(async (request, response) => {
 		json(response, status, { message: status >= 500 ? 'Authentication gateway error.' : String(error?.message ?? 'Request error.') });
 	}
 }).listen(config.port, () => {
-	console.log(`Auth gateway listening on http://localhost:${config.port}/api/auth and /api/newsletter`);
+	console.log(`Auth gateway listening on http://localhost:${config.port}/api/auth and /api/newsletter (rate-limit store: ${store.backendName()}, trusted proxy hops: ${config.trustedProxyHops})`);
 });

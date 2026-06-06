@@ -36,6 +36,7 @@ WORKDIR /app
 # The gateway code, and the email templates it reads at runtime relative to
 # process.cwd() (resolve(process.cwd(), 'src/email-templates')).
 COPY apps/opposite-osiris/scripts/auth-gateway.mjs ./scripts/auth-gateway.mjs
+COPY apps/opposite-osiris/scripts/auth/ ./scripts/auth/
 COPY apps/opposite-osiris/src/email-templates/ ./src/email-templates/
 
 # The only runtime dependency: the built SDK (it has NO transitive npm deps),
