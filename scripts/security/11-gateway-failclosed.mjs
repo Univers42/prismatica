@@ -177,6 +177,9 @@ export async function run() {
 					PUBLIC_SITE_URL: 'https://localhost:4322',
 					AUTH_GATEWAY_PORT: String(port),
 					AUTH_LOGIN_LOCKOUT_THRESHOLD: '3',
+					// Bypass Turnstile so failed logins reach the credential check (and
+					// thus the lockout counter); otherwise every attempt 403s first.
+					TURNSTILE_BYPASS_LOCAL: 'true',
 					PUBLIC_BAAS_URL: config.url,
 					PUBLIC_BAAS_ANON_KEY: config.anonKey,
 					SERVICE_ROLE_KEY: process.env.SERVICE_ROLE_KEY ?? process.env.KONG_SERVICE_API_KEY ?? '',
