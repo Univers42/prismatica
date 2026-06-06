@@ -20,6 +20,9 @@ import * as sensitiveData from './06-sensitive-data.mjs';
 import * as uploadPath from './07-upload-path.mjs';
 import * as rateLimit from './08-rate-limit.mjs';
 import * as gdpr from './09-gdpr.mjs';
+import * as gatewayHardening from './10-gateway-hardening.mjs';
+import * as gatewayFailClosed from './11-gateway-failclosed.mjs';
+import * as gatewayUnit from './unit/run-all.mjs';
 import * as ctf from './ctf/run-all.mjs';
 
 const colors = {
@@ -40,6 +43,9 @@ const categories = [
 	{ key: 'upload-path', name: 'File path and upload manipulation', module: uploadPath },
 	{ key: 'rate-limit', name: 'Rate limiting and denial-of-service surface', module: rateLimit },
 	{ key: 'gdpr', name: 'GDPR data protection controls', module: gdpr },
+	{ key: 'gateway-unit', name: 'Auth-gateway hardening unit tests', module: gatewayUnit },
+	{ key: 'gateway-hardening', name: 'Auth-gateway hardening (live integration)', module: gatewayHardening },
+	{ key: 'gateway-failclosed', name: 'Auth-gateway fail-closed and lockout (subprocess)', module: gatewayFailClosed },
 	{ key: 'ctf', name: 'Frontend CTF security laboratory', module: ctf },
 	{ key: 'auth', name: 'Authentication and brute-force resistance', module: auth },
 ];

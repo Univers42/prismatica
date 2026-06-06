@@ -97,6 +97,29 @@ export function requireBaasConfig() {
 	return config;
 }
 
+// Base URL of the auth-gateway under test. From a node container attached to
+// the compose network, `http://auth-gateway:8787` resolves. Override with
+// AUTH_GATEWAY_TEST_URL when running elsewhere. Integration tests must skip()
+// (never fail) when this base is unreachable so the suite still runs bare.
+export const gatewayBase = (process.env.AUTH_GATEWAY_TEST_URL ?? 'http://auth-gateway:8787').replace(/\/$/, '');
+
+export function gatewayUrl(path) {
+	return `${gatewayBase}${normalizePath(path)}`;
+}
+
+// True when the gateway answers anything (any HTTP status) within the timeout.
+// A network/DNS error or timeout => unreachable => caller should skip().
+export async function gatewayReachable(timeoutMs = 2500) {
+	try {
+		const response = await fetchWithTimeout(gatewayUrl('/api/auth/availability'), { method: 'GET' }, timeoutMs);
+		// Drain so the socket is freed.
+		await response.arrayBuffer().catch(() => undefined);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export function restUrl(path) {
 	return `${config.url}/rest/v1${normalizePath(path)}`;
 }
