@@ -89,7 +89,29 @@ declare global {
 
 const THEME_KEY = 'prismatica-theme';
 const MOTION_KEY = 'prismatica-motion-paused';
-const AUTH_TOKEN_KEY = 'prismatica-auth-token-v1';
+
+/**
+ * The short-lived ACCESS token lives only in memory for the lifetime of the
+ * page. It is never persisted to localStorage/sessionStorage/cookies, so an XSS
+ * cannot read it from storage. The long-lived REFRESH token is held by the
+ * server as an HttpOnly Secure cookie and drives rehydration on each page load.
+ */
+let accessToken: string | null = null;
+
+/** Returns the in-memory access token, or null when logged out. */
+function getAccessToken(): string | null {
+	return accessToken;
+}
+
+/** Stores the access token in memory only. */
+function setAccessToken(token: string | null): void {
+	accessToken = token && token.length > 0 ? token : null;
+}
+
+/** Clears the in-memory access token (used on logout). */
+function clearAccessToken(): void {
+	accessToken = null;
+}
 
 function secureRandom(): number {
 	const values = new Uint32Array(1);
@@ -439,9 +461,9 @@ function announce(message: string): void {
 	}
 }
 
-/** Reads the current demo auth token for authenticated RPC calls. */
+/** Reads the current in-memory auth token for authenticated RPC calls. */
 function readAuthToken(): string | null {
-	return readStorage(AUTH_TOKEN_KEY);
+	return getAccessToken();
 }
 
 type RpcStatus = {
@@ -464,7 +486,7 @@ async function callGdprRpc(name: string, body: Record<string, unknown>, token = 
 async function authenticatePortalLogin(email: string, password: string, turnstileToken: string): Promise<AuthResult> {
 	const payload = await authClient.signIn({ email, password, turnstileToken });
 	if (payload.ok && typeof payload.accessToken === 'string' && payload.accessToken.length > 0) {
-		writeStorage(AUTH_TOKEN_KEY, payload.accessToken);
+		setAccessToken(payload.accessToken);
 	}
 	return payload;
 }
@@ -473,6 +495,52 @@ async function authenticatePortalLogin(email: string, password: string, turnstil
 async function registerPortalAccount(email: string, password: string, turnstileToken: string, profile: RegisterProfile): Promise<AuthResult> {
 	const payload = await authClient.register({ email, password, turnstileToken, profile });
 	return payload;
+}
+
+/**
+ * Rehydrates the in-memory access token on a fresh page load by exchanging the
+ * HttpOnly refresh cookie for a new access token. Returns true when a session
+ * was restored, false when there is no/expired session (HTTP 401). The refresh
+ * cookie is sent automatically because useAuth posts with credentials:'include'.
+ */
+async function rehydrateSession(): Promise<boolean> {
+	if (getAccessToken()) {
+		return true;
+	}
+	try {
+		const payload = await authClient.refresh();
+		if (payload.ok && typeof payload.accessToken === 'string' && payload.accessToken.length > 0) {
+			setAccessToken(payload.accessToken);
+			return true;
+		}
+	} catch {
+		// Network/parse failure: treat as logged-out, no token retained.
+	}
+	clearAccessToken();
+	return false;
+}
+
+/** Logs out: clears the in-memory token and the server-side refresh cookie. */
+async function logoutSession(): Promise<void> {
+	clearAccessToken();
+	await authClient.logout().catch(() => undefined);
+}
+
+/**
+ * Defense-in-depth open-redirect guard: confirms a bridge-provided redirect URL
+ * shares the configured osionos origin before we navigate. Even though the URL
+ * comes from our own trusted bridge, we never assign() to an unexpected origin.
+ */
+function isTrustedOsionosRedirect(redirectUrl: string): boolean {
+	const expectedOrigin = String(import.meta.env.PUBLIC_OSIONOS_APP_URL ?? '').trim();
+	if (!expectedOrigin) {
+		return false;
+	}
+	try {
+		return new URL(redirectUrl).origin === new URL(expectedOrigin).origin;
+	} catch {
+		return false;
+	}
 }
 
 /** Requests a password recovery email without revealing whether the account exists. */
@@ -1702,6 +1770,18 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 		? await authClient.osionosSession(authenticated.accessToken).catch(() => null)
 		: null;
 	if (osionosBridge?.ok && osionosBridge.redirectUrl) {
+		const redirectUrl = osionosBridge.redirectUrl;
+		if (!isTrustedOsionosRedirect(redirectUrl)) {
+			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
+			notifyWithMascot({
+				kind: 'error',
+				title: 'Workspace redirect blocked',
+				message: 'The osionos workspace link did not match the expected app origin.',
+				duration: 8000,
+			});
+			announce('Workspace redirect blocked for safety.');
+			return;
+		}
 		notifyWithMascot({
 			kind: 'success',
 			title: 'Opening osionos',
@@ -1711,7 +1791,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 		setMountedMascotMood('happy', 1800);
 		announce('Opening your osionos workspace.');
 		globalThis.setTimeout(() => {
-			globalThis.location.assign(osionosBridge.redirectUrl as string);
+			globalThis.location.assign(redirectUrl);
 		}, 700);
 		return;
 	}
@@ -2299,6 +2379,40 @@ async function mountBaasStatus(): Promise<void> {
 	}
 }
 
+/** Reflects auth state onto any elements that opt in via data attributes. */
+function reflectAuthState(loggedIn: boolean): void {
+	document.documentElement.dataset.authState = loggedIn ? 'authenticated' : 'anonymous';
+	queryElements('[data-auth-only]', isHtmlElement).forEach((node) => {
+		node.hidden = !loggedIn;
+	});
+	queryElements('[data-anon-only]', isHtmlElement).forEach((node) => {
+		node.hidden = loggedIn;
+	});
+}
+
+/**
+ * Restores the session from the HttpOnly refresh cookie (if any) and reflects
+ * the resulting auth state into the UI. Any view that depends on "am I logged
+ * in?" should await this (or read [data-auth-state] after it resolves).
+ */
+async function rehydrateAndReflectAuth(): Promise<void> {
+	const loggedIn = await rehydrateSession();
+	reflectAuthState(loggedIn);
+}
+
+/** Wires any logout controls to clear the in-memory token and the cookie. */
+function bindLogoutControls(): void {
+	queryElements('[data-logout]', isHtmlElement).forEach((control) => {
+		control.addEventListener('click', (event) => {
+			event.preventDefault();
+			void logoutSession().then(() => {
+				reflectAuthState(false);
+				announce('You have been signed out.');
+			});
+		});
+	});
+}
+
 /** Starts all client-side page behavior. */
 function init(): void {
 	dismissAll();
@@ -2309,8 +2423,10 @@ function init(): void {
 	renderPaperGrain();
 	mountMascot();
 	bindInteractions();
+	bindLogoutControls();
 	bindScrollReveal();
 	void mountBaasStatus();
+	void rehydrateAndReflectAuth();
 }
 
 // ---------- Scroll reveal ----------
