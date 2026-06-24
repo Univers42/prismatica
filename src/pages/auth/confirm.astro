@@ -20,7 +20,7 @@ const anonKey = import.meta.env.PUBLIC_BAAS_ANON_KEY ?? '';
 		</section>
 	</main>
 	<script>
-		import { createClient } from '@mini-baas/js';
+		import { createClient } from '@grobase/js';
 		import { notify } from '../../scripts/notifications';
 
 		const root = document.querySelector('[data-auth-confirm]') as HTMLElement | null;

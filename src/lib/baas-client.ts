@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-import { createClient } from '@mini-baas/js';
+import { createClient } from '@grobase/js';
 import { baasConfig } from './baas-config';
 
 export type BaaSUser = {
