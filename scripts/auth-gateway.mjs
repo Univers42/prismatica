@@ -53,6 +53,7 @@ const config = {
 	serviceKey: process.env.SERVICE_ROLE_KEY ?? process.env.KONG_SERVICE_API_KEY ?? process.env.BAAS_SERVICE_ROLE_KEY ?? '',
 	turnstileSecret: process.env.TURNSTILE_SECRET_KEY ?? '',
 	turnstileBypassLocal: process.env.TURNSTILE_BYPASS_LOCAL === 'true',
+	demoInsecure: process.env.AUTH_DEMO_INSECURE === 'true',
 	siteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4322',
 	smtpHost: process.env.SMTP_HOST ?? '',
 	smtpPort,

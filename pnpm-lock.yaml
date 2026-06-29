@@ -15,8 +15,8 @@ importers:
         specifier: ^3.7.3
         version: 3.7.3
       '@grobase/js':
-        specifier: file:../../apps/grobase/sdks/js
-        version: file:../grobase/sdks/js
+        specifier: file:./vendor/grobase-js
+        version: file:vendor/grobase-js
       astro:
         specifier: ^6.2.1
         version: 6.3.1(@types/node@25.9.1)(rollup@4.60.3)(sass@1.99.0)(yaml@2.9.0)
@@ -66,6 +66,9 @@ importers:
       typescript-eslint:
         specifier: ^8.60.1
         version: 8.60.1(eslint@9.39.4)(typescript@5.9.3)
+      vite:
+        specifier: ^7.3.3
+        version: 7.3.3(@types/node@25.9.1)(sass@1.99.0)(yaml@2.9.0)
 
 packages:
 
@@ -429,8 +432,8 @@ packages:
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
 
-  '@grobase/js@file:../grobase/sdks/js':
-    resolution: {directory: ../grobase/sdks/js, type: directory}
+  '@grobase/js@file:vendor/grobase-js':
+    resolution: {directory: vendor/grobase-js, type: directory}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4333,7 +4336,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@grobase/js@file:../grobase/sdks/js': {}
+  '@grobase/js@file:vendor/grobase-js': {}
 
   '@html-validate/stylish@6.0.0': {}
 

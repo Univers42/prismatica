@@ -1,0 +1,19 @@
+allowBuilds:
+  '@parcel/watcher': set this to true or false
+  esbuild: set this to true or false
+  puppeteer: set this to true or false
+  sharp: set this to true or false
+# Single-package "workspace" file — in pnpm v11 this is the home for settings that
+# used to live under package.json#pnpm. Acknowledge dependencies whose install
+# scripts we intentionally skip (.npmrc has ignore-scripts=true) so that pnpm does
+# NOT exit non-zero with ERR_PNPM_IGNORED_BUILDS during the Vercel install step
+# (Astro's own deps-status check re-runs `pnpm install` and aborts on that code).
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - puppeteer
+  - sharp
+  - lighthouse
+# Skip the pre-exec deps-status check (the only path that makes ignored build
+# scripts a fatal error). Mirrors verify-deps-before-run=false in .npmrc.
+verifyDepsBeforeRun: false

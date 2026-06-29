@@ -15,6 +15,11 @@ import { readFileSync } from 'node:fs';
 import { assert, projectRoot, publicRoot, runChecks, srcRoot, summarize, walkFiles } from './_shared.mjs';
 import { sanitizeSvgMarkup } from '../../../src/lib/svg-security.mjs';
 
+/**
+ * LIMIT: the regex can be bypass:
+ * for isntance if transformed before parsing
+ * This is why the good sanitizer use a parser DOM(AST HTML/XML), not only REGEX
+ */
 const SVG_FILE_PATTERN = /\.svg$/iu;
 const DANGEROUS_SVG_PATTERNS = [
 	/<\s*script\b/iu,

@@ -52,17 +52,23 @@ export function collectStartupViolations(config) {
 	const violations = [];
 	if (!isProductionOrigin(config.siteUrl)) return violations;
 
-	if (config.turnstileBypassLocal) {
+	// AUTH_DEMO_INSECURE=true relaxes ONLY the anti-abuse controls (Turnstile,
+	// email verification) for a non-production demo on a public https origin —
+	// the hard requirements below (trusted-proxy hops, service key) stay enforced.
+	// NEVER set this on a real production deployment; it disables the CAPTCHA.
+	const demoInsecure = config.demoInsecure === true;
+
+	if (!demoInsecure && config.turnstileBypassLocal) {
 		violations.push(
 			'TURNSTILE_BYPASS_LOCAL is true on a public https origin — Turnstile would be fully bypassed. Set it to false in production.',
 		);
 	}
-	if (!config.requireEmailVerification) {
+	if (!demoInsecure && !config.requireEmailVerification) {
 		violations.push(
 			'AUTH_REQUIRE_EMAIL_VERIFICATION is false on a public https origin — accounts would be confirmed without email verification. Enable it in production.',
 		);
 	}
-	if (!config.turnstileSecret) {
+	if (!demoInsecure && !config.turnstileSecret) {
 		violations.push('TURNSTILE_SECRET_KEY is missing — Turnstile cannot be verified in production.');
 	}
 	if (Number(config.trustedProxyHops ?? 0) <= 0) {

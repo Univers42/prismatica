@@ -1,0 +1,31 @@
+{
+  "name": "@grobase/js",
+  "version": "0.2.0",
+  "description": "Supabase-shaped TypeScript/JavaScript SDK for the Grobase BaaS (vendored pre-built lib for static deploy).",
+  "type": "module",
+  "license": "MIT",
+  "author": "dlesieur",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "bin": {
+    "baas": "lib/bin/baas.js"
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

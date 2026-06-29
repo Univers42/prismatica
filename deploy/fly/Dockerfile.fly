@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.7
+# ============================================================================
+# prismatica-auth-gateway — REBUILD-FROM-SOURCE image for fly.
+#
+# The canonical Dockerfile (apps/opposite-osiris/docker/services/api-gateway/
+# Dockerfile) still copies `apps/baas/sdk/` — a path that no longer exists
+# (grobase was extracted to apps/grobase/, SDK renamed @mini-baas/js -> @grobase/js).
+# This file is the corrected variant: it builds the SDK from apps/grobase/sdks/js
+# and drops dist/ + package.json into node_modules/@mini-baas/js so the gateway's
+# bare `import ... from '@mini-baas/js'` still resolves (Node resolves by directory
+# name; the package.json "name" field is irrelevant to resolution).
+#
+# fly.toml deploys the PUBLISHED image by default; use this only to rebuild:
+#   BUILD CONTEXT = repository ROOT:
+#   fly deploy --config apps/opposite-osiris/deploy/fly/fly.toml \
+#     --dockerfile apps/opposite-osiris/deploy/fly/Dockerfile.fly .
+# (run from the repo root so the COPY paths below resolve)
+# ============================================================================
+
+# --- Stage 1: build the @grobase/js SDK (the gateway's only npm dependency) ---
+FROM public.ecr.aws/docker/library/node:22-alpine AS build
+WORKDIR /sdk
+COPY apps/grobase/sdks/js/ ./
+RUN npm install --ignore-scripts \
+ && npm run build
+
+# --- Stage 2: lean runtime: node + the BFF script + email templates + SDK ---
+FROM public.ecr.aws/docker/library/node:22-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Gateway code + the auth/ helpers + email templates (read at runtime relative
+# to process.cwd(): resolve(process.cwd(), 'src/email-templates')).
+COPY apps/opposite-osiris/scripts/auth-gateway.mjs ./scripts/auth-gateway.mjs
+COPY apps/opposite-osiris/scripts/auth/ ./scripts/auth/
+COPY apps/opposite-osiris/src/email-templates/ ./src/email-templates/
+
+# The built SDK, where Node resolves a bare `@mini-baas/js` import from /app.
+COPY --from=build /sdk/package.json ./node_modules/@mini-baas/js/package.json
+COPY --from=build /sdk/dist/ ./node_modules/@mini-baas/js/dist/
+
+USER node
+EXPOSE 8787
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
+  CMD node -e "fetch('http://127.0.0.1:8787/api/auth/availability').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["node", "scripts/auth-gateway.mjs"]

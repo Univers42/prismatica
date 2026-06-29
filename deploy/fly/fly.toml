@@ -1,0 +1,56 @@
+# prismatica-auth-gateway — the opposite-osiris auth BFF (Node, scripts/auth-gateway.mjs).
+# Deployed as a tiny standalone fly Machine. It brokers website auth against the
+# grobase BaaS (grobase-stack.fly.dev) and mints the osionos session via the
+# osionos-bridge (POST /api/auth/osionos-session -> handleOsionosSession).
+#
+# Default deploy uses the known-good published image (PULL-ONLY, same one the
+# local compose stack runs). To rebuild from source instead, deploy with
+# Dockerfile.fly (see deploy/fly/Dockerfile.fly + the README note).
+app = "prismatica-auth-gateway"
+primary_region = "cdg"
+
+[build]
+  # Build from source (Dockerfile.fly, repo-root context) so demo/local edits
+  # (e.g. the AUTH_DEMO_INSECURE Turnstile bypass) ship instead of the published image.
+  dockerfile = "Dockerfile.fly"
+
+# Non-secret config. SERVICE_ROLE_KEY / OSIONOS_BRIDGE_SHARED_SECRET /
+# TURNSTILE_SECRET_KEY / SMTP_PASSWORD are SECRETS — set via `fly secrets set`,
+# never here (this file is committed).
+[env]
+  AUTH_GATEWAY_PORT = "8787"
+  # grobase Kong gateway (GoTrue /auth/v1, data /query/v1, storage /storage/v1).
+  PUBLIC_BAAS_URL = "https://grobase-stack.fly.dev"
+  # Browser-safe anon JWT (role=anon) — same key the SPA ships.
+  PUBLIC_BAAS_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNzE5Mzc0LCJleHAiOjE5MzkzOTkzNzR9.ee8_21t5tNxe3SKrN_q32_KCvPsiVmFrdrxYM-6qvPo"
+  # Production posture (guards refuse to boot on a public https PUBLIC_SITE_URL
+  # if these drift): email verification ON, Turnstile bypass OFF, >=1 proxy hop.
+  AUTH_REQUIRE_EMAIL_VERIFICATION = "true"
+  TURNSTILE_BYPASS_LOCAL = "false"
+  # browser -> Vercel edge (same-origin rewrite) -> fly proxy -> gateway = 2 hops.
+  AUTH_TRUSTED_PROXY_HOPS = "2"
+  # --- cross-component URLs: REPLACE the PLACEHOLDERs before/at deploy ---
+  # Website origin (Vercel) — sole CORS allow-origin AND the prod-origin trigger.
+  PUBLIC_SITE_URL = "PLACEHOLDER:opposite-osiris-web-url"
+  # osionos-bridge session-mint endpoint (its deployed fly URL + this path).
+  OSIONOS_BRIDGE_URL = "PLACEHOLDER:osionos-bridge-url/api/auth/bridge/session"
+  # osionos app origin — validates the bridge's redirect target (LOW-3).
+  PUBLIC_OSIONOS_APP_URL = "PLACEHOLDER:osionos-app-url"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/auth/availability"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

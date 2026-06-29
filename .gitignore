@@ -29,3 +29,10 @@ docker-compose.override.yml
 
 # jetbrains setting folder
 .idea/
+.vercel
+.env*
+
+# build cache (do not commit)
+.pnpm-store/
+.pnpm_store
+*.pnpm_sto*
