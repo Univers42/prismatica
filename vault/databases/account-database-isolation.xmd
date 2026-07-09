@@ -1,0 +1,74 @@
+---
+title: Per-Account Database Isolation
+icon: ⚿
+order: 513
+summary: Every database request is scoped to the signed-in account through a workspace-membership check — no account can read or write a mount it isn't a member of.
+---
+
+# Per-Account Database Isolation
+
+A workspace tool is only as trustworthy as its boundaries. osionos scopes **every**
+live-database request to the account making it: you see and touch only the databases
+your account belongs to, enforced on the server, not just hidden in the UI.
+
+## The relation that grants access
+
+Access is not a flat allow-list — it follows a chain of memberships that already
+existed in the data model:
+
+```text
+user
+  └─ workspace member         (which workspaces am I in?)
+       └─ workspace           (what does that workspace own?)
+            └─ workspace database   (which mounts are linked here?)
+```
+
+> [!info] Enforced, not duplicated
+> Rather than invent a new user-to-database table, osionos **enforces the membership
+> chain that already exists** — the honest, minimal fix. A defence-in-depth
+> row-level policy backs it at the database layer too.
+
+## Two doors that were closed
+
+A security pass found two independent ways an account could over-reach, and shut
+both.
+
+> [!error] Vector A — the account switcher
+> A fresh login handoff was **merged** into the map of previously-signed-in accounts,
+> so a new user could inherit a prior user's still-valid session and switch into it.
+> Fix: a fresh handoff is a **primary login that replaces** the account set — merging
+> only happens under an explicit "add another account" intent. Replacing also purges
+> the prior account's tokens, personas and workspaces from local storage.
+
+> [!error] Vector B — the data plane
+> The `/api/databases/*` handlers checked only that you held a valid session, then
+> took the database id straight from the request — so any signed-in user could read,
+> write, or run DDL against any mount the tenant owned. Fix: **every per-mount handler
+> now runs an access check** (`403` if the mount isn't in your workspaces), and the
+> list endpoint intersects the registry with the mounts you can reach.
+
+## An empty navigator is the system working
+
+| Account | Sees |
+|:--------|:-----|
+| The owner / a member | their own linked databases |
+| A user in no database workspace | **nothing** — count zero |
+
+> [!success] Verified
+> An isolation test suite mints an owner token and an unrelated token and asserts the
+> owner gets `200` while the other gets `403` on schema, rows, DDL, transactions and
+> list. The owner reads their databases; the other reads none.
+
+## Denials don't storm
+
+A stale browser tab pointing at a database you can no longer access used to retry
+forever, hammering the server with `403`s.
+
+> [!tip] Fail fast, stay quiet
+> A permanent denial (a `401` or `403`) now **stops** that view's polling and realtime
+> loop instead of retrying, and the first denial is remembered so re-mounting the tab
+> doesn't re-issue the doomed requests. The boundary holds *and* stays quiet.
+
+> [!note] Not a bug — a boundary
+> The demo databases belong to a specific account. A different account not seeing them
+> is isolation **working as designed**; sign in as the owner to use them.

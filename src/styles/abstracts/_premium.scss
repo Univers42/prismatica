@@ -1,0 +1,156 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*   _premium.scss — glassmorphism + motion layer                             */
+/*                                                                            */
+/*   A premium visual layer over the existing two-token system. Everything    */
+/*   here is theme-adaptive (derived from --brand-* via color-mix, so solar/  */
+/*   aurora/ember/forest all get correct glass automatically) and GPU-cheap   */
+/*   (transform/opacity animation only). Every animation is disabled under    */
+/*   prefers-reduced-motion. Glass never carries text contrast — copy sits on */
+/*   the opaque --system-text* tokens, so WCAG contrast is unaffected.        */
+/*                                                                            */
+/* ************************************************************************** */
+
+:root {
+	// --- frosted-glass surface tokens (translucent, theme-adaptive) ---
+	--glass-bg: color-mix(in srgb, var(--brand-canvas-surface) 60%, transparent);
+	--glass-bg-strong: color-mix(in srgb, var(--brand-canvas-surface) 80%, transparent);
+	--glass-border: color-mix(in srgb, var(--brand-canvas-text) 14%, transparent);
+	--glass-border-strong: color-mix(in srgb, var(--brand-canvas-text) 24%, transparent);
+	--glass-highlight: color-mix(in srgb, #ffffff 55%, transparent);
+	--glass-sheen: color-mix(in srgb, #ffffff 10%, transparent);
+	--glass-blur: 16px;
+	--glass-shadow:
+		0 24px 60px -22px color-mix(in srgb, var(--brand-canvas-bg) 62%, transparent),
+		0 4px 14px -6px color-mix(in srgb, var(--brand-canvas-bg) 34%, transparent);
+
+	// --- glow / motion ---
+	--glow-primary: color-mix(in srgb, var(--brand-palette-primary) 46%, transparent);
+	--glow-secondary: color-mix(in srgb, var(--brand-palette-secondary) 40%, transparent);
+	--ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-premium-in: cubic-bezier(0.7, 0, 0.84, 0);
+	--dur-entrance: 720ms;
+
+	// aurora backdrop intensity — kept low on light solar, richer on the darks
+	--aurora-opacity: 0.42;
+	--aurora-blur: 40px;
+}
+
+// Dark palettes carry a richer, more luminous aurora + a crisper glass edge.
+:root[data-theme='aurora'],
+:root[data-theme='ember'],
+:root[data-theme='forest'],
+:root[data-theme='dark'],
+:root[data-theme='night'] {
+	--glass-bg: color-mix(in srgb, var(--brand-canvas-surface) 48%, transparent);
+	--glass-bg-strong: color-mix(in srgb, var(--brand-canvas-surface) 70%, transparent);
+	--glass-border: color-mix(in srgb, #ffffff 12%, transparent);
+	--glass-border-strong: color-mix(in srgb, #ffffff 22%, transparent);
+	--glass-highlight: color-mix(in srgb, #ffffff 22%, transparent);
+	--glass-sheen: color-mix(in srgb, #ffffff 6%, transparent);
+	--aurora-opacity: 0.72;
+}
+
+/* ── Frosted-glass surface ─────────────────────────────────────────────── */
+.glass {
+	background:
+		linear-gradient(135deg, var(--glass-sheen), transparent 46%),
+		var(--glass-bg);
+	-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+	backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+	border: 1px solid var(--glass-border);
+	box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+}
+
+// Fallback for engines without backdrop-filter: lean on the stronger opaque tint.
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.glass { background: var(--glass-bg-strong); }
+}
+
+/* ── Animated aurora backdrop ──────────────────────────────────────────── */
+.aurora-bg {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+	contain: layout paint;
+}
+.aurora-bg__blob {
+	position: absolute;
+	width: 62vw;
+	height: 62vw;
+	max-width: 820px;
+	max-height: 820px;
+	border-radius: 50%;
+	opacity: var(--aurora-opacity);
+	filter: blur(var(--aurora-blur));
+	will-change: transform;
+	transform: translate3d(0, 0, 0);
+	mix-blend-mode: normal;
+}
+.aurora-bg__blob--a {
+	top: -14%;
+	left: -8%;
+	background: radial-gradient(circle at center, var(--brand-palette-primary) 0%, transparent 66%);
+	animation: aurora-drift-a 26s var(--ease-premium) infinite alternate;
+}
+.aurora-bg__blob--b {
+	top: -6%;
+	right: -12%;
+	background: radial-gradient(circle at center, var(--brand-palette-secondary) 0%, transparent 66%);
+	animation: aurora-drift-b 32s var(--ease-premium) infinite alternate;
+}
+.aurora-bg__blob--c {
+	bottom: -22%;
+	left: 24%;
+	background: radial-gradient(circle at center, var(--brand-palette-warm) 0%, transparent 68%);
+	opacity: calc(var(--aurora-opacity) * 0.72);
+	animation: aurora-drift-c 38s var(--ease-premium) infinite alternate;
+}
+
+@keyframes aurora-drift-a {
+	from { transform: translate3d(0, 0, 0) scale(1); }
+	to   { transform: translate3d(8%, 10%, 0) scale(1.18); }
+}
+@keyframes aurora-drift-b {
+	from { transform: translate3d(0, 0, 0) scale(1.05); }
+	to   { transform: translate3d(-10%, 8%, 0) scale(1.24); }
+}
+@keyframes aurora-drift-c {
+	from { transform: translate3d(0, 0, 0) scale(1); }
+	to   { transform: translate3d(10%, -8%, 0) scale(1.2); }
+}
+
+/* ── Entrance + ambient motion (opt-in via classes) ────────────────────── */
+@keyframes premium-rise {
+	from { opacity: 0; transform: translate3d(0, 22px, 0); }
+	to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes premium-float {
+	from { transform: translate3d(0, -0.55%, 0); }
+	to   { transform: translate3d(0, 0.55%, 0); }
+}
+@keyframes premium-shimmer {
+	to { background-position: 200% center; }
+}
+@keyframes premium-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 var(--glow-secondary); }
+	50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-palette-secondary) 6%, transparent); }
+}
+
+// Staggered entrance helper: children rise in sequence on load.
+.premium-enter > * {
+	animation: premium-rise var(--dur-entrance) var(--ease-premium) both;
+}
+.premium-enter > *:nth-child(1) { animation-delay: 60ms; }
+.premium-enter > *:nth-child(2) { animation-delay: 150ms; }
+.premium-enter > *:nth-child(3) { animation-delay: 240ms; }
+.premium-enter > *:nth-child(4) { animation-delay: 330ms; }
+.premium-enter > *:nth-child(5) { animation-delay: 420ms; }
+.premium-enter > *:nth-child(6) { animation-delay: 510ms; }
+
+@media (prefers-reduced-motion: reduce) {
+	.aurora-bg__blob { animation: none !important; }
+	.premium-enter > * { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

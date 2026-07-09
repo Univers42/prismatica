@@ -12,6 +12,7 @@
 
 @use 'abstracts/tokens';
 @use 'themes/color-modes';
+@use 'abstracts/premium';
 @use 'base/reset';
 @use 'base/typography';
 @use 'utilities/accessibility';
@@ -35,3 +36,6 @@
 @use 'components/portal';
 @use 'utilities/animations';
 @use 'utilities/responsive';
+// Swiss / Vignelli theme (DEFAULT) — loaded last so its [data-theme='swiss']
+// overrides win ties against component styles emitted above.
+@use 'abstracts/swiss';

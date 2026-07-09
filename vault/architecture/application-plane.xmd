@@ -1,0 +1,71 @@
+---
+title: The Application Plane
+icon: ⊕
+order: 201
+summary: The TypeScript plane — everything a user touches: the osionos editor, the opposite-osiris website, and the bridging services.
+---
+
+# The Application Plane
+
+The application plane is written in **TypeScript** and is everything a user
+actually touches. In the deployment topology it *is* the frontends-only root
+compose stack — nothing in this plane holds a database or a service-role secret
+on its own; it reaches the [control](control-plane.xmd) and
+[data](data-plane.xmd) planes through the grobase backend.
+
+## What lives here
+
+> [!info] Membership of the plane
+> The React frontend (**osionos**), the Astro website (**opposite-osiris**, the
+> site you are reading now), the **bridging services**, and the **Mail &
+> Calendar** apps.
+
+| App | Tech | Host port | Purpose |
+|:----|:-----|:---------:|:--------|
+| opposite-osiris | Astro | 4322 (proxy) | Marketing website + auth landing |
+| osionos | React + Vite | 3001 | Block editor / collaborative workspace |
+| osionos-bridge | TypeScript | 4000 | Workspace persistence, website → editor |
+| mail / mail-bridge | React / TS | 3002 / 4100 | Gmail OAuth integration |
+| calendar / calendar-bridge | React / TS | 3003 / 4200 | Google Calendar OAuth |
+
+The compose service for the website is named **`opposite-osiris-web`** (it also
+publishes `4323 → 8080` directly for debugging).
+
+## osionos — the block editor
+
+osionos is a React + Vite single-page app: a Notion-style block editor that grew
+into a full collaborative workspace. Its source uses a **feature-sliced layout**
+(`app/ components/ data/ entities/ features/ pages/ services/ shared/ store/
+types/ widgets/`).
+
+> [!warning] osionos is a submodule with hard rules
+> osionos lives in a nested submodule (`apps/osionos/app`) and branches from
+> `develop`, never `main`. There is a convention of **≤200 lines and ≤5 functions
+> per file** — honour it in new code. See the [directory map](directory-map.xmd).
+
+## opposite-osiris — the website + auth landing
+
+The Astro site is both marketing surface and the **auth landing** where a user
+signs in before being handed off to the editor. This documentation shell itself
+ships from opposite-osiris, rendered by the project's own markengine.
+
+## The bridges are part of this plane — but special
+
+The `*-bridge` services are TypeScript, so they sit in the application plane, but
+they carry a **trust boundary**: osionos never talks to the BaaS directly. The
+bridge holds the service-role key and proxies data on the app's behalf.
+
+- [x] Bridge is TypeScript → application plane
+- [x] Bridge holds the privileged key → a trust boundary
+- [ ] Bridge is *not* the control plane — it does not decide policy, it forwards
+
+> [!tip] Go deeper
+> The bridge earns its own page: [the Node bridge trust
+> boundary](bridge-trust-boundary.xmd), and the two routes osionos uses to reach
+> the backend are compared in [bridge vs Kong](osionos-baas-access.xmd).
+
+## Not in this plane
+
+Postgres, Kong, gotrue, postgrest, redis, and the realtime server are **not**
+application-plane services — they belong to grobase. The application plane only
+*reaches* them, by container-name DNS over an external network.

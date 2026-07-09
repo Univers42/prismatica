@@ -1,0 +1,64 @@
+---
+title: The Go control plane
+icon: ⚙
+order: 1102
+summary: The Go control plane decides who can do what — key verification, provisioning, tenancy, metering, and the enterprise packages — organised by domain, never by type.
+---
+
+# The Go control plane
+
+The control plane is the **Go** half of grobase: the plane that decides *who*
+can do *what*. It lives at `src/control-plane/` (module
+`github.com/dlesieur/mini-baas/control-plane`) and ships as a handful of `cmd/`
+binaries — `tenant-control`, `adapter-registry`, `orchestrator`,
+`function-scheduler`, `webhook-dispatcher`, `scale-seed`.
+
+## The one job it must never get wrong
+
+A frontend hands grobase a **cleartext API key**. The control plane resolves it
+to an identity:
+
+```http
+POST /v1/keys/verify
+```
+
+The [Rust data plane](rust-data-plane.xmd) then *executes* the query and
+owner-scopes it per request using that identity. This split — Go authenticates,
+Rust executes — is the load-bearing seam of the whole system.
+
+## Packaged by domain, not by type
+
+The `internal/` tree groups everything about one concept in one package — never
+a `models/` / `utils/` / `helpers/` junk drawer. A sample of the domains:
+
+- **Core** — `tenants`, `provision`, `packages`, `orchestrator`, `adapterregistry`
+- **Infra / cross-cutting** — `config`, `httpx`, `identity`, `pg`, `observability`, `serviceauth`
+- **Cloud** — `metering`, `quotastage`, `spendcap`, `abuseguard`, `entitlements`, `backup`
+- **Enterprise (Track D)** — `orgs`, `teams`, `sso`, `scim`, `passkeys`, `audit`, `compliance`, `cmek`
+- **Parity (Track E)** — `branching`, `push`, `webhooks`
+
+> [!note] The "what capability disappears?" test
+> Every package answers it in one sentence: remove `metering` and usage
+> accounting disappears; remove `sso` and enterprise login disappears. A package
+> named `utils` couldn't answer — so there isn't one.
+
+## Flag-gating is structural
+
+Cloud and enterprise routes mount only under `if envBool("FLAG")` — roughly 38
+such sites, all defaulting false. A missing variable means the route is
+**physically not there**, so the stack is byte-parity by construction.
+
+> [!warning] The master + sub-flag AND pattern
+> Several features need *both* halves truthy across *both* planes — e.g.
+> metering is `METERING_ENABLED` (Go) **and** `DATA_PLANE_METERING` (Rust). Flip
+> only one and you get a silent no-op.
+
+## Built and tested Docker-first
+
+```bash
+make go-control-plane-check   # go vet ./... && go test ./...
+make go-control-plane-build   # compose build
+```
+
+The toolchain is pinned to `golang:1.25-bookworm`; the repo norm is strict —
+package-by-domain, no globals, dependency injection at the composition root.

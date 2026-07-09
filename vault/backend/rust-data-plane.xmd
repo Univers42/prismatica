@@ -1,0 +1,70 @@
+---
+title: The Rust data plane & realtime router
+icon: ⚡
+order: 1103
+summary: The Rust data plane executes every query across 8 engine adapters and owner-scopes it per request; a separate 10-crate Rust workspace routes realtime events.
+---
+
+# The Rust data plane & realtime router
+
+Where the [control plane](go-control-plane.xmd) says *who you are*, the **Rust
+data plane** does *what you asked*. It lives at `src/data-plane-router/` as a
+cargo workspace — crates `data-plane-core`, `data-plane-pool`,
+`data-plane-server`, `engine-conformance` — and produces one binary,
+`data-plane-router`.
+
+## Eight engines, one interface
+
+The adapters live in `crates/data-plane-pool/src/`:
+
+```
+postgres   mysql   mongo   mssql   sqlite   redis   http   dynamodb
+```
+
+`dynamodb` is an opt-in cargo feature, **OFF by default**. The rest are the
+`engines-full` default. Per-engine capability truth lives in Rust
+(`data_plane_core::EngineCapabilities`) and is surfaced through the TypeScript
+query-router.
+
+> [!warning] Engine-agnostic by construction
+> A fix that works for Postgres but breaks the other seven is not done. Isolation
+> is enforced **per request**, not by pool state — which is exactly what lets
+> `SHARE_POOLS` collapse 10K tenants onto one pool.
+
+## Many product shapes from one codebase
+
+The data plane builds several shapes purely via cargo features
+(`crates/data-plane-server/Cargo.toml`):
+
+- **`nano`** — SQLite-only, ~5 MB scratch image.
+- **`one`** — adds OAuth/OIDC, argon2id email-password, RFC-6238 TOTP MFA, SMTP,
+  file storage, and an admin UI at `/_/`.
+- **`control-pg`** — server-backed automations + a transactional outbox.
+- `default = [engines-full, control-pg, ratelimit-redis]`.
+
+## The realtime router is a separate workspace
+
+Realtime is its own **10-crate** Rust workspace under
+`infra/docker/services/realtime/realtime-agnostic/`:
+
+| Crate family | Role |
+|:-------------|:-----|
+| `realtime-core / -engine / -server` | The event pipeline |
+| `realtime-auth / -gateway / -client` | Auth, ingress, client |
+| `realtime-db-postgres / -db-mongodb` | Pluggable DB change producers |
+| `realtime-bus-inprocess / -bus-irc` | Pluggable EventBus backends |
+
+The EventBus (`inprocess` | `irc`) and the DB change producer
+(`postgres` | `mongodb`) are assembled in `realtime-server`.
+
+## Build & test
+
+```bash
+make rust-data-plane-check    # cargo check
+make rust-data-plane-test     # cargo test --workspace
+make conformance-postgres     # per-engine integration (the m27 gate)
+```
+
+> [!tip] The per-crate READMEs are the authoritative docs
+> Each `crates/<name>/README.md` under `data-plane-router` is the source of truth
+> for that piece of the data plane's architecture.

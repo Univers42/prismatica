@@ -1,0 +1,80 @@
+---
+title: Passkeys & WebAuthn
+icon: ✦
+order: 1011
+summary: The passwordless capability — server-side WebAuthn ceremonies shipped behind a flag, the MFA hook on the website, and the honest status of each.
+---
+
+# Passkeys & WebAuthn
+
+Passwordless sign-in with passkeys is a **capability the platform is built for**,
+implemented as server-side WebAuthn ceremonies. This page describes what exists,
+where it lives, and — importantly — its current status, so you do not assume more
+than is shipped.
+
+> [!info] Status in one line
+> The full WebAuthn registration + authentication ceremonies exist in the control
+> plane, **flag-gated OFF by default**. The website carries a reserved MFA /
+> WebAuthn hook. It is real code behind a flag, not a live end-user toggle yet.
+
+## Where the ceremonies live
+
+The control plane (Track-D) adds server-side WebAuthn on top of the identity
+provider, because gotrue itself has **no** passkey support. The ceremonies are
+driven by the maintained `go-webauthn/webauthn` library and mount four routes:
+
+| Route | Returns |
+|:------|:--------|
+| `POST /v1/auth/passkeys/register/begin` | `{ creation, challenge_id }` |
+| `POST /v1/auth/passkeys/register/finish` | `{ credential_id }` |
+| `POST /v1/auth/passkeys/login/begin` | `{ assertion, challenge_id }` |
+| `POST /v1/auth/passkeys/login/finish` | `{ access_token, … }` (a session JWT) |
+
+```
+register:  begin → authenticator creates a credential → finish (stores credential_id)
+login:     begin → authenticator signs the challenge   → finish (returns a session JWT)
+```
+
+## The begin → finish security model
+
+> [!note] Why finish needs no separate authz
+> The **begin** routes are authorized — they decide who may *start* a ceremony for
+> a given user. The **finish** routes consume a one-time, server-held
+> `challenge_id` minted by an already-authorized begin call; a reused or unknown
+> challenge id 404s before any verification runs. The challenge is the capability.
+
+## Flag-gating and parity
+
+The feature is guarded by a `PASSKEYS_ENABLED` flag that defaults **off**.
+
+- [x] When **off**: the routes do not exist and a request 404s — byte-identical to
+  the gotrue-only baseline (whose proven-parity state is *the routes not existing*)
+- [x] When **on**: the ceremonies mount and run the full cryptographic exchange
+- [ ] Do not flip the flag on in shared or parity runs without a gate
+
+> [!success] Proven end-to-end
+> A verification gate exercises the D2c code — built from current source — against
+> a software authenticator (an in-memory ES256 key), also from current source, so
+> the **entire cryptographic ceremony runs end-to-end** with `RP_ID=localhost` and
+> `ORIGIN=http://localhost`. This is not a mocked test; the assertion is really
+> signed and really verified.
+
+## On the website today
+
+The Prismatica auth surface exposes a client `beginWebAuthn()` call that posts to
+an MFA options endpoint — but that endpoint is currently a **reserved hook**:
+
+> [!warning] Reserved, not wired
+> The gateway's MFA endpoint answers `501` with a message that it is a reserved
+> hook to be wired to a TOTP or WebAuthn provider before enabling in production.
+> So a *settings-level* passkey toggle is not yet a shipped end-user flow — the
+> server-side ceremonies are the built foundation it will sit on.
+
+## What this means for you
+
+- Passkeys are **architecturally ready** in the control plane, behind a flag.
+- Do not document or promise a user-facing "Add a passkey" settings button as
+  shipped — describe it as a capability that is flag-gated and, on the website
+  side, still a reserved hook.
+
+Related: [Authentication & Sessions](authentication-and-sessions.xmd).

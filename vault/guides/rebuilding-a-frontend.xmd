@@ -1,0 +1,62 @@
+---
+title: Rebuilding a Single Frontend
+icon: ⎔
+order: 109
+summary: Rebuild just one app after editing it — without tearing the whole stack down.
+---
+
+# Rebuilding a Single Frontend
+
+When you've edited one app, you don't need to re-run the whole pipeline. Rebuild
+just that service.
+
+## The general form
+
+```bash
+docker compose up -d --build <service-name>
+```
+
+This rebuilds and restarts a single frontend in place while the rest of the stack
+keeps running.
+
+## The frontend services
+
+`make all` builds this set of root frontends:
+
+| Service | App |
+|:--------|:----|
+| `osionos-app` | The React block editor. |
+| `osionos-bridge` | Workspace persistence layer. |
+| `auth-gateway` | Go authentication & sessions. |
+| `opposite-osiris-web` | The Astro website (this docs shell). |
+| `local-https-proxy` | The TLS front door. |
+| `livekit` | The media server. |
+
+## The osionos shortcut
+
+For the editor specifically there's a dedicated target that rebuilds and
+hard-reloads it:
+
+```bash
+make update_web    # rebuild + restart osionos-app, then hard-reload :3001
+```
+
+> [!tip] Avoid a restart-time 502
+> Rebuilding a service can briefly break the container-name DNS its neighbours
+> rely on, surfacing as a transient 502. Rebuilding **only** the target service
+> (rather than pulling its dependencies with it) keeps the blast radius small and
+> the blip short.
+
+## After a rebuild
+
+- [ ] `docker compose ps` shows the service healthy again
+- [ ] Reload the app's URL (a **hard** reload for the editor)
+- [ ] `make healthcheck` if you want the full green-light — see [Health Checks](health-checks.xmd)
+
+> [toggle] The in-app Update button
+> The osionos editor exposes an Update control that triggers a rebuild through a
+> small host-side daemon. It's the same idea as `make update_web`, driven from
+> inside the running app instead of the terminal.
+
+For a full stack rebuild instead of a single service, just re-run
+[make all](make-all.xmd) — it's idempotent.

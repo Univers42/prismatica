@@ -1,0 +1,70 @@
+---
+title: The Update / Rebuild Button
+icon: ⚡
+order: 812
+summary: The top bar's Update button can rebuild the running stack — it POSTs to a tiny host daemon that runs `make all`, and gracefully degrades to a data refresh when the daemon is absent.
+---
+
+# The Update / Rebuild Button
+
+The [top bar](global-top-bar.xmd) carries a blue **Update** button. In the
+containerised dev stack it does something genuinely useful: it triggers a full
+**rebuild of the running app** and reloads — without you leaving the browser.
+
+## The problem it solves
+
+The osionos containers **bake their source at build time** (the live container is
+nginx-static). So editing app code and refreshing the page shows nothing new —
+you have to rebuild the image. But a browser button **cannot** run `docker` or
+`make` on the host; it lives in a sandbox.
+
+## The host daemon
+
+The bridge is a tiny host-side daemon, `scripts/dev-rebuild-server.py`:
+
+- **Python, not Node** — the host has `python3`, `make`, `docker`, and `bash`, but
+  no host Node on purpose. Zero-dependency `http.server` from the stdlib.
+- Listens on `127.0.0.1:7799` (loopback is exempt from mixed-content blocking,
+  the same trick the LiveKit video rooms use).
+- `POST /rebuild` runs `make all` and streams the output back; CORS is open so the
+  page can call it.
+
+You start it in a terminal once:
+
+```sh
+make rebuild-server     # runs scripts/dev-rebuild-server.py on 127.0.0.1:7799
+```
+
+## What the button does
+
+The client logic in `widgets/top-bar/model/rebuild.ts` (`rebuildServerUp`,
+`runHostRebuild`) drives `UpdateButton`:
+
+1. Probe the daemon.
+2. **Daemon up** → confirm with the user → `POST /rebuild` (`make all`) → reload on
+   success.
+3. **Daemon down** → fall back to a live-data refresh (`fetchPages`) and show a
+   hint on how to enable full rebuilds.
+
+```text
+[Update] ──probe──► 127.0.0.1:7799
+   │  up                         │  down
+   ▼                             ▼
+ confirm → make all → reload   fetchPages() + hint
+```
+
+> [!tip] Graceful degradation
+> The button never errors out. Without the daemon it still does something useful —
+> pulls fresh workspace data — and tells you what you'd need to run for a real
+> rebuild.
+
+> [!warning] `make all` is heavyweight
+> The full-rebuild path runs the whole self-provisioning pipeline, not a
+> hot-reload. It is a developer convenience for the local Docker stack, gated
+> behind a confirm — not a production update mechanism. On the desktop build the
+> same button is context-aware and checks for an app update instead.
+
+> [!note] Why a daemon at all
+> It is the one seam that lets an in-browser control reach host tooling safely: a
+> loopback-only, single-purpose HTTP endpoint, explicitly started by the developer
+> — nothing listening on the network, nothing running unless you launched it.

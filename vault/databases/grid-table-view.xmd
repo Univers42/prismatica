@@ -1,0 +1,67 @@
+---
+title: The Grid (Table) View
+icon: ▤
+order: 503
+summary: A virtualized Notion-style table that renders thousands of live rows smoothly, with a sticky header, typed cells and persistent per-view settings.
+---
+
+# The Grid (Table) View
+
+The default way to look at a live database is the **grid** — a Notion-style table
+where columns are typed, the header is sticky, and rows scroll by the thousand
+without stalling the browser.
+
+## Virtualization: thousands of rows, a handful of DOM nodes
+
+A naïve table with ten thousand `<tr>` elements would crawl. The grid instead uses
+**row virtualization**: only the rows currently in the viewport are mounted, with
+spacer rows above and below standing in for the rest. Scroll, and the window of real
+rows slides along.
+
+> [!info] How much data is in reach
+> The data plane clamps any single query to **500 rows**, so the adapter
+> **offset-loops** to preload a larger baseline, and the table view raises its own
+> display cap so virtualization can show everything already loaded rather than
+> hiding rows behind a "Load more" wall.
+
+## What the grid gives you
+
+- **Sticky header** — column names stay pinned as you scroll a long table.
+- **Typed cells** — text, number, date, checkbox, select, relation and place each
+  render and edit in their own way.
+- **Keyboard navigation** — move the selection cell to cell; the view scrolls to
+  keep it in sight.
+- **Fill-drag** — drag a cell's value down a column.
+- **Inline editing** — commit a cell and it writes straight back to the engine.
+
+## Dates never crash the view
+
+Live tables hold messy values — a MySQL `0000-00-00`, a NULL where the schema
+inferred a date, a free-text field the sampler guessed wrong. A strict date
+formatter would throw on these and take the whole database block down.
+
+> [!success] Guarded formatting
+> Every date cell — display *and* edit — runs through a lenient, guarded formatter
+> that returns nothing (and falls back to the raw string) instead of throwing on an
+> unparseable value. One bad date no longer blanks the grid.
+
+## Your view settings survive a reload
+
+The live adapter rebuilds a table's default views every time it loads. Left alone,
+that would erase any view you customised the moment you refreshed.
+
+> [!tip] Custom views are remembered
+> The grid persists your per-database views to local storage and **merges** them over
+> the rebuilt defaults on load. Views you add or edit come back after a hard refresh;
+> a default you deleted may reappear — a deliberate, minor trade-off.
+
+## Relations render as their target's title
+
+A column that is a foreign key does not show a bare number. The grid resolves the
+referenced row and shows **its title** as a clickable tag — see
+[Relations & Foreign Keys](relations-foreign-keys.xmd) for how the link is found and
+what an edit writes back.
+
+---
+
+The same rows, regrouped as cards → [The Board View](board-view.xmd).

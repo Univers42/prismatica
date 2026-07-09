@@ -1,0 +1,64 @@
+---
+title: Shadow → Parity → Cutover
+icon: ⇄
+order: 204
+summary: The discipline behind every major change — new code runs beside old, proves identical behaviour, then takes over. Deletion is always last.
+---
+
+# Shadow → Parity → Cutover
+
+Track Binocle never flips a switch on a major change. New code runs **in
+parallel** with the old, validation **precedes** any cutover, and **deletion is
+always last**. This is the single discipline that makes cross-plane changes safe.
+
+> [!quote] The rule in one line
+> New code runs in parallel with old, validation precedes any cutover, deletion
+> is always last.
+
+## The three phases
+
+1. **Shadow** — the new path is built and runs *alongside* the old one, serving
+   no real traffic yet. It can be exercised, instrumented, and compared.
+2. **Parity** — identical requests are sent through **both** paths and their
+   results are compared. Parity holds only when the outputs match.
+3. **Cutover** — once parity holds *and* CI is green with the new routing, the
+   new path takes over real traffic. The old path stays until deletion is safe.
+
+```text
+   ┌─ Shadow ─┐   ┌─ Parity ─┐   ┌─ Cutover ─┐   ┌─ Delete ─┐
+   │ new runs │   │ identical│   │ new serves│   │ old code │
+   │ beside   │──►│ results  │──►│ real      │──►│ removed  │
+   │ old      │   │ proven   │   │ traffic   │   │ (last)   │
+   └──────────┘   └──────────┘   └───────────┘   └──────────┘
+```
+
+## Why parity comes before cutover
+
+Parity is not a formality — it is the evidence that the cutover is safe. Without
+a proven parity comparison, a cutover is a guess.
+
+> [!warning] UNKNOWN counts as FAIL
+> A parity or gate result that is `UNKNOWN` is treated as `FAIL`, not as a
+> maybe. If you cannot prove both paths agree, keep shadowing and instrumenting —
+> do not cut over.
+
+## Where you see it
+
+- **The data plane.** The Rust query router shadows, then reaches parity with,
+  the legacy TypeScript data path before any cutover. See [the data
+  plane](data-plane.xmd).
+- **The deletion gates.** Removing legacy code is the very last step, gated on
+  live traffic, shadow parity, and green CI — the [migration safety
+  gates](migration-safety-gates.xmd).
+
+## Checklist for a major change
+
+- [ ] New path built and running in **shadow** (no real traffic)
+- [ ] Identical requests compared — **parity** proven, not assumed
+- [ ] CI **green** with the new routing enabled
+- [ ] Only then: **cutover**
+- [ ] Only after cutover is proven stable: **delete** the old path
+
+> [!tip] Deletion is a reward, not a step
+> The best time to delete legacy code is *after* it has been unused and proven
+> unnecessary — never before parity, never as the first move.

@@ -1,0 +1,58 @@
+---
+title: ABAC Permission Masks
+icon: ⚙
+order: 708
+summary: Attribute-based access control with per-field masks — roles, policies, the chmod-cycle UI, and View-as — as exercised by the agency org sim.
+---
+
+# ABAC Permission Masks
+
+Beyond "can you open this page", an organization needs "which *columns* can you
+see". osionos answers that with **attribute-based access control (ABAC)** and
+per-field **masks**, proven end-to-end by the agency org simulation.
+
+## Roles and policies
+
+The agency tenant is provisioned with a real policy set:
+
+| Ingredient | Count | Role |
+|:-----------|:-----:|:-----|
+| `agency:*` roles | 11 | Who a person is (director, analyst, …) |
+| Policies | 48 | What each role may do, per resource |
+| Field masks | — | Which fields a role sees vs. has hidden |
+
+Policies are compiled into a bundle the data plane can evaluate. osionos fetches
+the current bundle from the control plane:
+
+```text
+GET /permissions/bundles/latest   →   the Rust evaluator (parity proven)
+```
+
+## The chmod-cycle UI
+
+Permissions are edited in a matrix in Settings, using a **chmod-style cycle** — a
+cell toggles through access levels the way `chmod` cycles Unix bits — plus the
+field masks and a **View-as** control that re-renders the surface as another role
+would see it. The point of View-as is to *check your work*: apply a mask, then
+look through someone else's eyes before you trust it.
+
+> [!warning] Where masking is enforced today
+> Field masks are decided at the control plane's `/permissions/decide` endpoint.
+> osionos's live data reads currently use the **tenant** API key, not the
+> per-user identity — so the data plane can't yet mask fields *per user* on those
+> reads. Per-user data-plane masking is a known, documented gap, not a silent
+> assumption.
+
+## How a decision flows
+
+1. A role carries attributes; a resource carries attributes.
+2. A policy in the bundle matches the pair and yields allow/deny + a field mask.
+3. The Rust evaluator returns the decision — proven at parity with the reference.
+4. The UI renders only the fields the mask permits.
+
+> [!tip] Same evaluator, one source of truth
+> The bundle the UI reads is the same bundle the evaluator enforces. There's no
+> second copy of the rules to drift — the matrix you edit is the policy that
+> decides.
+
+See it running in [the agency org simulation](agency-org-simulation.xmd).

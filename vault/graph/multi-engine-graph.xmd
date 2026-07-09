@@ -1,0 +1,68 @@
+---
+title: Multi-Engine Graph
+icon: ⛁
+order: 407
+summary: The Second-Brain graph fuses notes with live records and cross-engine relations from every database an account is authorized for — Postgres, MySQL, Mongo and more.
+---
+
+# Multi-Engine Graph
+
+The graph is not just your notes. It is the whole data ecosystem an account can
+reach: **notes ⊕ live database records**, plus the relations that span *different*
+engines — Postgres, MySQL, Mongo, and the other backends grobase drives.
+
+## One graph, many sources
+
+```text
+  notes (osionos_pages) ─┐
+  Postgres records       ─┤
+  MySQL records          ─┼─► merge by id ─► one GraphModel ─► engine
+  Mongo records          ─┤
+  … other mounts         ─┘
+        + cross-engine edges (e.g. a ticket → an order)
+```
+
+The bridge composes it: `GET /api/graph/data?scope=workspace|account` merges the
+note graph with a record graph pulled from the data plane. `mergeGraphs` de-dupes
+nodes by id and edges by id, so a note and the record it mirrors don't double up.
+
+## The data path (and a dead end)
+
+> [!info] Records come from the query-router, over the bridge
+> Record graphs are fetched from the **internal** query-router `/graph/overview`
+> endpoint, authenticated with an `X-Baas-Api-Key` header. This is server-to-server,
+> behind the bridge — the browser never sees the key.
+
+> [!warning] The direct Kong path is not the graph path
+> The public `/query/v1/*` route through Kong returns `401` for graph overview. Only
+> the bridge → query-router path serves it. Don't reach for the direct client.
+
+## Access is authorization-scoped
+
+Which databases appear is derived from **authoritative workspace membership**, not
+from token claims alone. A join table, `osionos_workspace_databases`, records which
+mounts each workspace is associated with (engine, tables, edges table, label), under
+row-level security; the bridge is the enforcement point.
+
+| Caller | Sees |
+|:-------|:-----|
+| Workspace member | notes + every associated database's records |
+| Non-member | notes only — **zero** database records |
+| Unassociated workspace | notes only |
+
+A verified run scoped to a workspace returned ~2,147 nodes — notes plus Postgres and
+MySQL records — with ~1,727 edges, including cross-engine ticket→order links; a
+non-member on the same request got **0** records.
+
+## Node identity
+
+Record nodes use `dbId:resource:pk` as their id, and the mount's `edges` table must
+expose `from` / `to` / `type` columns for a relation to render. Because ids are
+global and stable, a record can also be **opened as a note** — the graph doubles as
+a launcher into the underlying data.
+
+- [x] Notes + live records in one model
+- [x] Cross-engine edges (ticket → order, review → product…)
+- [x] Per-user access, enforced at the bridge
+
+Resolving those ids on click is covered in [Node Peek & Open](node-peek-open.xmd).

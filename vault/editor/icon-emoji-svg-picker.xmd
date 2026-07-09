@@ -1,0 +1,62 @@
+---
+title: The Icon / Emoji / SVG Picker
+icon: ✦
+order: 308
+summary: One picker, one opaque string value — emoji, a Lucide icon, or custom SVG, each with an optional colour, understood everywhere.
+---
+
+# The Icon / Emoji / SVG Picker
+
+Page icons, callout icons, avatars, workspace glyphs — they all come from **one**
+shared picker and store as **one** opaque string. The design goal was a single
+value model that is backward-compatible with the old bare-emoji world.
+
+## The value model
+
+`iconValue.ts` (`parseIconValue` / `serializeIconValue`) encodes every icon as a
+single string in one of three forms, each with optional colour:
+
+| Form | Meaning |
+|:-----|:--------|
+| `😀` (bare) | A legacy emoji — still valid |
+| `icon:<lucide-kebab>` | A Lucide icon by kebab-case name |
+| `img:<url \| data-uri>` | Custom SVG, an uploaded file, or a URL |
+
+Optional suffixes: `;color=%23hex` sets the icon stroke, `;bg=%23hex` sets an
+emoji's chip background.
+
+> [!warning] Why the colours are URL-encoded
+> A raw `#` would collide with the `]` in callout markdown like `> [!note]`. So
+> the hex is percent-encoded (`%23`), and an SVG data-uri's own `;base64` is
+> never mistaken for a `;color=` suffix. Small rule, load-bearing.
+
+## The renderer
+
+`IconValueView` is a **drop-in superset** of the older `AssetRenderer`. It
+handles the new cases and delegates every legacy value straight through:
+
+- `img:` → an `<img>`
+- `icon:` → `LucideGlyph`, which loads the glyph via
+  `lucide-react/dynamicIconImports` — a per-icon lazy import, so the main bundle
+  stays lean
+- emoji + `;bg` → a coloured chip
+
+> [!info] Unknown icon names fall back
+> A non-Lucide `icon:` name (like `icon:page` or `icon:table`) falls back to the
+> legacy `AssetRenderer`, so nothing renders blank.
+
+## The picker UI
+
+`IconPicker` has three tabs plus a colour row:
+
+1. **Emoji** — the default emoji set.
+2. **Icons** — a curated common set, with full Lucide search.
+3. **Custom** — paste `<svg>` markup, paste a URL, or upload a file (read as a
+   data-uri).
+
+Click-outside and Escape dismiss it, and a swatch row sets the colour.
+
+> [!tip] It is the same picker everywhere
+> `EmojiPicker` is now just a thin alias to `IconPicker`, so every old call site
+> — `PageIcon`, settings avatar and workspace icon, editable and read-only
+> callouts, the sidebar and tab glyphs — gets the full picker for free.

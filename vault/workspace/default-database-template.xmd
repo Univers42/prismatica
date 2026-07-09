@@ -1,0 +1,79 @@
+---
+title: Applying a Database Template by Default
+icon: ⚙
+order: 809
+summary: How a database's default template gets applied on every "+ New" — the bug where in-grid creates bypassed it, and the fix.
+---
+
+# Applying a Database Template by Default
+
+A workspace database can carry **templates** — real osionos pages flagged
+`isTemplate`, one of them marked `isDefaultTemplate`. The promise is simple: click
+**+ New** and your default template's content is there, not a blank page. Getting
+that promise to hold everywhere took a fix.
+
+## How templates are stored
+
+Templates are ordinary pages, and the live `osionos_pages` table already has the
+columns:
+
+| Column | Meaning |
+|:-------|:--------|
+| `is_template` | this page is a template |
+| `is_default_template` | apply it on a blank `+ New` |
+| `recurrence` | (unrelated scheduling field) |
+
+The bridge persists and returns these, and `/api/pages/all` lists with **no**
+`is_template` filter, so templates reload with the rest of the tree.
+
+> [!note] Templates are per-workspace
+> A template lives in one workspace. If you own several workspaces, a template in
+> one will not appear while another is active — that is correct, not a bug.
+
+## The controller
+
+The split **+ New** button (`TopBarActions.tsx`) shows a chevron →
+a `TemplatesDropdown` ("Templates for <db>") **only** when a templates controller
+is present. `WorkspaceDatabaseBlock.tsx` provides that controller via
+`useWorkspaceTemplatesController()` — but **only** for workspace pages-databases.
+
+> [!info] Where the chevron does *not* appear
+> The `DatabaseBlock.tsx` router passes `templates` only on the workspace branch.
+> Live `baas:` mounts, known databases, and the fallback branch get no
+> controller — templates-as-page-content don't map onto external SQL rows.
+
+## The bug: in-grid "+ New" bypassed the default
+
+The top-bar split button applied the default correctly, but **every view's own
+in-grid "+ New"** — Table, Board, List, Gallery, Feed, Map — called the store's
+`addPage(database.id)` **directly**, skipping the controller. Result: blank pages,
+"as always".
+
+### The fix
+
+A new hook, `components/views/useDefaultTemplateCreate.ts`, wraps the blank
+create:
+
+```ts
+// runs the default template when one exists, else a blank create
+const create = useDefaultTemplateCreate(blankCreate);
+```
+
+- [x] wired into the **generic** view footers
+- [ ] context-specific creates (board column, calendar day, timeline start) stay
+  blank on purpose — they pre-fill their own props
+- [x] a null controller (live / standalone databases) → blank, unchanged
+
+Template content itself was already sound: `createPageFromTemplate` awaits
+`fetchPageContent`, then `instantiateTemplateContent` clones the blocks and resets
+placeholders.
+
+## A payload gotcha fixed alongside
+
+Saving a page config could hit **413 Payload Too Large**, because a `PageConfig`
+carries `versions[]` and `translations[]` with full block snapshots:
+
+- `pageConfigStore.ts` gained `shrinkConfigForApi()` — over a 5 MB soft limit it
+  sheds version and non-active translation content (settings always sync).
+- the bridge's JSON body limit was raised from 2 MB to 6 MB, so a config between
+  those two thresholds no longer 413s.

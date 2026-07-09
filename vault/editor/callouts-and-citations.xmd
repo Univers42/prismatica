@@ -1,0 +1,68 @@
+---
+title: Callouts & Citations
+icon: ◈
+order: 306
+summary: Callouts are typed, tinted containers; quotes render as real blockquotes with a citation line — both hold nested children.
+---
+
+# Callouts & Citations
+
+Callouts and quotes are the editor's two **container** blocks. They are not just
+styled paragraphs — they are parentable, they nest any block infinitely, and
+their children persist structurally as `block.children` JSON.
+
+## Semantic, typed callouts
+
+A callout has a **kind**, and the kind drives everything visual. The presets live
+in `entities/block/model/calloutTypes.ts`:
+
+`note` · `info` · `tip` · `success` · `warning` · `danger` · `important`
+
+Each preset carries an icon, a label, and a tone token (`--osio-block-tint-*`).
+`resolveCalloutType(color)` maps an emoji, a word-kind, or nothing at all onto a
+single preset — so a markdown `> [!warning]` and a picked emoji resolve to the
+same look.
+
+> [!tip] The tint is live while you edit
+> The editable callout applies the resolved tint the moment you type — surface,
+> border, and icon pick up the tone; body text stays default so it stays
+> readable. It also carries `role="note"` and an aria-label for screen readers.
+
+You pick or change a callout's type with `CalloutTypePicker`, which reuses the
+[icon / emoji / SVG picker](icon-emoji-svg-picker.xmd).
+
+## Quotes and citations
+
+A quote renders as a semantic `<blockquote>`. If its content ends with an
+attribution line, that line becomes a proper `<cite>`:
+
+```md
+> Nothing is lost, everything transforms.
+> — Antoine Lavoisier
+```
+
+`splitQuoteAttribution` peels off the trailing `— Source` line and renders it as
+the citation, and it round-trips back as plain text so nothing is lost on save.
+
+## Two bugs this design fixed
+
+> [toggle] The double-render and the multi-line-quote bugs
+> 1. **Double render** — the read-only path rendered the callout component *and*
+>    re-rendered its children, so children appeared twice. Because a callout
+>    *self-renders* its children, the duplicate pass was removed.
+> 2. **Multi-line serialize** — the serializer only `>`-prefixed the first line
+>    of a quote or callout, so a multi-line body (and the `— Source` cite) split
+>    into a stray sibling paragraph. Now every line gets the prefix.
+
+## Markdown forms
+
+| Construct | Source |
+|:----------|:-------|
+| Callout | `> [!kind] Title` then `>` body lines |
+| Quote | `> ` prefixed lines |
+| Citation | a trailing `— Source` line inside the quote |
+
+> [!note] Children behave differently on round-trip
+> **Callout** children preserve structurally; **quote** children flatten into the
+> content, and adjacent paragraph children merge (a markdown soft-break). Use
+> distinct child types inside quotes if structure matters.

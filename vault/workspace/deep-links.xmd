@@ -1,0 +1,66 @@
+---
+title: Deep-Links
+icon: ⇄
+order: 811
+summary: With no router, the URL is used only for deep-links — ?home= picks a Home variant, ?view= opens a database view, and bridge_token hands off a session from the website.
+---
+
+# Deep-Links
+
+osionos has [no `react-router`](layout-tree.xmd). Navigation is the in-memory
+layout tree, so the **URL carries no route**. It is used for exactly one thing:
+**deep-links** — a small set of query parameters that seed the initial view or
+hand off a session.
+
+## The parameters
+
+| Parameter | Purpose |
+|:----------|:--------|
+| `?home=` | select which [Home variant](home-variants.xmd) to land on |
+| `?view=` | open a specific database view |
+| `bridge_token` | hand off an authenticated session from the website |
+| `/__styleguide` | a dev-only style guide route |
+
+## `?home=` — pick a landing surface
+
+```text
+/?home=dashboard   /?home=graph   /?home=database   /?home=workspace
+```
+
+These four values are the Home variants, and they double as the Lighthouse gate's
+probe set — perf is measured per variant across mobile and desktop.
+
+## `?view=` — jump to a view
+
+A database view has an id, and `?view=` opens it directly. Internally this is the
+same mechanism the Home views launcher uses: each launcher row opens its exact
+view through a tab's `viewId`. A deep-link is just that action, driven from the
+URL instead of a click.
+
+## `bridge_token` — the website hand-off
+
+The opposite-osiris website and the osionos editor are separate apps. When you
+sign in on the website and cross into the editor, the session travels as a
+`bridge_token` on the URL.
+
+> [!info] What the token is
+> Auth in osionos is carried by an opaque **`osionos_v1.` app-session token** (an
+> HMAC value, distinct from the backend's gotrue JWTs). The `bridge_token`
+> deep-link is how that session is delivered across the surface boundary — the
+> hand-off covered by the `test:bridge` suite.
+
+> [!warning] It is a credential
+> A `bridge_token` authenticates a session. Treat a URL carrying one like a
+> password: it is meant for a single hand-off, not for sharing or logging.
+
+## Why so few
+
+A router would encode application state in the URL and force every view to be
+reconstructable from it. osionos deliberately keeps state in the store and the URL
+thin — so the only things worth putting in a link are an **entry point**
+(`?home=`, `?view=`) or a **credential hand-off** (`bridge_token`).
+
+> [!note] The layout itself isn't in the URL
+> Your pane splits and open tabs are restored from `localStorage`
+> (`osionos.workspace.layout.v1`), not from the address bar. A deep-link chooses
+> where you *start*, not the whole arrangement.

@@ -1,0 +1,408 @@
+/* ==========================================================================
+ * _swiss.scss — Swiss / International Typographic Style theme (DEFAULT).
+ *
+ * Grounded in the Müller-Brockmann grid discipline + Vignelli canon:
+ *   white paper · near-black ink · ONE accent (Swiss red) · grotesque type ·
+ *   strict 12-column grid on an 8px baseline · flush-left, ragged-right ·
+ *   few sizes with large jumps · big data numerals · hairline rules ·
+ *   generous margins · asymmetric compositions held in tension by the grid.
+ *
+ * It deliberately does NOT use aurora gradients, glassmorphism, serif display,
+ * or warm cream — the exact "generic AI premium" tells this replaces. Those
+ * live on the alternate themes (aurora/ember/forest), one toggle away.
+ *
+ * Everything is scoped under [data-theme='swiss'] so the other palettes are
+ * untouched; components keep consuming --brand-* / --system-* tokens.
+ * ========================================================================== */
+
+:root[data-theme='swiss'] {
+	/* --- Paper & ink -------------------------------------------------------- */
+	--brand-canvas-bg: #ffffff;
+	--brand-canvas-bg-2: #f4f4f2;
+	--brand-canvas-surface: #ffffff;
+	--brand-canvas-surface-2: #ececea;
+	--brand-canvas-line: rgba(17, 17, 17, 0.14);
+	--brand-canvas-line-strong: rgba(17, 17, 17, 0.30);
+	--brand-canvas-text: #111111;
+	--brand-canvas-text-dim: #3a3a3a;
+	--brand-canvas-text-muted: #6b6b6b;
+
+	/* --- The one accent: Swiss red ----------------------------------------- */
+	--brand-palette-primary: #e4002b; /* canonical Swiss red — marks, rules, accent word */
+	--brand-palette-secondary: #111111; /* ink doubles as the "second" — Swiss restraint */
+	--brand-palette-warm: #e4002b;
+	--brand-palette-rose: #e4002b;
+	--swiss-red: #e4002b;
+	--swiss-red-text: #c8001f; /* AA-safe red for small text on white */
+
+	/* --- Structure: 12-col grid on an 8px baseline ------------------------- */
+	--grid-cols: 12;
+	--grid-gutter: clamp(16px, 2vw, 24px);
+	--grid-margin: clamp(20px, 5vw, 72px);
+	--bl: 8px; /* baseline unit */
+	--lh: 24px; /* leading = 3 × baseline */
+	--maxw: 1200px;
+
+	/* --- Type: grotesque everywhere, mono for folios/labels ---------------- */
+	--brand-font-display: 'Space Grotesk', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+	--brand-font-brand: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+	--brand-font-body: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+	--brand-font-mono-sketch: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+	--brand-font-annotation: 'JetBrains Mono', ui-monospace, monospace;
+
+	/* --- System layer (mirrors solar's full override, Swiss values) -------- */
+	--system-bg: var(--brand-canvas-bg);
+	--system-surface: var(--brand-canvas-surface);
+	--system-surface-raised: #ffffff;
+	--system-surface-sunken: var(--brand-canvas-bg-2);
+	--system-surface-inverse: #111111;
+	--system-text-strong: var(--brand-canvas-text);
+	--system-text: var(--brand-canvas-text-dim);
+	--system-text-muted: var(--brand-canvas-text-muted);
+	--system-text-on-inverse: #ffffff;
+	--system-text-on-accent: #ffffff;
+	--system-border: rgba(17, 17, 17, 0.24);
+	--system-border-strong: #111111;
+	--system-divider: rgba(17, 17, 17, 0.14);
+	--system-focus-ring: var(--swiss-red);
+	--system-focus-ring-offset: #ffffff;
+	/* Links default to INK; red is the sparing accent, revealed on hover. */
+	--system-link: var(--brand-canvas-text);
+	--system-link-hover: var(--swiss-red-text);
+	--system-success-text: #0a7a34;
+	--system-success-bg: #e9f6ee;
+	--system-success-border: #0a7a34;
+	--system-warning-text: #8a4d00;
+	--system-warning-bg: #fbf1de;
+	--system-warning-border: #8a4d00;
+	--system-danger-text: var(--swiss-red-text);
+	--system-danger-bg: #fdeaed;
+	--system-danger-border: var(--swiss-red);
+	--system-info-text: #111111;
+	--system-info-bg: #f0f0ee;
+	--system-info-border: #111111;
+	--system-action-bg: #111111;
+	--system-action-bg-hover: #000000;
+	--system-action-bg-active: #2a2a2a;
+	--system-action-fg: #ffffff;
+	--system-action-secondary-bg: #ffffff;
+	--system-action-secondary-bg-hover: #f4f4f2;
+	--system-action-secondary-fg: #111111;
+	--system-action-secondary-border: #111111;
+	--system-input-bg: #ffffff;
+	--system-input-fg: #111111;
+	--system-input-placeholder: #6b6b6b;
+	--system-input-border: rgba(17, 17, 17, 0.34);
+	--system-input-border-hover: #111111;
+	--system-input-border-focus: var(--swiss-red);
+	--system-input-border-invalid: var(--swiss-red);
+	--system-input-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--swiss-red) 22%, transparent);
+	--system-input-shadow-invalid: 0 0 0 3px color-mix(in srgb, var(--swiss-red) 18%, transparent);
+	--system-chip-bg: #f0f0ee;
+	--system-chip-fg: #3a3a3a;
+	--system-chip-border: rgba(17, 17, 17, 0.24);
+	--system-dialog-bg: #ffffff;
+	--system-dialog-fg: #111111;
+	--system-dialog-border: #111111;
+	--system-dialog-backdrop: rgba(17, 17, 17, 0.55);
+	--system-dialog-summary-bg: #f4f4f2;
+	--system-dialog-summary-fg: #111111;
+	--system-dialog-summary-muted: #6b6b6b;
+	/* Flat elevation — Swiss favours hairline rules over soft shadows. */
+	--system-shadow-1: 0 0 0 1px rgba(17, 17, 17, 0.06);
+	--system-shadow-2: 0 1px 0 rgba(17, 17, 17, 0.14);
+	--system-shadow-3: 0 2px 0 rgba(17, 17, 17, 0.18);
+
+	/* Neutralise the glass tokens so any .glass surface renders flat. */
+	--glass-bg: #ffffff;
+	--glass-bg-strong: #ffffff;
+	--glass-border: rgba(17, 17, 17, 0.16);
+	--glass-highlight: transparent;
+	--glass-sheen: transparent;
+	--glass-blur: 0px;
+	--glass-shadow: none;
+	--glow-primary: transparent;
+	--glow-secondary: transparent;
+	--aurora-opacity: 0;
+
+	--brand-checkmark: var(--swiss-red);
+	--prismatica-logo-left: #111111;
+	--prismatica-logo-right: var(--swiss-red);
+	--prismatica-logo-spark: #ffffff;
+}
+
+/* ==========================================================================
+ * Kill the decorative layers that don't belong in the Swiss world.
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	.aurora-bg { display: none !important; }
+
+	/* Any .glass surface → flat paper with a hairline rule. */
+	.glass,
+	.glass::before {
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
+		background: var(--system-surface) !important;
+		border: 1px solid var(--system-border) !important;
+		box-shadow: none !important;
+	}
+	.glass::before { display: none !important; }
+
+	/* Retire the paper-grain / blueprint / sketch decorations. */
+	#paper-grain,
+	.blueprint-drawing,
+	.grid-explosion,
+	.perspective-drawing,
+	.micro-symbols { display: none !important; }
+}
+
+/* ==========================================================================
+ * Global Swiss chrome — grotesque type, flush-left, hairline rules, grid.
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	body { background: var(--system-bg); }
+
+	/* Grotesque, tightly-tracked headings; few sizes, large jumps. */
+	h1, h2, h3, h4, h5, h6,
+	.section__title,
+	.brand-display {
+		font-family: var(--brand-font-display);
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.02;
+		text-transform: none;
+		color: var(--system-text-strong);
+	}
+
+	/* Eyebrows: mono, uppercase, wide-tracked, preceded by a red rule — no pill,
+	   no border, no background (reset the base .eyebrow chip). */
+	.eyebrow,
+	.brand-eyebrow {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 0 0 0.75rem;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
+		font-family: var(--brand-font-mono-sketch);
+		font-size: 0.72rem;
+		font-weight: 500;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--system-text-strong);
+	}
+	.eyebrow::before,
+	.brand-eyebrow::before {
+		content: '';
+		width: 28px;
+		height: 2px;
+		background: var(--swiss-red);
+	}
+	/* Drop the emoji/icon glyph some eyebrows carry — Swiss uses the red rule. */
+	.eyebrow :where(svg, .eyebrow__icon),
+	.brand-eyebrow :where(svg, .eyebrow__icon) { display: none; }
+
+	/* Section rhythm: a hairline top rule + baseline-multiple padding. */
+	.section {
+		border-top: 1px solid var(--system-divider);
+		padding-block: clamp(56px, 8vw, 120px);
+		background: var(--system-bg);
+	}
+	.section--hero { border-top: 0; }
+	.section__container { max-width: var(--maxw); }
+
+	/* Section heads flush-left, not centered. */
+	.section__head,
+	.section__title,
+	.section__lede {
+		text-align: left;
+		margin-inline: 0;
+	}
+	.section__title {
+		font-size: clamp(2rem, 4.4vw, 3.4rem);
+		max-width: 20ch;
+	}
+	.section__lede {
+		font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+		color: var(--system-text);
+		max-width: 60ch;
+	}
+
+	/* Links: ink by default, red + underline on hover — no decorative games. */
+	a:not(.button):not(.header-cta) { color: var(--system-link); }
+	a:not(.button):not(.header-cta):hover { color: var(--system-link-hover); }
+
+	/* Nav + footer links: calm ink, red accent only on hover. */
+	.header-new__link,
+	.footer-new__group a,
+	.footer-new__social a,
+	.footer-new__legal a {
+		color: var(--system-text);
+		text-decoration: none;
+	}
+	.header-new__link:hover,
+	.footer-new__group a:hover,
+	.footer-new__social a:hover,
+	.footer-new__legal a:hover {
+		color: var(--swiss-red-text);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	/* Retire decorative section gradient washes (they read as leftover aurora). */
+	.final-cta::before { display: none; }
+}
+
+/* ==========================================================================
+ * Flat cards — hairline border, near-square corners, ink text, red top rule
+ * on hover. No glass, no soft float.
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	.ui-card {
+		position: relative;
+		background: var(--system-surface) !important;
+		border: 1px solid var(--system-border) !important;
+		border-radius: 3px !important;
+		box-shadow: none !important;
+		backdrop-filter: none !important;
+		transition: border-color 160ms ease, transform 160ms ease;
+	}
+	.ui-card::before {
+		content: '';
+		position: absolute;
+		inset: -1px -1px auto -1px;
+		height: 3px;
+		background: var(--swiss-red);
+		transform: scaleX(0);
+		transform-origin: left;
+		transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	.ui-card:hover {
+		border-color: var(--system-border-strong) !important;
+		transform: none !important;
+	}
+	.ui-card:hover::before { transform: scaleX(1); }
+}
+
+/* ==========================================================================
+ * Buttons — ink-black primary (action), hairline ghost secondary. Red is
+ * reserved for the accent word / marks, so actions read as calm + confident.
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	.button {
+		border-radius: 4px;
+		font-family: var(--brand-font-body);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		text-transform: none;
+		/* Kill the hand-drawn "sketch" treatment — Swiss buttons are precise
+		   rectangles: no roughen filter, no torn clip-path silhouette, no wobble. */
+		filter: none;
+	}
+	.button::before,
+	.button::after { display: none !important; }
+	.button:hover { transform: translateY(-1px); }
+	.button:focus-visible { transform: none; filter: none; }
+	.button--primary {
+		background: var(--system-action-bg);
+		color: var(--system-action-fg);
+		border: 1px solid var(--system-action-bg);
+		box-shadow: none;
+	}
+	.button--primary:hover {
+		background: var(--system-action-bg-hover);
+		transform: translateY(-1px);
+		box-shadow: 0 2px 0 var(--swiss-red);
+	}
+	.button--secondary,
+	.button--ghost {
+		background: transparent;
+		color: var(--system-text-strong);
+		border: 1px solid var(--system-border-strong);
+	}
+	.button--secondary:hover,
+	.button--ghost:hover {
+		background: var(--system-action-secondary-bg-hover);
+		box-shadow: 0 2px 0 var(--system-border-strong);
+		transform: translateY(-1px);
+	}
+}
+
+/* ==========================================================================
+ * Big data numerals — the Swiss "signature move": data set large, mono,
+ * with a red rule and a mono label. Used by the hero stat row + stats blocks.
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	.swiss-data {
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		gap: clamp(20px, 3vw, 40px);
+		border-top: 2px solid var(--system-text-strong);
+		padding: 16px 0 0;
+		margin: clamp(24px, 4vw, 48px) 0 0;
+	}
+	.swiss-data__item { display: grid; gap: 4px; }
+	.swiss-data__num {
+		font-family: var(--brand-font-display);
+		font-weight: 600;
+		font-size: clamp(2.4rem, 5vw, 3.6rem);
+		line-height: 0.9;
+		letter-spacing: -0.03em;
+		color: var(--system-text-strong);
+		font-variant-numeric: tabular-nums;
+	}
+	.swiss-data__num em { font-style: normal; color: var(--swiss-red); }
+	.swiss-data__label {
+		font-family: var(--brand-font-mono-sketch);
+		font-size: 0.72rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--system-text-muted);
+	}
+}
+
+/* ==========================================================================
+ * Consent — a SLIM bottom bar, never a hero-covering panel. Single row of
+ * message + actions; the preferences form expands only on "Manage".
+ * ========================================================================== */
+:root[data-theme='swiss'] {
+	.consent-banner {
+		inset: auto 0 0 0;
+		z-index: 90;
+	}
+	.consent-banner__paper {
+		max-width: none;
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		gap: clamp(12px, 3vw, 32px);
+		padding: 14px clamp(20px, 5vw, 72px);
+		border: 0;
+		border-top: 2px solid var(--system-text-strong);
+		border-radius: 0;
+		background: #ffffff;
+		box-shadow: 0 -8px 24px rgba(17, 17, 17, 0.08);
+	}
+	.consent-banner__paper > div:first-child { display: grid; gap: 2px; }
+	.consent-banner__paper h2 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0;
+	}
+	.consent-banner__paper #consent-description { font-size: 0.85rem; margin: 0; }
+	.consent-banner__version { display: none; }
+	.consent-banner__actions { flex-wrap: nowrap; }
+	.consent-banner__preferences { grid-column: 1 / -1; }
+	/* Keep the bar SLIM: the preferences form stays collapsed until "Manage"
+	   is clicked. The base .consent-banner__preferences{display:grid} overrode
+	   the [hidden] attribute, so the toggle could never hide it. */
+	.consent-banner__preferences[hidden] { display: none !important; }
+
+	@media (max-width: 720px) {
+		.consent-banner__paper { grid-template-columns: 1fr; }
+		.consent-banner__paper #consent-description { display: none; }
+	}
+}

@@ -1,0 +1,70 @@
+---
+title: Graph Engine Overview
+icon: ◈
+order: 400
+summary: The Second-Brain force graph — a framework-agnostic Canvas2D scene driven by a Web-Worker d3-force layout, consumed like an installed plugin.
+---
+
+# Graph Engine Overview
+
+osionos ships its knowledge graph as a self-contained package,
+**`@osionos/graph-engine`**, living at `packages/graph-engine/`. It renders the
+"Second Brain" — every note and live-database record an account can reach — as an
+**aurora-glass force graph**: a Canvas2D scene laid out by a Web-Worker d3-force
+simulation.
+
+> [!info] One sentence
+> The host builds a `GraphModel` and hands it to the engine. The engine draws it,
+> lays it out, and answers pointer events. It **never fetches data** and it knows
+> nothing about React or the backend.
+
+## Two halves, one firewall
+
+The package is split so the expensive, portable part never leaks framework code.
+
+| Layer | Path | May import | Role |
+|:------|:-----|:-----------|:-----|
+| **Core** | `src/core/**` | no `@/*`, no `react` | model, layout, Canvas2D render, camera, theme |
+| **React adapter** | `src/react/**` | anything | thin components that drive the core facade |
+
+The boundary is enforced, not just documented: an **ESLint `no-restricted-imports`
+rule** forbids `@/*` and `react`/`react-dom` inside `core/**`. It is the *only*
+import firewall in the whole osionos repo — a violation still type-checks but fails
+`test:quality`.
+
+## The facade
+
+`GraphEngine` (`core/engine.ts`) owns the aurora background, the Canvas2D scene, and
+the worker layout controller, and exposes a small imperative API:
+
+```ts
+// core/engine.ts — no React, no data fetching
+engine.setModel(model);      // a GraphModel the host assembled
+engine.setControls(controls); // filters, physics, visual, search
+engine.setTheme(root);        // resolve live --osio-* tokens
+engine.camera; engine.search(query); engine.exportSvg();
+```
+
+## What the host gets
+
+The React side (`src/react/`) re-exports a batteries-included surface:
+
+- `GraphExplorer` — the whole thing wired together
+- `GraphView` + `GraphConsole` — canvas and the 4-panel control console
+- `Minimap`, `useControls`, `useGraphEngine`, and `indexModel`
+
+The console has four panels: **Filters** (per-database / tag recolor), **Physics**
+(live force sliders), **Visual** (LOD, glow, background), and **Search + Export**
+(to PNG and SVG).
+
+## How it is consumed
+
+- [x] Resolved via a **Vite / tsconfig alias**, not a `node_modules` install
+- [x] Ships as **TypeScript source** — no build step; consumers import its CSS explicitly
+- [x] `NodeId == the BaaS global id`, so layout stays stable across model rebuilds
+- [x] Reduced-motion aware, and theme-driven from the app's `--osio-*` tokens
+
+> [!tip] Where to go next
+> The pieces below each get their own page — start with
+> [Semantic-zoom LOD](semantic-zoom-lod.xmd) or the
+> [GraphModel projection](graph-model-projection.xmd) that feeds the whole engine.

@@ -1,0 +1,65 @@
+---
+title: The grobase BaaS
+icon: ⛁
+order: 1100
+summary: One backend, any frontend, no per-project server code — grobase is Track Binocle's self-hostable Backend-as-a-Service, spanning a Go control plane and a Rust data plane.
+---
+
+# The grobase BaaS
+
+**grobase** is a self-hostable **Backend-as-a-Service**: one backend, any
+frontend, **no per-project server code**. Swappable engines, isolation models,
+and editions all live on **one codebase, no rewrite** — the same binary scales
+from a ~5 MB single-file build to a 10K-tenant platform.
+
+It lives in the monorepo at `apps/grobase/` as a **nested independent repo**
+(its own `.git`, remote `github.com/Univers42/grobase`, its own authoritative
+`CLAUDE.md`). The root Track Binocle stack reaches it over an external Docker
+network; grobase itself owns all backend state.
+
+> [!info] Where it sits in the three-plane pattern
+> grobase is the **control + data plane** of Track Binocle. The application
+> plane (osionos, the website, the bridges) are pure clients that talk to it
+> through one gateway. See [Architecture](../guides/architecture.xmd).
+
+## Three languages, one seam
+
+| Plane | Language | What it does |
+|:------|:---------|:-------------|
+| **Control** | Go | Resolves a cleartext API key → identity (`POST /v1/keys/verify`), provisioning, tenancy, metering |
+| **Data** | Rust | *Executes* the query and owner-scopes it per request using that identity |
+| **Realtime** | Rust | A separate 10-crate event-bus router with a pluggable EventBus and DB change producer |
+
+The **load-bearing seam**: Go says *who you are*, Rust does *what you asked* and
+scopes it to you. Per-engine capability truth lives in Rust and is surfaced
+through the TypeScript query-router.
+
+## What makes it one product, not many
+
+- **Engine-agnostic by construction** — 8 adapters (`postgres mysql mongo mssql
+  sqlite redis http dynamodb`). A fix that works for Postgres but breaks the
+  other seven is *not done*.
+- **Owner-scoping is per request, never by pool state** — this is what lets
+  `SHARE_POOLS` collapse 10K tenants onto a single connection pool (see the
+  [Scale program](scale-program.xmd)).
+- **Contract-driven, zero app code** — grobase contains no app-specific logic.
+  Each app is a declarative provisioning contract that the generic provisioner
+  consumes to create an isolated database, seed it, and mint keys.
+
+## Beyond OSS self-host
+
+grobase also runs as a **managed cloud** (sign-up → API key → CRUD/realtime →
+usage → Stripe billing) and an **enterprise-procurable** platform (orgs/RBAC,
+SSO/SCIM, audit, compliance, CMEK).
+
+> [!warning] Every cloud/enterprise behavior is flag-gated OFF by default
+> The stack stays **byte-parity** with the OSS edition until you flip a flag.
+> OFF is *structural*: the feature routes are physically not mounted unless the
+> flag is set — a missing variable means the old behavior, unchanged.
+
+## Where to go next
+
+- [Kong — the API front door](kong-api-gateway.xmd)
+- [The Go control plane](go-control-plane.xmd)
+- [The Rust data plane & realtime router](rust-data-plane.xmd)
+- [Editions](editions.xmd) · [Tracks A–E](tracks-a-to-e.xmd)

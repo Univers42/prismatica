@@ -1,0 +1,73 @@
+---
+title: Worker & In-Process Fallback
+icon: ⇄
+order: 410
+summary: The d3-force layout runs in a Web Worker when one exists and transparently falls back to an in-process engine when it doesn't — with identical physics either way.
+---
+
+# Worker & In-Process Fallback
+
+The force simulation is CPU-heavy, so it runs **off the main thread** in a Web
+Worker. But not every environment has a `Worker` — server-side rendering and the
+test harness don't — so the engine falls back to running the same simulation
+in-process, behind an identical API.
+
+## One controller, two backends
+
+`core/layout/layoutBridge.ts` defines a `LayoutController` that owns exactly one of
+two things:
+
+```ts
+// layoutBridge.ts
+const worker = createWorker();          // null when Worker is undefined
+if (worker) { /* post messages to the worker */ }
+else        { this.fallback = new LayoutEngine(msg => this.onOutbound(msg)); }
+```
+
+```ts
+// createWorker() — real guard
+function createWorker(): Worker | null {
+  if (typeof Worker === "undefined") return null;  // SSR / tests
+  return new Worker(new URL("./layout.worker.ts", import.meta.url), { type: "module" });
+}
+```
+
+The caller can't tell which is running. Sending a message either posts it to the
+worker or hands it to the in-process engine; ticks come back the same way.
+
+## Physics is defined once
+
+> [!success] No duplicated simulation
+> The tick-driver `core/layout/layoutEngine.ts` — which wraps the d3-force sim from
+> `forceLayout.ts` — is imported **verbatim** by both the worker and the fallback.
+> There is one physics implementation, run in two places. A change to the forces can
+> never drift between the two paths.
+
+```text
+        forceLayout.ts  (d3-force setup)
+                 │
+        layoutEngine.ts (tick driver)
+             ┌───┴───┐
+   layout.worker.ts   in-process fallback
+       (browser)      (SSR / tests)
+```
+
+## Live, without a restart
+
+Layout parameters — charge, link distance, collision, cluster strength — can be
+reshaped **while the simulation runs**. The controller forwards a params update to
+whichever backend is active; the console's Physics panel drives it live, and the
+graph re-settles without a rebuild.
+
+> [!note] Why it matters for tests
+> Because the fallback is API-identical, the layout can be unit-tested with no
+> browser and no `Worker` polyfill — the same reason the engine's core carries no
+> React or DOM imports.
+
+- [x] Web Worker when available
+- [x] In-process `LayoutEngine` otherwise (SSR / tests)
+- [x] Shared tick-driver — physics defined exactly once
+- [x] Live parameter updates on either backend
+
+The tunable parameters themselves are listed in
+[Performance Tuning Knobs](performance-tuning.xmd).

@@ -1,0 +1,59 @@
+---
+title: In-channel Call Panel
+icon: ◇
+order: 610
+summary: Start a video call without leaving the conversation — the same LiveKit stack embedded as a panel inside the channel, loaded on demand.
+---
+
+# In-channel Call Panel
+
+Sometimes a message thread just needs to become a call. The **call panel** lets a
+channel spin up a live video room *in place*, so nobody has to context-switch to
+a separate meeting surface.
+
+## Same stack, embedded framing
+
+The call panel isn't a second video implementation — it's the **same LiveKit
+media stack** described in [Video Rooms](video-rooms.xmd), rendered inside the
+channel instead of as a standalone room.
+
+- Same grant flow (`POST /api/rtc/token` via `bridge-rtc`).
+- Same self-hosted media server over loopback WebRTC.
+- Same in-room features: active-speaker highlighting, raise-hand, device switching.
+
+## Loaded on demand
+
+> [!tip] The channel stays light until you call
+> The call panel pulls in `livekit-client` through a **deep lazy import**, so the
+> heavy WebRTC client stays out of the warm chunk. A channel you only ever type
+> in never pays the cost of the video code.
+
+```text
+ Channel view
+ ├─ message column      ← always mounted, lightweight
+ └─ [ Start call ] ─────► call panel mounts
+                          └─► lazy-loads livekit-client
+                          └─► joins the room, tiles appear inline
+```
+
+## When to use which
+
+| You want… | Use |
+|:----------|:----|
+| A quick call tied to the conversation | **Call panel** (this page) |
+| A dedicated, full-surface room | **Video room** ([Video Rooms](video-rooms.xmd)) |
+
+Both connect to the same room infrastructure, so participants can be in the same
+call regardless of which entry point they used.
+
+> [!note] One media plane
+> Whether you join from the panel or the full room, you're on the **same
+> self-hosted LiveKit server**. The distinction is purely how the video is framed
+> in the UI — not a separate backend.
+
+## Recap
+
+- [x] Video without leaving the channel
+- [x] Reuses the LiveKit grant + media stack
+- [x] Deep lazy import keeps the warm bundle small
+- [x] Interoperates with the standalone video room

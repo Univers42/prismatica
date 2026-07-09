@@ -1,0 +1,71 @@
+---
+title: The milestone verify gates
+icon: ✶
+order: 1109
+summary: Every BaaS feature lands behind a numbered, self-contained verify script — a gate that must actually exercise the behavior, run directly or in curated batteries.
+---
+
+# The milestone verify gates
+
+In grobase, the **unit of "done" is a gate**. New work lands behind a numbered
+milestone script:
+
+```
+scripts/verify/m<NN>-*.sh
+```
+
+There are **160+** of them. The m-numbers are a *range*, not a contiguous
+sequence, and a few numbers are deliberately **reused** (several `m23`, `m24`,
+`m101`, `m102`, `m146`, `m154` scripts exist) — so a gate is identified by its
+full name, not a bare number.
+
+## Run one directly
+
+```bash
+bash scripts/verify/m80-quota-enforce.sh
+bash scripts/verify/m46-share-pools-isolation.sh
+```
+
+> [!warning] A vacuous gate is not a gate
+> A script that passes as a no-op proves nothing. Every gate must *actually
+> exercise* the behavior — send the request, assert the isolation, force the
+> failure arm. This is why "measured, not claimed" is a binding rule.
+
+## Run many at once
+
+`scripts/verify/run-gate-battery.sh` drives curated sets — the source of truth,
+not a contiguous range:
+
+- **`--fast`** — the per-PR subset (e.g. `m101-quota-realtenant` + `m120`).
+- **`--enterprise`** — the nightly enterprise + data-plane battery (m103–m112,
+  m120–m122, and more).
+
+```bash
+bash scripts/verify/run-gate-battery.sh --fast
+bash scripts/verify/run-gate-battery.sh --enterprise
+```
+
+A bare invocation prints help and runs nothing; trailing gate tokens are
+appended (`--fast m122` works).
+
+## How gates map to features
+
+Each flag-gated feature carries its own gate — the flag and the gate are minted
+together:
+
+| Feature | Gate |
+|:--------|:-----|
+| Orgs + RBAC | `m103-orgs-rbac.sh` |
+| Enterprise SSO (OIDC) | `m110-sso-oidc.sh` |
+| CMEK envelope | `m123-cmek-envelope.sh` |
+| Share-pools isolation | `m46-share-pools-isolation.sh` |
+
+> [!tip] The scripts are the source of truth
+> `make conformance` is just an alias for the `m27` script, and `make verify-all`
+> loops every `m*-*.sh` in version order. The make targets are thin wrappers over
+> the scripts — read the script to know what a gate actually checks.
+
+> [!note] Why only running proves it
+> Read-only review catches design intent, but only *running* a gate proves
+> product behavior. Several latent bugs in this repo were found only when a gate
+> ran on real Docker — never by inspection alone.

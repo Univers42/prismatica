@@ -1,0 +1,62 @@
+---
+title: The Social Layer
+icon: ⊕
+order: 700
+summary: How osionos grew a LinkedIn/WhatsApp-style social network on top of the block editor — connections, directory, chat, feed, and presence.
+---
+
+# The Social Layer
+
+osionos started life as a Notion-style block editor. It grew a **full social
+network**: the surfaces you'd expect from LinkedIn and WhatsApp — a people
+directory, connection requests, 1:1 and group chat with read receipts, an
+activity feed, live presence, and profiles — all wired into the same workspace
+shell, each opening as a tab pane.
+
+> [!info] One backend, one bridge
+> Every social surface reaches grobase through the same Node **bridge**, never
+> directly. The bridge holds the service-role key, speaks PostgREST for reads and
+> writes, and publishes realtime events server-side to the Rust gateway. The
+> browser only ever talks to the bridge and to Kong's realtime WebSocket.
+
+## The surfaces
+
+| Surface | What it does | Where it lives |
+|:--------|:-------------|:---------------|
+| **Directory** | Search everyone, connect, open a profile | `widgets/people-search` |
+| **Connections** | Request → accept → connected, block/report | `features/connections` |
+| **DMs** | Open 1:1 chat with anyone | `widgets/dm-list` |
+| **Channels & groups** | Workspace channels + named group chats | `widgets/channel-*` |
+| **Feed** | An activity stream of what's happening | `bridge-feed` |
+| **Profiles** | Avatar, headline, presence, connect | `widgets/profile-page` |
+| **Notifications** | LinkedIn-style bell in the activity rail | `widgets/notifications` |
+
+## What shipped
+
+- [x] Connections with a request/accept lifecycle and block/report
+- [x] A global people directory with trigram, semantic, and full-text search
+- [x] 1:1 DMs, group chat, read/seen receipts, and typing indicators
+- [x] Live presence (a 45-second heartbeat marks you online)
+- [x] Realtime delivery over the Rust gateway, degrading to polling
+- [x] A pinned AI contact dock
+
+## The data model
+
+The social schema is additive. `models/osionos-social-migration.sql` adds the
+`connections`, `message_receipts`, `user_blocks`, `user_reports`, and
+`join_requests` tables, and extends identities with a `username`, a
+`directory_opt_out` flag, a `bio_embedding vector(384)`, and a `search_doc`
+`tsvector`. It leans on two Postgres extensions — `pg_trgm` for fuzzy name
+matching and `pgvector` for semantic search.
+
+> [!tip] The three planes still apply
+> The social layer is squarely **application-plane** work. Reads and writes flow
+> through the bridge to grobase (control + data planes); realtime routing is the
+> Rust plane doing what it's best at — moving small messages fast.
+
+## Where to go next
+
+- [Connections & follows](connections-and-follows.xmd) — the request lifecycle.
+- [The people directory](people-directory.xmd) — how search actually works.
+- [DMs, channels & the feed](dms-channels-feed.xmd) — the three messaging shapes.
+- [Shared live collaboration](shared-live-collaboration.xmd) — co-presence.

@@ -1,0 +1,77 @@
+---
+title: Security & UX Hardening
+icon: ⚿
+order: 611
+summary: Rate limits, membership-scoped everything, sanitized uploads, SSRF-guarded link previews, enforced blocks, and the quality-of-life touches that make the messenger feel solid.
+---
+
+# Security & UX Hardening
+
+A messenger is a wide, untrusted surface — user text, uploads, links, and
+identities all flow through it. The osionos messenger treats the bridge as the
+**trust boundary** and hardens every edge that touches it.
+
+## Rate limiting at the door
+
+Bursty or abusive traffic is capped with **token-bucket rate limits** on the
+sensitive operations — sending messages, reacting, and uploading each have their
+own budget. Exceed it and the bridge answers **`429`** rather than absorbing the
+flood.
+
+> [!warning] The limits are per-operation
+> Posting, reacting, and uploading are limited **independently** — a burst of
+> reactions can't starve your ability to send, and vice versa. Each has its own
+> bucket.
+
+## Everything is membership-scoped
+
+> [!info] The one invariant to remember
+> Reading history, searching, opening threads, serving an attachment, resolving
+> a mention — **all** of it is filtered by the channels you actually belong to,
+> on the server. Membership is the boundary, and it's enforced at the trust
+> layer, not the UI.
+
+## Uploads are sanitized
+
+- **Metadata is sanitized** before it's stored — dimensions, durations, and
+  waveform data are clamped to sane bounds, so a crafted payload can't smuggle
+  oversized or malformed metadata through.
+- **Size ceilings** are enforced per media type on the way in.
+- **Images are compressed** client-side before upload.
+- **Serving a private attachment requires your session** — media is never a
+  naked public URL that anyone with the link could fetch.
+
+## Link previews are SSRF-guarded
+
+> [!warning] A pasted URL can't be weaponized
+> Generating a link preview means the server fetching a URL — a classic
+> server-side request forgery risk. The link-preview path is **guarded against
+> SSRF**, so a malicious link can't turn the bridge into a probe of internal
+> services.
+
+## Blocks and E2E
+
+- A **block** is enforced with a `403` at the bridge, not hidden in the client
+  ([Direct Messages](direct-messages.xmd)).
+- **End-to-end encrypted DMs** use a non-extractable, on-device key — the server
+  only ever sees ciphertext, at the deliberate cost of search and previews.
+
+## The UX side of "solid"
+
+Hardening isn't only security — it's also the friction the messenger removes:
+
+| Touch | What it does |
+|:------|:-------------|
+| Persistent drafts | Your half-written message survives a channel switch |
+| Smart auto-scroll | Reading history isn't interrupted by new messages |
+| "↓ N new" pill | Jump to what you missed |
+| Enter / Shift+Enter | Send vs. newline, predictably |
+| Send-failure toast | A failed send tells you, and keeps your text |
+| Mic-permission toast | A denied microphone explains itself instead of silently doing nothing |
+
+> [!success] The result
+> The trust boundary is one place (the bridge), abuse is capped, private data
+> stays private, and the everyday flow feels frictionless. That's the bar the
+> messenger holds itself to.
+
+Back to the start → [Messenger Overview](messenger-overview.xmd).

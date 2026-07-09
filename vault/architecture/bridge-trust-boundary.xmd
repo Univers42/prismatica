@@ -1,0 +1,69 @@
+---
+title: The Node Bridge Trust Boundary
+icon: ⚿
+order: 207
+summary: osionos never talks to the BaaS directly — a Node bridge holds the service-role key and proxies data, keeping the trust boundary in one place.
+---
+
+# The Node Bridge Trust Boundary
+
+osionos never talks to the BaaS directly. A **Node bridge** — `osionos-bridge`,
+running on host port `4000` — sits between the editor and grobase. It holds the
+privileged **service-role key** and proxies data requests. The trust boundary
+lives in *one* place, not scattered across the browser client.
+
+> [!info] What the bridge is for
+> `osionos-bridge` provides **workspace persistence between the website and the
+> editor** — it is the server-side custodian of the app's data path.
+
+## Why a bridge at all
+
+If the browser held the service-role key, the key would be exposed to every user
+and every extension. The bridge keeps the secret server-side and only forwards
+requests it is willing to make.
+
+- [x] Secret stays server-side (never shipped to the browser)
+- [x] One trust boundary, one place to audit
+- [x] The client sends *intent*; the bridge decides what actually hits the DB
+
+## How privileged calls are made
+
+> [!warning] The bridge bypasses RLS deliberately
+> To persist page writes, the bridge sends the `SERVICE_ROLE_KEY` as **both** the
+> `apikey` and the `Authorization: Bearer` header to postgrest, which bypasses
+> Row-Level Security. This is exactly why the key must never leave the server —
+> it is a full-access credential.
+
+```text
+   Browser (osionos)
+     │  page read/write intent  (no service key here)
+     ▼
+   osionos-bridge (Node)  ── holds SERVICE_ROLE_KEY
+     │  apikey + Bearer = service role
+     ▼
+   mini-baas-kong:8000 ──► postgrest ──► mini-baas-postgres
+```
+
+## Bridge vs the direct client
+
+osionos has **two** ways to reach the backend, and they are not the same trust
+level:
+
+| Path | Credential | Used for |
+|:-----|:-----------|:---------|
+| **Bridge** (server) | service-role key | page reads & writes, workspace data |
+| **Direct client** | anon key + user session | auth (gotrue) via Kong |
+
+The two are compared in full on [how osionos reaches the
+BaaS](osionos-baas-access.xmd).
+
+## The bridge is application-plane, not control-plane
+
+The bridge is TypeScript, so it belongs to the [application
+plane](application-plane.xmd). It is *not* the [control
+plane](control-plane.xmd): it does not decide policy or issue identities — it
+forwards data requests with a privileged key it is trusted to hold.
+
+> [!tip] Trace a real write
+> To see the bridge in the middle of a live edit, follow the [page-edit data
+> flow](page-edit-data-flow.xmd).

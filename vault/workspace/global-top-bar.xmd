@@ -1,0 +1,66 @@
+---
+title: The Global Top Bar
+icon: ▶
+order: 803
+summary: A VSCode-style chrome bar across the top of the shell — app menus, a centre search/command bar, an Update button, and desktop window controls.
+---
+
+# The Global Top Bar
+
+Across the top of the osionos shell sits a **VSCode-style chrome bar**, mounted
+in `App.tsx` above the content. It is its own widget, `widgets/top-bar/`, and it
+appears on both surfaces: the osionos editor and the opposite-osiris website.
+
+## What's on the bar
+
+Left to right:
+
+1. **Logo**
+2. **Menus** — `File · Edit · Selection · View · Help` (native Electron menu sync
+   on the desktop build)
+3. **Centre search / command bar** — page search by default; type `>` to switch
+   to command mode
+4. **Update button** — see [the Update/rebuild button](update-rebuild-button.xmd)
+5. **Window controls** — minimise / maximise / close, **desktop only**
+
+## Widget layout
+
+The widget splits cleanly into model and UI:
+
+| Layer | Files |
+|:------|:------|
+| `model/` | `desktop.ts` · `menus.ts` · `commands.ts` · `search.ts` · `usePalette.ts` |
+| `ui/` | `TopBar` · `TopBarMenu` · `MenuDropdown` · `TopBarSearch` · `WindowControls` · `UpdateButton` |
+
+Its own theme tokens — `--osio-topbar-{h,bg,border}` — were added to `global.css`,
+so the bar restyles with the rest of the theme rather than carrying hard-coded
+colours.
+
+## Search that reaches your whole workspace
+
+The centre bar started as a **client-side** search over the pages already loaded
+in the store. That missed most real content: nested child pages are not all held
+in the client cache, so search "only found Untitled".
+
+It was moved server-side:
+
+> [!success] Bridge-backed search
+> The client calls a bridge endpoint that lists **all** workspace rows (title +
+> content), ranked title-prefix → substring → content, scoped by owner/ACL. The
+> input debounces the remote call and shows an instant local fallback plus a
+> "Searching…" state while the network round-trips.
+
+## Window controls only on desktop
+
+`WindowControls` renders **only** when running inside the Electron desktop shell
+(`isDesktop()`), where it calls the already-wired IPC bridge —
+`window.osionosDesktop.{minimize, toggleMaximize, close}`. In the browser it
+renders nothing.
+
+> [!note] Keyboard chords
+> The bar owns a set of global chords that don't collide with the editor's own
+> `⌘B / ⌘I / ⌘U / ⌘E`: **`⌘K`** focuses search, **`⌘⇧P`** opens command mode, and
+> **`⌘\`** splits the active pane. Command mode is detected **only** inside the
+> top-bar input, so it never fights the in-document slash menu.
+
+Continue → [The ⌘K command palette](command-palette.xmd).

@@ -1,0 +1,57 @@
+---
+title: Tailwind v4, CSS-First
+icon: ⚙
+order: 906
+summary: osionos runs Tailwind v4 with no tailwind.config.js and no postcss config — utilities are mapped onto --osio-* tokens through an @theme block in CSS.
+---
+
+# Tailwind v4, CSS-First
+
+osionos uses **Tailwind v4 in its CSS-first mode**. There is **no
+`tailwind.config.js`** and **no separate PostCSS config** — the whole setup is a
+CSS file that imports Tailwind and declares its theme inline.
+
+```css
+@import "tailwindcss";
+
+@theme {
+  /* utility classes are mapped onto the --osio-* tokens here */
+}
+```
+
+## Why CSS-first fits the token system
+
+The design system already keeps every value in [one token file](./token-architecture.xmd).
+Tailwind v4's `@theme` block lives in **that same file**, so there is a single place
+that both defines a token and exposes it as a utility. No JS config drifts out of
+sync with the CSS.
+
+> [!tip] One file, two audiences
+> `global.css` serves components (`var(--osio-accent)`) and utility classes (the
+> `@theme` mapping) from the same declarations. A designer changing a value doesn't
+> hunt through a JS config to keep them aligned.
+
+## What this buys you
+
+- [x] **No config file to maintain** — the theme is CSS, versioned next to the tokens.
+- [x] **No PostCSS pipeline config** — v4 ships its own engine.
+- [x] **Utilities track tokens** — change a token, the matching utility follows.
+- [x] **Smaller supply-chain surface** — one fewer config the build depends on.
+
+## Layering with the token cascade
+
+Tailwind utilities and the `--osio-*` cascade coexist cleanly:
+
+1. Tokens define the **values** (`:root`, `[data-theme]`, `[data-palette]` blocks).
+2. `@theme` binds a subset of those to **utility class names**.
+3. Components use whichever is clearer — a utility for layout, `var(--osio-…)` for
+   bespoke colour — and both resolve through the same token layer.
+
+> [!note] The build knows about the oxide engine
+> The pnpm side of the workspace allowlists `@tailwindcss/oxide` as a built
+> dependency — the one place the locked-down supply chain explicitly permits
+> Tailwind v4's native engine to build.
+
+Because there is no config file, there is also nowhere for a stray hex to hide in
+JS — colour only ever appears in the token blocks, which is exactly what the
+[style-token guard](./style-token-guard.xmd) enforces.

@@ -1,0 +1,66 @@
+---
+title: SonarCloud Quality
+icon: ◇
+order: 1211
+summary: The static-analysis quality gate on SonarCloud — the right project key, on-demand scans, and how issues were driven to zero.
+---
+
+# SonarCloud Quality
+
+Beyond the security scanners, SonarCloud provides the code-quality read: bugs,
+code smells, and security hotspots across the codebase. On 2026-06-05 the project
+was driven to **0 open issues and 0 open hotspots**.
+
+## The essentials
+
+| Setting | Value |
+|:--------|:------|
+| Project key | `Univers42_ft_transcendence` |
+| Organization | `univers42` |
+| Automatic Analysis | **OFF** |
+| Config file | `sonar-project.properties` |
+
+> [!warning] Mind the project key
+> The key is `Univers42_ft_transcendence` — **not** `Univers42_track-binocle`,
+> which does not exist. The properties file once carried the wrong key; a scan
+> against a nonexistent project silently produces nothing.
+
+## On-demand scanning
+
+Because Automatic Analysis is **off**, a scan is a direct call to the scanner —
+no git push required. Docker-first, of course:
+
+```sh
+docker run --rm \
+  -e SONAR_TOKEN=$SONAR_TOK \
+  -e SONAR_HOST_URL=https://sonarcloud.io \
+  -v "$PWD:/usr/src" sonarsource/sonar-scanner-cli \
+  -Dsonar.projectKey=Univers42_ft_transcendence \
+  -Dsonar.organization=univers42
+```
+
+> [!info] The token is read, never printed
+> `SONAR_TOK` lives in the repo-root `.env.local`. Read it into the environment;
+> never echo its value. Auth is `curl -u "$SONAR_TOK:" …` against the API.
+
+## How the count reached zero
+
+The starting 1177 issues + 76 hotspots broke down honestly:
+
+- [x] **~809 were generated / non-product** — `wiki/**` Docusaurus build output,
+  `**/sandbox/**`, an unbuilt prototype, and build artifacts → excluded via
+  `sonar.exclusions` (set in the properties file *and* live via the API).
+- [x] **Real issues fixed in code** — log-injection sanitizers, GitHub-Actions
+  job-level permissions, `--ignore-scripts`, and assorted TypeScript.
+- [x] **53 accepted with reasons** — immutable SQL migrations, an upstream
+  deprecation, context-blind false positives.
+- [x] **54 hotspots reviewed → Safe** — linear regexes, internal/localhost HTTP,
+  non-crypto `Math.random`, controlled paths, version-pinned actions.
+
+> [!tip] Transitions persist across re-scans
+> Issue transitions, hotspot reviews, and exclusions are stored **server-side**,
+> so a re-scan does not resurrect resolved findings. Zero stays zero.
+
+Sonar is the *quality* lens; the [security scan gate](security-scan-gate.xmd) and
+[code-scanning to zero](code-scanning-to-zero.xmd) are the *security* lens — run
+all three for the full picture.

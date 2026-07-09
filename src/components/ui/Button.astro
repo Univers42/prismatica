@@ -122,12 +122,12 @@ const classes = [
 	}
 	.ui-button--primary:hover:not([disabled]) {
 		background: var(--system-action-bg-hover);
-		box-shadow: var(--system-shadow-2);
+		box-shadow: var(--system-shadow-2), 0 12px 30px -12px var(--glow-primary);
 		transform: translateY(-1px);
 	}
 	.ui-button--primary:active:not([disabled]) {
 		background: var(--system-action-bg-active);
-		transform: translateY(0);
+		transform: translateY(0) scale(0.98);
 	}
 
 	.ui-button--secondary {

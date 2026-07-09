@@ -1,0 +1,62 @@
+---
+title: Restoring Demo Data
+icon: ⇄
+order: 108
+summary: How the fail-safe snapshot restore works, and how to load the live-database demo.
+---
+
+# Restoring Demo Data
+
+A clean stack is an empty stack. `make all` can populate it from a snapshot — but
+it does so **only** when it is certain the databases are empty.
+
+## The fail-safe restore
+
+The `restore-if-empty` step is deliberately conservative:
+
+> [!success] It never wipes a populated stack
+> The snapshot loads only when **every** running primary engine (postgres, mysql,
+> mongo) is *confirmed* empty. Any existing data — or any uncertainty at all, such
+> as an unreachable engine or a query error — results in a **SKIP**, not an
+> overwrite.
+
+Because the backend starts detached, the step also waits for Docker health before
+probing, so it doesn't race the engines while they're still booting.
+
+## What the snapshot covers
+
+The demo snapshot spans the stack's primary storage engines. Tooling to capture
+and load it lives with the backend:
+
+| Script | Purpose |
+|:-------|:--------|
+| `apps/grobase/data-snapshots/snapshot-databases.sh` | Capture a fresh snapshot. |
+| `apps/grobase/data-snapshots/restore-databases.sh` | Restore from the snapshot. |
+
+> [!tip] Re-snapshot before you migrate
+> If you're moving a machine and want the *latest* data on the new box, capture a
+> fresh snapshot first, then commit it — otherwise the new machine restores
+> whatever was last committed.
+
+## The live-database demo
+
+Separate from the empty-restore path, there's a deterministic demo dataset:
+
+```bash
+make seed-live-demo
+```
+
+- It generates a large, deterministic commerce + operations dataset (fixed PRNG
+  seed) and is **idempotent** — safe to re-run.
+- `RESEED=1 make seed-live-demo` wipes first, then regenerates.
+- It rebuilds osionos with the BaaS environment baked in so the editor can read
+  the live data.
+
+> [toggle] Empty-restore vs seed-live-demo
+> **restore-if-empty** loads a captured snapshot only into an empty stack — it's
+> about *reconstituting* a machine. **seed-live-demo** generates a fresh synthetic
+> dataset on demand — it's about *demonstrating* the live-database features. They
+> serve different jobs; you rarely need both at once.
+
+If a restore is skipped when you expected data, the cause is almost always that
+the databases weren't actually empty — check [Common Failure Modes](common-failure-modes.xmd).

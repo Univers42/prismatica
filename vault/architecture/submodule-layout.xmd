@@ -1,0 +1,68 @@
+---
+title: Submodule & Nested-Repo Layout
+icon: ⧉
+order: 208
+summary: The monorepo is stitched from Git submodules, plus grobase — a nested independent repo with its own .git, remote, and authoritative CLAUDE.md.
+---
+
+# Submodule & Nested-Repo Layout
+
+Track Binocle looks like one monorepo but is stitched together from **Git
+submodules**. The root repo records each submodule's commit SHA; the actual code
+lives in its own repository. One member — **grobase** — goes further: it is a
+*nested independent repo* with its own remote and its own authoritative docs.
+
+## The submodules
+
+The root `.gitmodules` declares **10** entries:
+
+| Submodule | What it is |
+|:----------|:-----------|
+| `apps/osionos/app` | the React + Vite block editor |
+| `apps/opposite-osiris` | the Astro website + auth (this site) |
+| `apps/mail` · `apps/calendar` | Gmail / Calendar bridge apps |
+| `apps/vite-gourmand` | a separate product (declared, not checked out) |
+| `apps/grobase` | the nested BaaS repo (see below) |
+| `vendor/scripts` · `vendor/born2root` · `vendor/QA` · `vendor/monkey-bot` | side projects |
+
+> [!note] Commit inside the submodule first
+> The workflow is always: commit *inside* the submodule, then the root records
+> the new SHA. The root never holds the submodule's file contents — only a
+> pointer.
+
+## grobase — a repo within the repo
+
+> [!info] grobase has its own everything
+> `apps/grobase/` has its **own `.git`** (remote `github.com/Univers42/grobase`,
+> branch `main`) and its **own authoritative `apps/grobase/CLAUDE.md`**. It is
+> recorded in the root index as a **gitlink** and registered in `.gitmodules`.
+
+Read grobase's own `CLAUDE.md` before substantial BaaS work — it is the source of
+truth for the backend's layout, flags, and gates.
+
+## Gotchas that look like breakage but aren't
+
+> [!warning] Not everything untracked is broken
+> - `vendor/scripts` and `vendor/born2root` often show as `??` in `git status`.
+>   That is benign untracked content *inside* a checked-out submodule — **not** a
+>   broken gitlink. Do not reflexively `git submodule update --init`.
+> - `apps/vite-gourmand` is *declared* in `.gitmodules` but **not checked out on
+>   disk** — it is a separate product with its own rules.
+
+## Pulling and pushing across the boundary
+
+- [x] `make pulls` — fetch the submodules
+- [x] `make pushes GIT_COMMIT_MESSAGE="…"` — push submodules, then the root
+- [ ] Never expect a root commit alone to carry submodule file changes
+
+```text
+   root repo
+     ├─ gitlink ─► apps/osionos/app        (own history)
+     ├─ gitlink ─► apps/opposite-osiris     (own history)
+     ├─ gitlink ─► apps/grobase             (own .git + remote + CLAUDE.md)
+     └─ gitlink ─► vendor/*                 (side projects)
+```
+
+> [!tip] The physical tree
+> For where these submodules sit among the non-submodule directories, see the
+> [monorepo directory map](directory-map.xmd).

@@ -1,0 +1,64 @@
+---
+title: The People Directory
+icon: ▤
+order: 702
+summary: A searchable directory of everyone, backed by a single authorized view with trigram, semantic, and full-text search.
+---
+
+# The People Directory
+
+The directory is how you find people to connect with. Type a name, a username, or
+a phrase from someone's headline, and results rank across **three** kinds of
+search working together.
+
+## Three ways to match
+
+| Mode | Powered by | Good at |
+|:-----|:-----------|:--------|
+| **Fuzzy / trigram** | `pg_trgm` | Typos, partial names, usernames |
+| **Semantic** | `pgvector` 0.8.0 | "growth designer" finding a "brand lead" |
+| **Full-text** | `tsvector` websearch | Multi-word phrases, headline text |
+
+The fuzzy filter runs `ILIKE` across `display_name`, `username`, and the
+`headline`, while the `search_doc` column drives a `websearch_to_tsquery`
+full-text pass. Semantic matching compares a 384-dimension `bio_embedding`.
+
+## One view, not a scatter of tables
+
+Search reads a single Postgres view — `public.osionos_people_directory` — rather
+than joining raw tables per query. The view stitches together the authoritative
+user base from three sources:
+
+```text
+public.users              → id, name, username
+public.user_profiles      → display_name, avatar_url
+osionos_bridge_identities → headline, last_seen_at, directory_opt_out
+        │
+        ▼
+public.osionos_people_directory   (one authorized read surface)
+```
+
+> [!warning] The view never exposes secrets
+> `osionos_people_directory` projects **only** display name, username, avatar,
+> headline, last-seen, and the search columns. Email and password are
+> deliberately absent — the directory is a public-facing surface, so it can only
+> ever return what is safe to show.[^src]
+
+[^src]: Sourcing the directory from one authorized view (rather than the sparse
+local identity cache) is what made search return the real 42 user base instead of
+only the handful of people who had logged in.
+
+## Presence and opt-out
+
+- **Online** is derived from `last_seen_at` — a fresh heartbeat within the last
+  ~90 seconds shows a green dot.
+- **Opt-out** is honored: anyone with `directory_opt_out = true` is filtered from
+  results entirely.
+
+> [!tip] The directory is also a database
+> In Settings → People, the same directory is rendered as a live Notion-style
+> database view. Each tab (Contacts, Directory, Groups, Guests, Members) is a
+> read projection over an existing bridge client — a row click opens a peek panel
+> where the create/remove actions live.
+
+Search endpoint: `GET /api/directory/search`.

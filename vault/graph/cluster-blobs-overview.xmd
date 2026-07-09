@@ -1,0 +1,66 @@
+---
+title: Cluster Blobs & Overview Mode
+icon: ⎔
+order: 402
+summary: Zoomed far out on a huge graph, per-node rendering gives way to one translucent blob per database cluster — O(clusters) draw calls instead of O(nodes).
+---
+
+# Cluster Blobs & Overview Mode
+
+Drawing 100,000 individual nodes when they are each a fraction of a pixel is pure
+waste. Past a certain zoom-out on a large-enough graph, the engine stops rendering
+nodes and paints **one translucent disc per database cluster** instead.
+
+## The overview gate
+
+`core/render/renderFrame.ts` checks two conditions at the top of the node pass:
+
+```ts
+// renderFrame.ts — enter overview aggregation
+if (!f.focus && camera.scale < AGG_MAX_SCALE && f.state.count > AGG_MIN_NODES) {
+  const blobs = f.state.clusterAggregates(!f.lowQuality);
+  drawClusterBlobs(ctx, blobs, camera);
+  return; // skip the per-node path entirely
+}
+```
+
+The thresholds (`core/render/clusterBlobs.ts`):
+
+| Constant | Value | Meaning |
+|:---------|:------|:--------|
+| `AGG_MAX_SCALE` | `0.34` | below this camera scale, overview mode is eligible |
+| `AGG_MIN_NODES` | `15000` | only graphs larger than this aggregate |
+
+Each blob is a centroid plus a spread, computed in a single O(visible) pass, so a
+100k-node overview costs about the same as a 100-node one — the draw count is
+**O(clusters)**, not O(nodes). Above scale `0.34`, the normal per-node / dot-batch
+path runs, culled to the viewport.
+
+## Where clusters come from
+
+Clusters are not a render-time invention — they exist in the layout. Every node
+already carries a `source` (its mount) and a `databaseId`. The layout keys a
+`nodeGroups: Uint8Array` on `node.source` (≤ 256 clusters) and adds a gentle
+`forceX` / `forceY` pull toward each cluster's centre at `clusterStrength` (default
+`0.09`). The centres sit on a ring sized so the islands actually separate rather
+than overlapping into one central mass.
+
+> [!note] Layout, not data
+> Databases only connect through **explicit cross-mount edges**. A graph that
+> looked like one giant blob was a *layout* problem — the clustering force plus the
+> overview aggregation is what pulls the islands apart and keeps them cheap.
+
+## Why this matters
+
+- One draw call per mount, not one per record
+- Culling downstream is more effective once islands are spatially separated
+- The layout settles and stops (bounded ticks + alpha decay) — no idle churn
+
+> [toggle] What about even bigger graphs?
+> Canvas2D `drawImage` tops out around 10–20k sprites per frame. Beyond that the
+> next headroom lever is WebGL instancing and link aggregation at overview — noted
+> as a direction, not yet shipped. The blob aggregation is what keeps today's 100k
+> overview smooth.
+
+Pair this with the [spatial grid & label cache](spatial-grid-label-cache.xmd) that
+keeps the *zoomed-in* path fast.

@@ -1,0 +1,74 @@
+---
+title: Places, Maps & Geocoding
+icon: ☁
+order: 507
+summary: City and country columns are auto-detected as location attributes, geocoded offline first and online when needed, and plotted on a live map.
+---
+
+# Places, Maps & Geocoding
+
+A column full of city names is a *location*, not a dropdown. osionos recognises
+this, retypes such columns as **place** attributes, geocodes them to coordinates,
+and offers a **Map** view — all while writing only the plain place name back to the
+source table.
+
+## Auto-detected, not configured
+
+When a live table loads, columns whose names read like places — `city`, `country`,
+`region`, `province`, `location`, `place` and friends — are retyped to the
+**place** type automatically. No setup, no picker.
+
+> [!info] Why a place, not a select
+> An early version turned city columns into a select. That was wrong: "a select on a
+> city doesn't make sense — it should be a location attribute." So the column itself
+> *is* the location. It stays fully editable, and it is geocoded so it can appear on
+> a map.
+
+## Two-tier geocoding
+
+Turning a name into `lat/lng` happens in two tiers, fast path first:
+
+1. **Offline centroids** — bundled tables of country, region and major-city
+   coordinates resolve common places **instantly**, with no network call.
+2. **Online lookup** — anything the offline tables miss (a smaller town, a full
+   street address) is resolved through the bridge's geocode endpoint, which queries
+   **OpenStreetMap Nominatim** and returns a single best match.
+
+> [!tip] Results are cached both ways
+> The client caches geocode results in memory **and** in local storage, and dedupes
+> in-flight requests, so a place is looked up once and reused thereafter. Definitive
+> answers are cached; a transient failure is not, so it can be retried.
+
+## The Map view
+
+When a table has a place column, a **Map** view is offered automatically. It gathers
+the place values, resolves any that lack offline coordinates online, and drops a
+marker per row. A place that can't be resolved at all simply shows no marker rather
+than breaking the map.
+
+> [!note] Maps need numbers
+> The map itself plots numeric `lat/lng`. A derived helper column holds those
+> coordinates and is **read-only** — it is never written to your table.
+
+## What actually gets stored
+
+This is the write-safety heart of the feature:
+
+| Layer | Behaviour |
+|:------|:----------|
+| Editing a place cell | you type a name; osionos stores the **name string** |
+| Coordinates | derived for the map only — **never written back** |
+| A legacy `{"address":"…"}` wrapper | unwrapped so the column holds the clean name |
+
+> [!warning] A fixed corruption class
+> An earlier bug let a place editor's `{address: "Reims"}` object reach a plain-text
+> column and get JSON-stringified into it — the cell literally stored
+> `{"address":"Reims"}`. The codec now unwraps that wrapper on both read and write
+> (and even repairs legacy rows on display), so a place always resolves to its real
+> name. Verified end to end: adding *Reims* geocodes to ~49.26, 4.03 and maps
+> cleanly.
+
+---
+
+Location is one of several ways the interpretation layer re-reads engine data — see
+also [Relations & Foreign Keys](relations-foreign-keys.xmd).

@@ -1,32 +1,27 @@
 ---
 import Button from '../ui/Button.astro';
-import Eyebrow from '../brand/Eyebrow.astro';
 ---
 
 <section class="section section--hero hero-new" id="top">
 	<div class="section__container hero-new__grid">
-		<div class="hero-new__copy" data-scroll-rise>
-			<Eyebrow icon="✶">Open-source BaaS for product teams</Eyebrow>
+		<div class="hero-new__copy premium-enter">
+			<p class="eyebrow hero-new__eyebrow">01 — Open-source BaaS for product teams</p>
 			<h1 class="section__title hero-new__title">
-				Everything.
-				<span class="hero-new__glow-word">One Space.</span>
+				Everything.<br />
+				<span class="hero-new__accent">One Space.</span>
 			</h1>
 			<p class="section__lede hero-new__lede">
-				Prismatica keeps auth, database, files, email, dashboards, and product workflows
-				on one self-hostable backend canvas. GDPR-ready, fully typed, and yours forever.
+				Prismatica keeps auth, database, files, email, dashboards, and product
+				workflows on one self-hostable backend canvas. GDPR-ready, fully typed,
+				and yours forever.
 			</p>
 			<div class="hero-new__cta">
 				<Button variant="primary" size="lg" data-open-portal>Start free</Button>
 				<Button variant="secondary" size="lg" href="#product">See it in action</Button>
 			</div>
-			<ul class="hero-new__bullets" role="list">
-				<li>No credit card</li>
-				<li>Self-host or cloud</li>
-				<li>EU data residency</li>
-			</ul>
 		</div>
 
-		<div class="hero-new__art" data-scroll-grow aria-hidden="true">
+		<div class="hero-new__art" aria-hidden="true">
 			<div class="hero-new__frame">
 				<div class="hero-new__chrome">
 					<span></span><span></span><span></span>
@@ -43,102 +38,94 @@ import Eyebrow from '../brand/Eyebrow.astro';
 						<div><span>noor@axiomlab.nl</span><em>verified</em></div>
 					</div>
 					<div class="hero-new__panel hero-new__panel--query">
-						<code>POST /api/users<br/>Authorization: Bearer •••</code>
+						<code>POST /api/users<br />Authorization: Bearer •••</code>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<ul class="swiss-data hero-new__data" role="list">
+			<li class="swiss-data__item">
+				<span class="swiss-data__num">6</span>
+				<span class="swiss-data__label">Backend primitives</span>
+			</li>
+			<li class="swiss-data__item">
+				<span class="swiss-data__num">1</span>
+				<span class="swiss-data__label">Docker file to run it</span>
+			</li>
+			<li class="swiss-data__item">
+				<span class="swiss-data__num"><em>0</em></span>
+				<span class="swiss-data__label">Vendor lock-in</span>
+			</li>
+			<li class="swiss-data__item">
+				<span class="swiss-data__num">EU</span>
+				<span class="swiss-data__label">Data residency</span>
+			</li>
+		</ul>
 	</div>
 </section>
 
 <style is:global>
+	/* Swiss hero: asymmetric two-column composition held by the grid — copy on
+	   the left (7 cols), a flat data mock on the right (5), a big-numeral data
+	   band spanning the full width below. Flush-left, ragged-right throughout. */
 	.hero-new__grid {
 		display: grid;
-		gap: clamp(1.5rem, 4vw, 3rem);
-		align-items: center;
-		justify-items: center;
+		grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+		gap: clamp(1.5rem, 4vw, 3.5rem) clamp(2rem, 5vw, 4.5rem);
+		align-items: end;
 	}
 
 	.hero-new__copy {
 		display: grid;
-		gap: 1rem;
-		justify-items: center;
-		max-width: 940px;
-		text-align: center;
+		gap: clamp(1rem, 2vw, 1.5rem);
+		max-width: none;
+		text-align: left;
+		justify-items: start;
 	}
+
+	.hero-new__eyebrow { margin: 0; }
 
 	.hero-new .hero-new__title {
-		max-width: min(10.5ch, 94vw);
+		max-width: 14ch;
 		font-family: var(--brand-font-display);
-		font-size: clamp(4.8rem, 10vw, 10.5rem);
-		font-weight: 400;
-		line-height: 0.86;
-		letter-spacing: 0;
-		text-align: center;
-		color: var(--brand-canvas-text);
+		font-size: clamp(3.2rem, 8.2vw, 7rem);
+		font-weight: 600;
+		line-height: 0.94;
+		letter-spacing: -0.03em;
+		text-align: left;
+		color: var(--system-text-strong);
 	}
 
-	.hero-new__glow-word {
-		display: inline-block;
-		color: transparent;
-		background: linear-gradient(90deg, var(--brand-palette-primary), var(--brand-palette-secondary), var(--brand-palette-warm));
-		background-clip: text;
-		-webkit-background-clip: text;
-		text-shadow: 0 0 42px var(--brand-glow-primary), 0 0 72px var(--brand-glow-secondary);
+	/* The ONE accent — a single confident colour word (red on Swiss, the theme
+	   accent elsewhere). No gradient, no glow. */
+	.hero-new__accent {
+		color: var(--brand-palette-primary);
 	}
 
 	.hero-new__lede {
-		max-width: 66ch;
-		text-align: center;
+		max-width: 52ch;
+		text-align: left;
 	}
 
 	.hero-new__cta {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.65rem;
-		margin-top: 0.4rem;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
 	}
 
-	.hero-new__bullets {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem 1.5rem;
-		margin: 0.4rem 0 0;
-		padding: 0;
-		list-style: none;
-		font-size: 0.88rem;
-		color: var(--system-text-muted);
-	}
-	.hero-new__bullets li::before {
-		content: '✓';
-		display: inline-block;
-		margin-right: 0.4rem;
-		color: var(--brand-checkmark);
-		font-weight: 700;
-	}
-
-	.hero-new__art {
-		position: relative;
-		width: min(940px, 100%);
-	}
-
-	.hero-new__art::before {
-		content: '';
-		position: absolute;
-		inset: 12% 6%;
-		z-index: -1;
-		background: radial-gradient(ellipse, var(--brand-glow-secondary), transparent 72%);
-		opacity: 0.52;
-	}
+	/* Flat data mock — hairline frame, mono, no glass. */
+	.hero-new__art { width: 100%; }
 
 	.hero-new__frame {
 		display: grid;
 		grid-template-rows: auto 1fr;
-		border: 1px solid var(--brand-canvas-line-strong);
-		border-radius: var(--system-radius-xl);
-		background: var(--brand-canvas-panel-bg-strong);
-		box-shadow: var(--system-shadow-3);
+		border: 1px solid var(--system-border);
+		border-radius: 4px;
 		overflow: hidden;
+		background: var(--system-surface);
+		box-shadow: var(--system-shadow-2);
 	}
 
 	.hero-new__chrome {
@@ -146,40 +133,33 @@ import Eyebrow from '../brand/Eyebrow.astro';
 		align-items: center;
 		gap: 0.4rem;
 		padding: 0.55rem 0.9rem;
-		background: color-mix(in srgb, var(--brand-canvas-bg) 76%, transparent);
-		border-bottom: 1px solid var(--brand-canvas-line);
+		background: var(--system-surface-sunken);
+		border-bottom: 1px solid var(--system-border);
 		font-family: var(--system-font-mono);
-		font-size: 0.78rem;
+		font-size: 0.76rem;
 		color: var(--system-text-muted);
 	}
 	.hero-new__chrome span {
-		width: 10px;
-		height: 10px;
+		width: 9px;
+		height: 9px;
 		border-radius: 50%;
 		background: var(--system-border-strong);
+		opacity: 0.35;
 	}
-	.hero-new__chrome span:first-child { background: var(--brand-window-close); }
-	.hero-new__chrome span:nth-child(2) { background: var(--brand-window-minimize); }
-	.hero-new__chrome span:nth-child(3) { background: var(--brand-window-maximize); }
-	.hero-new__chrome code {
-		margin-left: 0.5rem;
-	}
+	.hero-new__chrome code { margin-left: 0.5rem; }
 
 	.hero-new__viewport {
 		display: grid;
-		gap: 0.75rem;
-		padding: 1rem;
-		background:
-			linear-gradient(90deg, var(--brand-canvas-line) 1px, transparent 1px) 0 0 / calc(var(--brand-canvas-grid-size) / 2) calc(var(--brand-canvas-grid-size) / 2),
-			linear-gradient(180deg, var(--brand-canvas-line) 1px, transparent 1px) 0 0 / calc(var(--brand-canvas-grid-size) / 2) calc(var(--brand-canvas-grid-size) / 2),
-			var(--brand-canvas-bg-2);
+		gap: 0.55rem;
+		padding: 0.9rem;
+		background: var(--system-surface);
 	}
 
 	.hero-new__panel {
-		padding: 0.7rem 0.9rem;
-		border: 1px solid var(--brand-canvas-line-strong);
-		border-radius: var(--system-radius-md);
-		background: color-mix(in srgb, var(--brand-canvas-surface) 86%, transparent);
+		padding: 0.65rem 0.85rem;
+		border: 1px solid var(--system-divider);
+		border-radius: 3px;
+		background: var(--system-surface);
 		font-size: 0.85rem;
 		color: var(--system-text);
 	}
@@ -193,32 +173,32 @@ import Eyebrow from '../brand/Eyebrow.astro';
 	.hero-new__panel--rows div {
 		display: flex;
 		justify-content: space-between;
-		padding: 0.35rem 0;
-		border-bottom: 1px dashed var(--system-divider);
+		padding: 0.4rem 0;
+		border-bottom: 1px solid var(--system-divider);
+		font-variant-numeric: tabular-nums;
 	}
-	.hero-new__panel--rows div:last-child {
-		border-bottom: 0;
-	}
+	.hero-new__panel--rows div:last-child { border-bottom: 0; }
 	.hero-new__panel--rows em {
 		font-style: normal;
-		font-size: 0.78rem;
+		font-size: 0.76rem;
 		color: var(--system-text-muted);
 	}
 	.hero-new__panel--query {
 		font-family: var(--system-font-mono);
-		font-size: 0.78rem;
-		background: color-mix(in srgb, var(--brand-canvas-bg) 82%, transparent);
+		font-size: 0.76rem;
+		background: var(--system-surface-sunken);
+		color: var(--system-text);
+	}
+
+	/* Big-numeral data band spans both columns. */
+	.hero-new__data { grid-column: 1 / -1; }
+
+	@media (max-width: 860px) {
+		.hero-new__grid { grid-template-columns: 1fr; align-items: start; }
+		.hero-new__art { max-width: 460px; }
 	}
 
 	@media (max-width: 700px) {
-		.hero-new .hero-new__title {
-			max-width: min(9.2ch, 96vw);
-			font-size: clamp(3.35rem, 17vw, 5.6rem);
-			line-height: 0.86;
-		}
-		.hero-new__cta,
-		.hero-new__bullets {
-			justify-content: center;
-		}
+		.hero-new .hero-new__title { font-size: clamp(2.8rem, 14vw, 4.4rem); }
 	}
 </style>

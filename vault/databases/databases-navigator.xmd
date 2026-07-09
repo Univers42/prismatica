@@ -1,0 +1,64 @@
+---
+title: The Databases Navigator
+icon: ⧉
+order: 505
+summary: A left-sidebar panel that discovers every database you can access and opens any table as a live grid — read-only discovery, no manual connection.
+---
+
+# The Databases Navigator
+
+The **Databases** panel is a left-sidebar rail item that lists every external
+database you are allowed to see and lets you open any of its tables as a live grid
+in one click. Discovery is read-only, so it works like auto-connect: if you can read
+a mount, it simply appears.
+
+## What it shows
+
+- Every **registered mount** the tenant exposes, filtered to the ones you can access.
+- Per-mount **tables** (with a column count) drawn from live schema introspection.
+- Clear states when something is off: **unconfigured**, **empty**, or a **per-mount
+  error** — so a broken connection is debuggable, not silent.
+
+Click a row and the panel opens that table as a `database` tab — the same
+virtualized Notion grid used everywhere else.
+
+## Discovery goes through the bridge, not the gateway
+
+The catalog, schema and rows are **not** fetched from the backend gateway by the
+browser — that route rejects the anonymous key with a 401. Instead the panel calls
+the bridge, which proxies server-side to the adapter registry and query-router with
+the real credentials:
+
+```text
+GET /api/databases?tenant=<tenant>     → adapter registry (list of mounts)
+GET /api/databases/<dbId>/schema        → query-router  (columns per table)
+POST /api/databases/<dbId>/tables/<t>   → query-router  (rows / writes)
+```
+
+> [!note] The tenant is a slug, not a UUID
+> Mounts are keyed by a tenant **slug** (for example `agency`), which the registry
+> matches directly. The bridge supplies the tenant on the server side, so the browser
+> never has to know a backend id.
+
+## Discovery is scoped to you
+
+The navigator is not a god-view of the tenant. What it returns is intersected with
+the databases your account can actually reach.
+
+> [!warning] An empty navigator can be correct
+> For a user who has not been invited to any database workspace, the panel is
+> **empty by design** — the access check returns zero mounts. Seeing nothing is the
+> isolation working, not a bug. Log in as an account that owns or is a member of a
+> database workspace to see its mounts. Full detail:
+> [Per-Account Database Isolation](account-database-isolation.xmd).
+
+## It scales to large tables
+
+Opening a table does not choke on volume — the grid it hands you is virtualized, so
+a table with thousands of rows renders a small window of DOM nodes and streams the
+rest as you scroll ([The Grid View](grid-table-view.xmd)).
+
+> [toggle] Why read-only discovery is safe to auto-connect
+> Listing mounts and reading schema mutate nothing. Because discovery only ever
+> *reads*, there is no destructive action to confirm — so the panel can populate
+> itself the moment you open it, with writes still gated behind explicit edits.

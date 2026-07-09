@@ -1,0 +1,56 @@
+---
+title: The Two make all Modes
+icon: ◐
+order: 111
+summary: With the vault key you get team parity; without it the stack still comes up fully local.
+---
+
+# The Two `make all` Modes
+
+`make all` is one command with two behaviours, decided entirely by whether the
+machine holds the vault key.
+
+## Side by side
+
+| | **With the vault key** | **Without it** |
+|:--|:--|:--|
+| Secrets | Shared team secrets pulled from the vault | grobase self-generates them |
+| Root env | From the shared `*.env` tree | Derived locally from grobase's `.env` |
+| Demo data | Shared snapshot restored | Empty until you seed it yourself |
+| Outcome | **Team parity** | **Fully local, self-contained** |
+
+## With the key — team parity
+
+The machine pulls the shared secrets and restores the shared demo data, so it
+matches everyone else's environment. This is the path for a teammate who has copied
+`~/.config/42ctl/` across.
+
+## Without the key — fully local
+
+> [!success] A box with only Docker + git + the clone still boots
+> No vault access needed. grobase generates its own random secrets, and the root
+> `.env.local` is **derived** from those — the BaaS keys are copied (they must
+> match grobase's random secret) rather than invented. Core login and editing work
+> out of the box.
+
+The one host requirement for this path is `openssl`, which grobase's own
+secret-generation already uses.
+
+## What stays dormant locally
+
+- [x] Core login
+- [x] Document editing
+- [ ] The live-database demo (needs a provisioned app key)
+- [ ] Certain org-simulation permission sets
+
+Those wake up only when their own seed steps run with real secrets.
+
+> [toggle] How the local env is derived
+> When there's no root `.env.local`, an `env-local-ensure` step runs *after* the
+> backend starts. It reads grobase's freshly generated `.env`, copies the BaaS keys
+> that must match, mints the handful of app secrets it needs locally, and leaves
+> optional cloud keys empty. That's the whole trick behind "works with no vault
+> access."
+
+For the mechanics of the pipeline itself, see [The make all pipeline](make-all.xmd);
+for the key itself, see [The vault key & secrets flow](vault-key-secrets.xmd).

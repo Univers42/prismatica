@@ -1,0 +1,64 @@
+---
+title: People on a Live Database
+icon: ◇
+order: 512
+summary: The Settings → People panel is itself a live database view — contacts, directory, groups, guests and members rendered as Notion tables over real social data.
+---
+
+# People on a Live Database
+
+The database machinery isn't only for external SQL — osionos turns it **inward**.
+The **Settings → People** panel is rebuilt as a set of live database views over the
+workspace's real social data: contacts, the org directory, groups, guests and
+members, each a Notion-style table or gallery with full read and write.
+
+## Every tab is a database view
+
+The panel used to be a hand-rolled static table with dead tabs that showed a count
+of zero even when real data existed. Now each tab is a genuine database view bound to
+an existing data client — no new backend, just a projection over data that was
+already there.
+
+| Tab | Backed by |
+|:----|:----------|
+| **Contacts** | your accepted connections (table + gallery) |
+| **Directory** | the org people directory, searchable, with connect actions |
+| **Groups** | your group channels and communities, grouped by kind |
+| **Guests** | pending workspace invites |
+| **Members** | workspace members, with role, transfer and remove |
+
+## Read projections, write through actions
+
+There is a deliberate design choice here worth calling out.
+
+> [!warning] Why these adapters have no auto-persist
+> A live database adapter fires a persist-diff on **every** store change — including
+> its own reload. A directory that persisted on each refetch would spuriously look
+> like a wave of creates and deletes every time it refreshed. So the People adapters
+> are **read projections with no persist step**: all writes go through explicit
+> actions — a row's peek panel or the header's create button — which call the real
+> social client and then refresh the view.
+
+This keeps a read-heavy panel from ever mistaking a refresh for an edit.
+
+## Identity from the real user base
+
+The panel first looked "empty of anything relevant" because it was reading a sparse
+local cache of only the people who had logged into osionos.
+
+> [!success] Reading the authoritative directory
+> The fix pointed the directory, people-search and connection-name lookups at a
+> purpose-built, authorized **directory view** in the shared database — exposing only
+> display name, username, avatar, headline and last-seen, and **never** email or
+> password. No data is replicated; the panel simply reads the source of truth under
+> proper authorization.
+
+> [!note] Same engine, different data
+> Mechanically this is the identical live-database pipeline used for external
+> Postgres or MongoDB — the same grid, the same peek, the same refresh model — pointed
+> at the workspace's own people data instead of a customer's database.
+
+---
+
+Access to any of these views is still scoped per account — see
+[Per-Account Database Isolation](account-database-isolation.xmd).

@@ -1,0 +1,40 @@
+---
+// System-layer stroke icons for the feature trio. One consistent visual
+// language (24x24 grid, currentColor, 1.75 stroke, round caps/joins) — replaces
+// the earlier emoji glyphs (see /ui-ux-pro-max no-emoji-icons / icon-style rule).
+type Props = { name: 'auth' | 'database' | 'privacy' };
+const { name } = Astro.props;
+---
+
+{name === 'auth' && (
+	<svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+		<path d="M12 3l7 2.6v5.2c0 4.4-3 7.3-7 8.9-4-1.6-7-4.5-7-8.9V5.6L12 3z" />
+		<path d="M8.8 12.1l2.2 2.2 4.2-4.4" />
+	</svg>
+)}
+{name === 'database' && (
+	<svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+		<path d="M4 5.5c0-1.7 3.6-2.8 8-2.8s8 1.1 8 2.8-3.6 2.8-8 2.8-8-1.1-8-2.8z" />
+		<path d="M4 5.5v6.2c0 1.7 3.6 2.8 8 2.8s8-1.1 8-2.8V5.5" />
+		<path d="M4 11.7v6.2c0 1.7 3.6 2.8 8 2.8s8-1.1 8-2.8v-6.2" />
+	</svg>
+)}
+{name === 'privacy' && (
+	<svg class="feature-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+		<rect x="4.75" y="10.5" width="14.5" height="9.25" rx="2.25" />
+		<path d="M8 10.5V7.75a4 4 0 0 1 8 0V10.5" />
+		<path d="M12 14.2v2.4" />
+	</svg>
+)}
+
+<style is:global>
+	.feature-icon {
+		width: 22px;
+		height: 22px;
+		stroke: currentColor;
+		stroke-width: 1.75;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		fill: none;
+	}
+</style>

@@ -1,0 +1,66 @@
+---
+title: Node Peek & Open
+icon: ◇
+order: 406
+summary: Hold Ctrl and hover a node to preview its content; Ctrl-click to open it as a workspace tab — with the id-resolution and store gotchas that make it reliable.
+---
+
+# Node Peek & Open
+
+The graph is navigable, not just decorative. Hold **Ctrl** and hover a node to peek
+at its content in a preview card; **Ctrl-click** to open that page as a tab in the
+workspace.
+
+The wiring lives in `src/widgets/graph-explorer/`:
+`GraphEngineExplorer.tsx`, `NodeHoverPreview.tsx`, and `nodePreview.ts`.
+
+## Ctrl is tracked outside the engine
+
+The engine core is React-firewalled, so its `onHover` / `onSelect` callbacks carry
+**only a `NodeId`** — never the DOM event. The modifier key is therefore tracked
+separately, via `window` `keydown` / `keyup` into a `modRef`, and the preview is
+debounced (~220ms) so a fast mouse-over doesn't fire a fetch per node.
+
+## The id is composite — never a bare page id
+
+This is the crux of getting it right. A graph `NodeId` encodes where the node came
+from; it is not the raw page `_id`.
+
+| Origin | NodeId shape |
+|:-------|:-------------|
+| BaaS page graph (default) | `osionos:osionos_pages:<pageId>` |
+| Local derived graph — record | `<source>:<databaseId>:<page.id>` |
+| Note | `note:<id>` |
+
+Resolve it with `parseNodeId` / `pageIdFromNodeId` before touching any page API —
+passing a composite id where a bare page id is expected was exactly the bug that
+broke this feature the first time.
+
+## Fetch on demand — the store only holds loaded pages
+
+> [!warning] `pageById` is not the whole graph
+> The client's page store only holds pages you have actually opened. The graph shows
+> **all** pages, so peek and open must **fetch by id on demand** — store-first, then
+> the bridge `GET /api/pages/:id` (which returns the full page including content),
+> memoised so repeated peeks don't refetch.
+
+And opening has its own trap:
+
+> [!error] `openPage` bails on unloaded pages
+> `usePageStore.openPage` refuses to open a page that isn't already in the store. To
+> open a graph node reliably, go through the layout store instead —
+> `useWorkspaceLayout.getState().openTab(...)` — which is store-independent (the same
+> path search uses).
+
+## The flow
+
+1. Ctrl held (`modRef` true) + hover → debounce → `loadPageById` → preview card.
+2. Ctrl-click → resolve id → load page → `openTab` in the workspace layout.
+3. Release Ctrl → preview dismisses.
+
+- [x] Preview card on Ctrl-hover
+- [x] Open-as-tab on Ctrl-click
+- [x] Composite-id resolution + on-demand fetch + layout-store open
+
+See also [The GraphModel projection](graph-model-projection.xmd) for where these ids
+are minted, and [Multi-engine graph](multi-engine-graph.xmd) for record nodes.

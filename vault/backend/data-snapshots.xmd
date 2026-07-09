@@ -1,0 +1,69 @@
+---
+title: Demo-data snapshots & restore
+icon: ⎔
+order: 1112
+summary: A portable, all-engine snapshot toolkit — dump every running grobase database into ~12.5 MB of committable archives, then restore them on a fresh machine instead of re-seeding.
+---
+
+# Demo-data snapshots & restore
+
+Regenerating the [live demo](live-database-demo.xmd) from scratch is slow. The
+snapshot toolkit captures the *current* data from every running engine into a
+small, committable bundle you can restore anywhere.
+
+It lives at **`apps/grobase/data-snapshots/`** — two scripts and an archive dir.
+
+## The two scripts
+
+```bash
+# capture: auto-discovers running engines, dumps each in a native format
+bash apps/grobase/data-snapshots/snapshot-databases.sh
+
+# restore: DESTRUCTIVE drop-replace, needs an explicit confirm
+CONFIRM=1 bash apps/grobase/data-snapshots/restore-databases.sh
+```
+
+Both operate only on **running** engines discovered on the `mini-baas_mini-baas`
+network, and read credentials from each container's own environment at runtime —
+never echoed.
+
+## What it captures
+
+| Engine | How |
+|:-------|:----|
+| **postgres** | `pg_dump -Fc` per database + globals/roles |
+| **mysql** | native dump |
+| **mongodb** | `mongodump` via a `mongo:7` image |
+| **mssql** | `BACKUP` via `sqlcmd` |
+| **dynamodb** | schema + scan via an `aws-cli` container |
+| **minio** | objects tar |
+
+The bundle writes `archives/MANIFEST.json` (sha256 + sizes) and **auto-splits any
+file over ~95 MB** to stay under GitHub's cap. The whole demo set is ~**12.5 MB**.
+
+> [!warning] Two engines are always excluded
+> **vault42** (zero-knowledge secrets) and **redis** (cache) are never captured.
+
+> [!danger] Restore is destructive
+> `restore-databases.sh` drops and replaces — it requires `CONFIRM=1` and only
+> touches running engines. It never merges into existing data.
+
+## The workflow
+
+1. Change your data.
+2. Re-run `snapshot-databases.sh`.
+3. Commit `archives/`.
+4. On another machine: `make -C apps/grobase up`, then `CONFIRM=1
+   restore-databases.sh`.
+
+## Two non-obvious gotchas
+
+> [!note] Found by actually restoring into a fresh container
+> - **pgvector** — the `postgres` database has a `vector`-typed table, so a
+>   restore needs the `pgvector/pgvector:pg16` image; stock `postgres:16` fails on
+>   that one table only. (The dump itself is correct.)
+> - **`rows` is a MySQL 8.4 reserved word** — the optional count-helper query
+>   must backtick it. The restore itself is unaffected.
+
+Public-repo safe: the dumps carry only throwaway local demo credentials (bcrypt
+hashes and default container DSNs), verified free of real external keys.

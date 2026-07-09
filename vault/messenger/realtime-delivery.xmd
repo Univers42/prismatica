@@ -1,0 +1,72 @@
+---
+title: Realtime Delivery
+icon: ⚡
+order: 608
+summary: Messages arrive live over a Kong WebSocket published server-side from the bridge, with a polling fallback and a same-tab echo so delivery never stalls.
+---
+
+# Realtime Delivery
+
+When someone sends a message, you should see it *now* — not on your next refresh.
+The messenger delivers over a WebSocket, but it's engineered so that a missing
+token or a flaky connection degrades instead of breaking.
+
+## Two separate transports
+
+> [!warning] Don't conflate the paths
+> **Sending** goes through the bridge. **Receiving live** comes over a separate
+> WebSocket. They are different connections with different jobs — mixing them up
+> is the classic messenger bug.
+
+| Concern | Path |
+|:--------|:-----|
+| Send / history / uploads | The Node **bridge** (holds the service-role key) |
+| Live delivery | **Kong** WebSocket at `/realtime/v1/ws` |
+
+## How an event travels
+
+```text
+ Sender ──► bridge ──► write to Postgres
+                 └──► publishes the event server-side
+                          to the Rust realtime gateway
+                                     │
+                                     ▼
+   Recipient's browser  ◄── Kong /realtime/v1/ws ── event fan-out
+```
+
+The bridge publishes each event **server-side** (best-effort) to the Rust
+realtime gateway, which fans it out to subscribed clients over the Kong socket.
+The client subscribes per channel and per user, so it hears new messages,
+mentions, and notifications on the topics that concern it.
+
+## Graceful degradation
+
+The live socket is gated on a valid session credential. When one isn't
+available, the client doesn't fail — it **falls back to polling** on a short
+interval. You still get your messages; they just arrive on the poll instead of
+the instant push.
+
+> [!info] A missing session knocks realtime down, not out
+> The realtime credential is resolved from the active app session. An expired or
+> missing session drops you to polling — the same root cause that would make a
+> data fetch skip. Restore the session and the live socket comes back.
+
+## The same-tab echo
+
+Underneath the network transport, a **same-tab broadcast** always runs. When you
+send a message, other views *in your own browser* hear it immediately over an
+in-browser channel — additive to the network path, never a replacement for it.
+
+## De-duplication
+
+Because a message can reach you two ways (the send response *and* the live
+echo), the client **de-duplicates by message id** — first arrival wins, the
+second is dropped. You never see a doubled message, even when the socket beats
+the HTTP response.
+
+> [!tip] If messages feel laggy
+> Check that your session is valid — laggy delivery usually means the client has
+> quietly fallen back to polling.
+
+Related: [Unread & read receipts](unread-and-read-receipts.xmd) ride the same
+live events.

@@ -1,0 +1,71 @@
+---
+title: Account Switching Without Bleed
+icon: ⌥
+order: 1008
+summary: Switching or adding accounts must never leak the previous account's pages, tabs, or session — the failure modes and the fixes that keep accounts clean.
+---
+
+# Account Switching Without Bleed
+
+osionos lets you hold several accounts and switch between them. The hard
+requirement: **switching to account B must show *only* B** — none of account A's
+pages, open tabs, or still-valid session. Getting this wrong is a data-bleed bug,
+not a cosmetic one.
+
+## The three ways state can bleed
+
+> [!error] 1. Page-cache merge on switch
+> `switchUser` sets the active user, and page hydration re-runs — but if it
+> *merges* instead of *clearing*, the old account's cached pages linger. Fix:
+> reset page state and the workspace layout on a real switch.
+
+> [!error] 2. Global tab layout
+> The open-tab layout used to be a **global** key, so a fresh login restored the
+> previous user's tab strip into the new account. Fix: make the layout
+> **per-user** — key it by user id and return a fresh layout when the user is
+> unknown, so another account's tabs never flash.
+
+> [!error] 3. Session inheritance on handoff
+> A fresh website handoff that *merged* into the persisted account map could hand
+> a new user the previous user's still-valid token. Fix below.
+
+## Fresh handoff is a PRIMARY login
+
+The decisive rule lives in a small pure function, `selectActivatedSessions`:
+
+| Situation | Behaviour |
+|:----------|:----------|
+| Fresh website handoff (`?bridge_token`, `fromUserId` set) | **REPLACE** the account set — purge prior tokens / personas / workspaces |
+| Explicit "Add another account" intent flag set | **Merge** — accumulate the new account alongside existing ones |
+| Plain refresh, no token | **Restore** every persisted account (accumulate across refreshes) |
+
+```
+handoff  →  REPLACE   (a primary login is a clean slate)
+"add account" intent  →  MERGE   (deliberate multi-account)
+F5, no token  →  RESTORE  (keep what you had)
+```
+
+> [!success] Extracted and tested
+> The switch decision is a pure module with its own unit tests — the account-set
+> logic is proven in isolation, not just observed in the running app.
+
+## Adding an account on purpose
+
+The in-app **"Add another account"** flow (the account switcher → auth dialog →
+login) was already correct: it accumulates and never runs the primary-login
+replace path. Only a fresh external handoff triggers REPLACE.
+
+## Gotchas worth knowing
+
+> [toggle] Do not use a full window reload to switch
+> Added accounts are not restored from a hard reload — the session map re-seeds
+> from the initial personas — so a `window.reload` after switching can lose the
+> added session. Switch in-app; do not reload.
+
+> [toggle] A stale browser heals on re-login
+> An already-crossed local storage from before these fixes is cleared by logging
+> the stale account out of the switcher, or by a fresh website re-login (REPLACE
+> purges it). A plain F5 keeps pre-existing accounts by design.
+
+This is the client side of isolation. The server side is
+[Per-Account Data Isolation](per-account-data-isolation.xmd).

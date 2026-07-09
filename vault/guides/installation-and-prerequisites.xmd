@@ -1,0 +1,66 @@
+---
+title: Installation & Prerequisites
+icon: ⚙
+order: 100
+summary: What a machine needs before its first make all, and the clone-to-running path.
+---
+
+# Installation & Prerequisites
+
+Track Binocle is **Docker-first**. Almost everything you need lives inside
+containers, so the host stays lean: no language toolchains, no `node_modules`, no
+database servers to install by hand.
+
+## What the host actually needs
+
+| Requirement | Why |
+|:------------|:----|
+| **Docker Engine + Compose v2** | Every service — frontends and backend — runs in containers. |
+| **git** | The repo uses submodules; you clone recursively. |
+| **openssl** | The no-vault path self-generates secrets on the host with it. |
+| **make** | The root `Makefile` is the entry point for every lifecycle command. |
+
+> [!warning] Do not install Node, npm, or pnpm on the host
+> Host `node_modules` break the container volumes, and the app's npm scripts
+> detect host execution and proxy back into Docker anyway. Installing a toolchain
+> locally only creates drift. See [Docker-First Development](docker-first.xmd).
+
+## Clone and run
+
+```bash
+# Submodules matter — clone recursively.
+git clone --recursive <repo-url>
+cd ft_transcendence
+
+# One command reconstitutes the whole stack.
+make all
+```
+
+That single command is self-provisioning — it starts the backend, restores demo
+data, and builds the frontends. See [The make all pipeline](make-all.xmd).
+
+## The one optional secret
+
+Everything above gets a machine running on its own. **Sharing the team's secrets
+and demo data** additionally needs the vault key — the one secret that lives in
+neither git nor the vault itself.
+
+> [!note] Fresh-machine prerequisite
+> Copy your `~/.config/42ctl/` directory (the keystore and its contract token)
+> onto the new machine **once**, before the first `make all`. Without it the stack
+> still boots — grobase just self-generates its own secrets locally. Both paths
+> are described in [The two make all modes](make-all-two-modes.xmd).
+
+## First-run checklist
+
+- [ ] Docker + Compose v2 installed and the daemon running
+- [ ] Repo cloned with `--recursive`
+- [ ] (Optional) `~/.config/42ctl/` copied over for shared secrets
+- [ ] `make all` run to completion
+- [ ] `make healthcheck` reports the front doors green — see [Health Checks](health-checks.xmd)
+
+> [toggle] Why "recursive"?
+> Several apps (the osionos editor, this website, mail, calendar, grobase) are
+> git submodules. A plain clone leaves those directories empty; `--recursive`
+> populates them. `make all` also runs a best-effort submodule sync, so a missed
+> flag is recoverable.

@@ -1,0 +1,80 @@
+---
+title: CRUD Across Engines
+icon: ⇄
+order: 502
+summary: Insert, read, update and delete real rows in any connected engine — every write goes through the bridge, scoped to you, as a minimal valid op.
+---
+
+# CRUD Across Engines
+
+The live grid is fully read-write. Editing a cell, adding a row, or deleting one
+persists straight back to the source engine — Postgres, MySQL, SQLite, MongoDB,
+DynamoDB or SQL Server — through one uniform path.
+
+## Every write goes through the bridge
+
+Writes do **not** go from the browser to the backend gateway directly — that path
+is not authorized for the anonymous key and would be rejected. Instead the write
+client posts to the **bridge**, which carries the credential and proxies to the
+Rust query-router:
+
+```text
+POST /api/databases/<dbId>/tables/<table>
+Authorization: Bearer <app-session token>
+{ "op": "update", ... }        // op ∈ insert | update | delete | upsert
+```
+
+The bridge preserves the query-router's status verbatim, so the client sees the
+engine's true answer.
+
+> [!note] Writes answer 201, not 200
+> A successful `insert`, `update`, `upsert`, `create_table` or `drop_table` returns
+> **HTTP 201**. A test asserting `200` is testing the wrong number.
+
+## One write is one operation
+
+osionos deliberately does **not** wrap single-cell edits in a multi-statement
+transaction. Each edit is exactly one operation against the source table — the same
+per-cell save model Notion uses. A single cell change never needed multi-op
+atomicity, and avoiding the pinned-transaction path removed a whole class of
+"my edit reverted" failures (see [Live-Write Resilience](live-write-resilience.xmd)).
+
+## The lifecycle, by engine capability
+
+- **Relational engines that allow DDL** (Postgres, MySQL, SQLite) run the full
+  lifecycle: `create_table → insert → get → update → delete → drop_table`.
+- **Engines without DDL** (SQL Server, DynamoDB) are **op-based** — you insert,
+  read, update and delete rows on tables that already exist, but osionos will not
+  create or drop the table for you.
+
+> [!example] Verified round-trips
+> The demo stack has confirmed full create-through-drop lifecycles on
+> SQLite / MongoDB / MySQL / PostgreSQL, and op-based insert / get / update / delete
+> round-trips against a DynamoDB table — with SQL Server correctly skipping the
+> create step because it advertises no DDL.
+
+## Two rules the write path lives by
+
+> [!warning] Never ask the engine to echo extra columns
+> The write client must **not** send a `returning` clause — the query-router
+> rejects unknown fields, and every engine already echoes the affected row by
+> default. Ask for less, not more.
+
+> [!tip] An unchanged UPDATE is still a success
+> MySQL reports **zero affected rows** when an `UPDATE` sets a column to the value it
+> already held. The client treats a missing count as "one row touched" on purpose —
+> reading the count strictly would make an unchanged edit look like a failed one and
+> snap the cell back.
+
+## What a relation or a place writes back
+
+Some column types present richly but persist plainly:
+
+| You see / edit | What lands in the column |
+|:---------------|:-------------------------|
+| A **relation** (related record's title) | the foreign-key value, coerced to the column's type |
+| A **place** on a map | the plain address *name* string — never raw coordinates |
+| A derived helper column (name starts with `__`) | nothing — it has no engine column and is skipped |
+
+This keeps the presentation friendly while the stored value stays a correct,
+minimal engine value.

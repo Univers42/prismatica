@@ -1,0 +1,69 @@
+---
+title: "Shared" Live Collaboration
+icon: ⧉
+order: 706
+summary: Co-presence and awareness in a Shared space — carets, activity, and summon — over the grobase realtime gateway, built hexagonally.
+---
+
+# "Shared" Live Collaboration
+
+A **Shared** space adds live *co-presence* to a workspace: you see who else is
+here, where their keyboard caret is, what they're focused on, and you can summon
+them to a page. It is an **awareness** layer, not a co-editing engine.
+
+> [!note] Awareness, not co-editing — a deliberate YAGNI
+> There is intentionally **no CRDT / operational-transform** co-editing. Two
+> people don't merge keystrokes into one paragraph. The value is knowing who's
+> present and what they're doing — which is far cheaper and covers the real need.
+
+## What travels between clients
+
+Exactly one message type per event, validated at the boundary before it reaches
+any reducer or the render path. Mouse position is **never** sent.
+
+```ts
+type CollabEvent =
+  | { t: 'caret';     actor: string; seq: number; caret: CaretState }
+  | { t: 'selection'; actor: string; seq: number; range: SelectionRange | null }
+  | { t: 'focus';     actor: string; seq: number; elementId: string | null }
+  | { t: 'activity';  actor: string; seq: number; kind: ActivityKind; targetId: string }
+  | { t: 'nav';       actor: string; seq: number; route: string }
+  | { t: 'note';      actor: string; noteId: string; op: NoteOp; anchor: Anchor }
+  | { t: 'file';      actor: string; fileId: string; op: FileOp; name: string };
+```
+
+## The building blocks
+
+- **Presence roster** — avatars of who's in the space, each assigned a stable,
+  WCAG-safe colour (`var(--collab-1..8)`).
+- **Remote carets** — a portal layer paints each person's keyboard caret; it
+  never re-renders the editable content.
+- **Active-control pulse** — a soft pulse marks what a peer is focused on.
+- **Summon** — tap a peer to ask them to come to your page; they must **consent**
+  (a prompt with a 30-second auto-decline). Nothing moves anyone without a tap.
+- **Shared files** — bytes upload durably first, *then* an ephemeral announce
+  goes out. No file bytes ever cross the presence channel.
+
+## Built hexagonally
+
+The design keeps the transport at arm's length. The domain and the collab store
+depend on a single **port** (`realtimeTransport.port.ts`) and nothing else;
+exactly **one** adapter binds that port to the grobase realtime WebSocket. Swap
+the transport and the domain never notices.
+
+```text
+  collab domain / store ──► realtimeTransport.port  (transport-free)
+                                     ▲
+                                     │  the ONE adapter
+                          realtimeTransportGrobase.adapter
+                                     │
+                            grobase realtime gateway (WS)
+```
+
+> [!warning] Gated OFF until membership is enforced
+> The whole surface sits behind the `osio.collab.shared` flag, **default off**.
+> It stays off in shared runs until the realtime subscribe is membership-gated —
+> see [Namespace isolation & the collab gate](collab-namespace-isolation.xmd).
+> For dev/demo you can force it with `?osio.collab.shared=1`.
+
+Next: [how co-presence maps onto the gateway](co-presence-realtime-gateway.xmd).

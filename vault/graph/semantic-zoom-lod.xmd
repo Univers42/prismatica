@@ -1,0 +1,59 @@
+---
+title: Semantic-Zoom LOD
+icon: ⊕
+order: 401
+summary: Nodes change representation with zoom — plain dots far out, icon sprites mid-range, glass cards up close — all as camera-scale crossfades.
+---
+
+# Semantic-Zoom LOD
+
+A node does not look the same at every zoom. The engine runs a **level-of-detail
+mix** driven purely by camera scale, so the graph reads as an overview when you are
+zoomed out and as a detailed board when you are zoomed in.
+
+## The three tiers
+
+| Tier | What draws | Cost strategy |
+|:-----|:-----------|:--------------|
+| **FAR** | plain vector dots | one path-fill **per colour bucket** — no `drawImage` |
+| **MID** | the page's icon (emoji / image) baked into a sprite | cached sprite, drawn as one blit |
+| **CLOSE** | a canvas **glass card** (icon chip, title, database, degree pill) | capped at ~80 cards, chosen by degree |
+
+At the FAR tier, dots below roughly a 3.2px screen radius collapse into a single
+batched fill per colour — tens of thousands of them cost a handful of draw calls.
+
+## Camera-scale crossfades, not timers
+
+`core/render/lod.ts` computes the mix from the camera scale with `smoothstep`
+crossfades — never a time-based animation. That is deliberate:
+
+> [!success] Reduced-motion safe by construction
+> Because the transitions are *positional* (a function of zoom), not *temporal*,
+> they honour `prefers-reduced-motion` automatically — there is no animation to
+> suppress. Zoom is the only clock.
+
+The bands nest inside the camera's zoom range (~`0.15`…`5`):
+
+```ts
+// core/render/lod.ts (real constants)
+const ICON_IN_START = 0.45;  // icons begin fading in here
+const ICON_IN_WIDTH = 0.35;
+const CARD_IN_START  = 1.9;  // cards crossfade in, sprites out
+const CARD_IN_WIDTH  = 0.7;
+```
+
+`icon`, `card`, and `sprite` are returned as three overlapping opacities, so the
+tiers blend rather than snap. Labels come in over roughly `0.75`…`2`.
+
+## The escape hatch
+
+Semantic zoom is **on by default** but toggleable from the console's **Visual**
+panel. Turned off, `lodMix` short-circuits to `{ icon: 0, card: 0, sprite: 1 }` —
+the classic flat-dot graph, for anyone who prefers it.
+
+- [x] FAR dots · MID sprites · CLOSE cards
+- [x] Toggle in the Visual panel (`semanticZoom`)
+- [ ] Nothing to configure per node — the tier follows the camera
+
+Zooming way out crosses into a different regime entirely — see
+[Cluster blobs & overview mode](cluster-blobs-overview.xmd).

@@ -1,0 +1,73 @@
+---
+title: Supply-Chain Lockdown
+icon: ⧉
+order: 1203
+summary: Frozen lockfiles, no install-time scripts, and a release-age hold — how a poisoned dependency is kept out of the build.
+---
+
+# Supply-Chain Lockdown
+
+A modern app is mostly other people's code. The most likely way to get owned is
+not a bug in *your* code — it is a malicious version of a dependency you already
+trust. Track Binocle closes that door in three ways.
+
+## 1. Frozen lockfiles, reproducible installs
+
+Every install is reproducible. There is no silent version drift because the
+lockfile is the source of truth, and CI proves it on every push.
+
+| Package manager | Apps | CI job |
+|:----------------|:-----|:-------|
+| **npm** | baas/sdk, mail, calendar | `npm-frozen-installs` |
+| **pnpm** | opposite-osiris, osionos/app | `pnpm-frozen-installs` |
+
+```sh
+# npm side — exact lockfile, no lifecycle scripts
+npm ci --ignore-scripts
+
+# pnpm side — frozen, offline-preferred, no scripts
+pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+```
+
+## 2. No install-time lifecycle scripts
+
+> [!warning] `--ignore-scripts` is not optional
+> A dependency's `postinstall` hook runs arbitrary code on your machine at
+> install time — a classic supply-chain vector. Both package managers install
+> with **scripts disabled**. pnpm apps additionally use an `onlyBuiltDependencies`
+> allowlist, so only vetted packages may ever run a build step.
+
+## 3. Release-age hold
+
+New releases are not trusted the instant they publish — a poisoned version is
+often yanked within hours of discovery. Renovate holds every update for a cooling
+period before it is even proposed.
+
+```json
+{
+  "minimumReleaseAge": "3 days",
+  "rangeStrategy": "bump",
+  "dependencyDashboardApproval": true
+}
+```
+
+- Updates wait **3 days** after registry publication before Renovate opens them.
+- **No wildcard ranges** — dependencies are pinned to exact or `~minor`.
+- Updates require **dashboard approval**; nothing merges silently.
+
+## The rules, restated
+
+- [x] Lockfiles are committed — no drift
+- [x] `--ignore-scripts` everywhere — no install-time code execution
+- [x] pnpm `onlyBuiltDependencies` allowlist — vetted build steps only
+- [x] 3-day release-age hold — freshly-published poison ages out
+- [x] pinned `pnpm@10.32.1` via corepack — the tool itself is pinned
+- [ ] Never add an install-time lifecycle hook — it defeats the whole scheme
+
+> [!tip] This dovetails with Docker-first
+> Because there is **no host Node/npm/pnpm** and no host `node_modules`, the
+> frozen-install discipline runs inside containers where it cannot leak onto the
+> developer's machine. Two constraints reinforcing one wall.
+
+Dependency *vulnerabilities* (as opposed to *malice*) are caught separately by
+the [security scan gate](security-scan-gate.xmd) and Renovate's CVE alerts.

@@ -1,0 +1,57 @@
+---
+title: Direct Messages
+icon: ⇄
+order: 602
+summary: One-to-one conversations with their own list, block enforcement, and an opt-in end-to-end encryption seam.
+---
+
+# Direct Messages
+
+Direct messages are the private, 1:1 side of the messenger. They live in their
+own list (`dm-list`) separate from channels, so a personal conversation never
+gets lost among the rooms.
+
+## Opening a conversation
+
+You start a DM from the people directory or a person's profile. Under the hood a
+DM is just a two-member channel — which means it inherits everything channels
+already do: history, drafts, threads, media, mentions, and read state.
+
+> [!note] Same engine, different shape
+> A DM reuses the channel model. The difference is membership (exactly two
+> people) and where it surfaces in the UI — not a separate message pipeline.
+
+## Blocking is enforced, not cosmetic
+
+> [!warning] A block is a hard boundary
+> Blocking isn't a client-side hide. When you open a DM with someone who has a
+> block in place, the bridge **refuses** the conversation with a `403` — the
+> boundary is enforced at the trust layer, not painted over in the UI.
+
+## Opt-in end-to-end encryption
+
+DMs carry an **opt-in** end-to-end encryption seam. When enabled for a
+conversation, messages are sealed on your device and opened on the recipient's —
+the bridge and database only ever see ciphertext.
+
+- Keys are derived per conversation from an elliptic-curve exchange.
+- The private key is **non-extractable** and stays on-device.
+- Encryption is **per-DM and opt-in** — it is not on by default.
+
+> [!info] The deliberate trade-off
+> Encrypted DMs are, by design, **excluded from search and message previews** —
+> the server can't index what it can't read. That's the price of true E2E, and
+> it's the correct one.
+
+## What a DM shares with channels
+
+| Capability | In DMs? |
+|:-----------|:-------:|
+| Rich media & voice | Yes |
+| Threaded replies | Yes |
+| Read receipts & unread | Yes |
+| Full-text search | Only for non-encrypted DMs |
+| @mentions | N/A (two people) |
+
+Next: the media you can actually send →
+[Rich-media messages](rich-media-messages.xmd).

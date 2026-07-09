@@ -1,0 +1,74 @@
+---
+title: The Fresh-Machine Gate
+icon: ☁
+order: 1207
+summary: The strongest integration test in the project — a clean Ubuntu runner clones the repo and rebuilds the entire stack, data and all.
+---
+
+# The Fresh-Machine Gate
+
+Most CI proves a change compiles. The `fresh-machine` workflow proves something
+far stronger: that a **clean machine** can reconstruct the *entire* stack from a
+git clone — code, secrets, and data — and come up green.
+
+> [!success] What it asserts
+> A clean `ubuntu-latest` runner does `git clone --recursive` → `make all`, then
+> checks the whole stack is up **and** the demo data restored: postgres
+> `osionos_pages = 350` (identical to the dev machine), mysql 4 tables, mongo
+> `activity.events = 30000`. Zero unhealthy or restarting containers.
+
+## Why this gate exists
+
+It is the acceptance test for the migration goal: *a new laptop, or a new
+teammate, can stand the project up with one command.* If that breaks, everything
+downstream breaks — so this gate catches the bugs that only appear on a truly
+clean box.
+
+## `make all` is self-provisioning
+
+The whole pipeline runs from one target:
+
+```text
+sync-submodules-soft
+  → secrets-ensure        (pull vault42 if keystore present)
+  → certs → certs-trust-local
+  → backend-up            (STARTS grobase, EDITION=migrate)
+  → restore-if-empty      (only if every engine is confirmed empty)
+  → frontends-up
+  → healthcheck → showcase
+```
+
+The default edition is **`migrate`** — all snapshot engines plus core and
+realtime, *minus* the monitoring/lakehouse extras that come up unhealthy in a
+constrained runner. `make all GROBASE_EDITION=full` gets the everything-on shape.
+
+## Five fresh-machine bugs it caught
+
+Every one of these would have broken a real migration, not just CI:
+
+1. `BAAS_HEALTH_KEY` used `:=` — evaluated before `.env.local` was pulled → empty
+   key → healthcheck `401`. Fixed with deferred `=`.
+2. `restore-if-empty` probed engines still booting after a detached `up` — added a
+   `wait_healthy` on Docker health first.
+3. A restore probe hard-referenced `osionos_pages`, which **parse-fails** on a
+   fresh DB where the table does not exist → false "unreadable" skip. Fixed with a
+   `to_regclass(...) IS NOT NULL` existence check first.
+4. `pg_restore` lacked `-U postgres` → ran as root → `role "root" does not exist`
+   → *all* postgres dumps failed.
+5. `docker-prefetch-images` exited 1 on any pull miss → a transient rate-limit
+   killed `make all`. Made non-fatal.
+
+> [!info] restore-if-empty is fail-safe
+> It loads the snapshot **only** when every running engine is *confirmed* empty.
+> Any data, or any uncertainty (unreachable / query error), → SKIP. It never wipes
+> a populated stack.
+
+## The migration ritual
+
+> [toggle] Reproducing the stack on another machine
+> 1. Copy the whole `~/.config/42ctl/` dir (keystore + contract) over once.
+> 2. `git clone --recursive`.
+> 3. `make all`.
+>
+> The [vault & secrets architecture](vault-secrets-architecture.xmd) covers the
+> no-vault fallback for a box with no keystore at all.

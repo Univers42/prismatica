@@ -1,0 +1,72 @@
+---
+title: The Fully-Local make local Edition
+icon: ⛁
+order: 1004
+summary: The lean backend behind the desktop apps — editor, database, auth, and pages on one machine over plain HTTP, with no cloud and none of the distributed data plane.
+---
+
+# The Fully-Local `make local` Edition
+
+Every Docker-backed desktop shape sits on the same lean backend: a
+**self-contained, local-only** stack that runs the editor plus database, auth, and
+pages on **one machine over plain HTTP on `localhost`**. No cloud, no Fly Vault,
+no TLS certs, and none of the heavy distributed `mini-baas` plane.
+
+## What runs
+
+The lean profile brings up roughly **12 containers** instead of the ~45 of the
+full dev stack:
+
+```
+postgres · redis · kong · pg-meta · gotrue · postgrest ·
+auth-gateway · osionos-bridge   (+ db-bootstrap, project-db-init,
+local-runtime-secrets one-shots, + mailpit)
+```
+
+**Excluded on purpose:** the whole `mini-baas-*` zoo (trino / iceberg / minio /
+mongo / mysql / debezium / …), the website, mail, calendar, the web app, and the
+TLS proxy.
+
+> [!info] What you lose, and what you don't
+> The Second Brain **graph** runs from the local note layer and **Database mode**
+> runs from local pages. The absent `mini-baas` costs you only the optional
+> cross-engine "data layer" — nothing else in the everyday editor.
+
+## Bring it up
+
+```bash
+make local            # generate local secrets + start the lean stack on :4000
+```
+
+Under the hood this is `make local` / `make up-local`, implemented by tagging
+`auth-gateway` and `mailpit` with a `local` compose profile; the overlay
+`docker-compose.local.yml` publishes the bridge on HTTP `127.0.0.1:4000` and parks
+the HTTPS proxy on a disabled profile.
+
+> [!warning] `make local` is currently stale
+> The lean recipe predates the BaaS extraction; several `LOCAL_SERVICES` were
+> moved into the standalone grobase stack, so the target can error on services no
+> longer in the root compose graph. Treat it as the *design* of the lean edition;
+> verify before relying on it, and prefer the desktop `install.sh` path which
+> pulls known-good images.
+
+## What is kept vs dropped
+
+| Kept | Dropped (for local) |
+|:-----|:--------------------|
+| Real local login (gotrue + auth-gateway) | TLS-on-loopback |
+| JWT + Redis sessions | Remote / Fly Vault |
+| Postgres **RLS** | The distributed data plane |
+| Data persistence in a local volume | Website, mail, calendar |
+
+## Prerequisites
+
+- [x] Ubuntu x86-64 (22.04 or 24.04)
+- [x] Docker Engine + compose plugin, with internet (images pull from Docker Hub)
+- [x] The repo present (it carries the lean compose, secret scripts, and DB migrations)
+- [ ] No Node / pnpm, no Fly token, no certs required
+
+> A friendly reminder: this edition keeps **real authentication**. "Local" means
+> local data and no cloud — it does **not** mean no login.
+
+Where the desktop apps consume this: [Electron + Docker Backend](electron-docker-backend.xmd).

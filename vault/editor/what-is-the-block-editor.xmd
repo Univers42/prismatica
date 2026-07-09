@@ -1,0 +1,63 @@
+---
+title: What the Block Editor Is
+icon: ◆
+order: 300
+summary: osionos is a Notion-style block editor that grew into a full collaborative workspace — documents, databases, chat, and video, all built from blocks.
+---
+
+# What the Block Editor Is
+
+**osionos** (npm name `osionos-playground`) is a Notion-style **block editor
+that grew into a full collaborative workspace**. It is a React 19 + Vite 6 +
+TypeScript app, served at `https://localhost:3001`, and it is one of the
+frontends of the Track Binocle monorepo.
+
+Every piece of content on a page is a **block**: a paragraph, a heading, a
+callout, a table, an embedded database view. Blocks nest into a tree, and the
+same tree drives the editor, the read-only renderer, and the markdown you can
+round-trip out and back in.
+
+## More than a document editor
+
+The editor is the centre of gravity, but the surfaces around it are real and
+sidebar-reachable — each opens as its own pane:
+
+| Surface | What it does |
+|:--------|:-------------|
+| **Documents** | The block editor and the "Second Brain" force-graph |
+| **Databases** | Notion-style DB views — grids, charts, maps, equations |
+| **Chat & DMs** | Channels, direct messages, a feed, mentions |
+| **Video rooms** | Self-hosted LiveKit rooms embedded in channels |
+| **BaaS console** | API-key, usage, and plan management for the tenant |
+
+> [!note] One backend, reached through a bridge
+> osionos never talks to the grobase BaaS directly. Page and workspace data
+> flow through a Node **bridge**; realtime traffic uses a separate transport.
+> The two are deliberately kept apart — see [Offline-First Sync](offline-first-sync.xmd).
+
+## How "pages" open — no router
+
+There is **no react-router.** Navigation is a VSCode-style **tab and pane
+layout tree** held in a zustand store. What renders inside a pane is decided by
+its `tab.kind`:
+
+```ts
+// widgets/page-renderer/ui/PaneContent.tsx — a guard chain, not a switch
+if (tab.kind === 'home')     return <HomeTabView />;
+if (tab.kind === 'database') return <DatabaseView />;
+if (tab.kind === 'channel')  return <ChannelMessages />;
+// …home / folder / trash / database / profile / console / channel
+// default → an editable page (PageTabView)
+```
+
+## Performance is a design constraint, not an afterthought
+
+- Surfaces are code-split with `React.lazy` using **deep import paths**, never
+  widget barrels — importing a barrel would staple the whole editor onto the
+  warm chunk.
+- Only the **focused** pane mounts the live editor. Unfocused splits render a
+  cheap read-only preview instead.
+
+> [!tip] Where to go next
+> Start with the [Block Types Overview](block-types-overview.xmd) to see the
+> vocabulary, then [Slash Commands](slash-commands.xmd) for how you summon them.

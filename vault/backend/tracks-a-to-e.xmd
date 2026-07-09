@@ -1,0 +1,63 @@
+---
+title: Tracks A–E overview
+icon: ◇
+order: 1108
+summary: grobase is built along five tracks — OSS self-host, managed cloud, scale/HA, enterprise, and capability parity — where only Track A is on by default.
+---
+
+# Tracks A–E overview
+
+grobase's roadmap is organised into **five tracks**. Track A is the shipped OSS
+product; the rest layer managed-cloud, scale, enterprise, and parity capability
+on top — and **B, D, and E are flag-gated OFF by default** for byte-parity with
+the OSS edition.
+
+## The five tracks
+
+| Track | Name | What it adds | Default |
+|:-----:|:-----|:-------------|:-------:|
+| **A** | OSS self-host | The shipped self-hostable BaaS | **ON** |
+| **B** | Managed cloud | Metering → billing → tenant self-service | OFF |
+| **C** | Scale / HA | Connection pooler, prod Helm, 10K/100K load | infra |
+| **D** | Enterprise | Orgs/RBAC, SSO/SCIM, passkeys, audit, CMEK | OFF |
+| **E** | Parity | DB branching, push/messaging, read-replica | OFF |
+
+> [!warning] Do not flip B/D/E on in shared or parity runs without a gate
+> OFF is the proven, byte-parity state. Each track's features mount only behind a
+> flag; a missing flag means the old behavior, unchanged.
+
+## What lives in each
+
+> [toggle] Track B — managed cloud (gates m74–m87)
+> Usage metering, quota enforcement, Stripe billing, per-tenant observability,
+> and per-tenant backup/restore. The money path. See [Metering &
+> billing](metering-billing.xmd).
+
+> [toggle] Track C — scale & HA
+> A supavisor connection-pooler overlay, a production Helm chart, ops/SLA
+> runbooks, and the 10K/100K load harness. See the [Scale
+> program](scale-program.xmd).
+
+> [toggle] Track D — enterprise (gates m103–m112)
+> Org model + RBAC, tamper-evident hash-chained audit, hard-erase, IP allowlist,
+> passkeys/WebAuthn, SOC2-lite evidence, tenant data export, enterprise SSO
+> (OIDC), SCIM 2.0, and a trust center. These are the commercially-licensed
+> packages of the open-core split.
+
+> [toggle] Track E — capability parity (gates m113–m114, m122)
+> DB branching (fork a schema into a live clone), push/messaging (webhook + FCM
+> fan-out with an SSRF guard), and read-replica routing.
+
+## The open-core line
+
+Grobase is **open-core**:
+
+- **Core** (server / control / data planes) — AGPL-3.0-only.
+- **SDKs** — MIT (calling a Grobase server does not put the caller under AGPL).
+- **Enterprise (Track D)** — commercial license. Track E and the Track-B cloud
+  components stay in the AGPL core, sold as hosting rather than licensed
+  features.
+
+> [!note] Flag-gated OFF is a licensing boundary too
+> Because the enterprise features are structurally absent unless enabled, the
+> default OSS build genuinely ships without them.

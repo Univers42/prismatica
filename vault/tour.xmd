@@ -1,0 +1,90 @@
+---
+title: A Visual Tour
+icon: ◈
+order: 5
+summary: Real screenshots of the running stack — the workspace, live databases, dashboards, and the warm-editorial website.
+---
+
+# A Visual Tour
+
+These are screenshots of the **actual running application**, not mockups. Each one
+is a real surface you reach after signing in through Prismatica.
+
+## The workspace
+
+osionos opens as a VSCode-style shell: a page explorer on the left, channels and
+agents below it, and a tabbed, splittable editor grid in the centre. Everything —
+a note, a database, a chat channel, a profile — opens as a tab.
+
+<figure class="xmd-figure">
+<img src="assets/app-workspace-home.png" alt="osionos workspace home with page explorer, channels, and a live-database command centre." />
+<figcaption>The workspace home — a live-database "command centre" page with a real page tree alongside it.</figcaption>
+</figure>
+
+> [!tip] One shell, every surface
+> The same window hosts documents, databases, chat, video rooms, and the tenant
+> console. No context-switch between apps — it is all panes in one grid.
+
+## The Second Brain graph
+
+Every note and database row becomes a node in a force-directed graph, rendered on
+Canvas2D with a Web-Worker layout. It stays smooth into the **hundreds of
+thousands** of nodes — semantic-zoom swaps dots for icons for cards as you zoom,
+and a console filters by node kind and database.
+
+<figure class="xmd-figure">
+<img src="assets/app-graph.png" alt="The osionos Second Brain force-directed graph with ~1,500 icon nodes and a live graph console." />
+<figcaption>The Second Brain graph — icon-level detail on a live force layout, with a console to scope and filter by database. Zoom out and it collapses to cluster blobs; zoom in and cards appear.</figcaption>
+</figure>
+
+## Live databases
+
+Point osionos at a real database (Postgres, MySQL, Mongo, and more) and it renders
+the tables as Notion-style views — grid, board, and dashboards — writing straight
+back through the bridge.
+
+<figure class="xmd-figure">
+<img src="assets/app-live-database.png" alt="A live database rendered as a Notion-style grid view inside osionos." />
+<figcaption>A live database as a Notion grid — virtualized, sortable, editable, backed by the real engine.</figcaption>
+</figure>
+
+## Dashboards
+
+Every view can become a dashboard widget: charts, counters, and maps composed on a
+canvas, with the numbers computed server-side across all rows.
+
+<figure class="xmd-figure">
+<img src="assets/app-dashboard.png" alt="A dashboard home in osionos with widgets composed on a canvas." />
+<figcaption>A dashboard home — widgets are views, aggregated server-side for a live, honest total.</figcaption>
+</figure>
+
+## The editor grid
+
+Panes split horizontally and vertically; only the focused pane mounts the live
+editor, so a wall of open panes stays fast.
+
+<figure class="xmd-figure">
+<img src="assets/app-workspace-grid.png" alt="A split editor grid in osionos with multiple panes open." />
+<figcaption>The splittable editor grid — a tab/pane tree, not a router.</figcaption>
+</figure>
+
+## The front door
+
+Prismatica — the marketing-and-auth website — in its warm-editorial theme.
+
+<figure class="xmd-figure">
+<img src="assets/website-hero.png" alt="The Prismatica marketing website hero: Everything. One Space." />
+<figcaption>The Prismatica website, warm-editorial theme — the auth landing that hands you off to the workspace.</figcaption>
+</figure>
+
+## This docs shell
+
+And the site you are reading — light and dark, both authored in `.xmd`.
+
+<figure class="xmd-figure">
+<img src="assets/docs-shell-dark.png" alt="The Prismatica docs shell in dark (noir) theme." />
+<figcaption>This documentation shell in its dark "noir" theme — every doc is a `.xmd` file in <code>vault/</code>.</figcaption>
+</figure>
+
+Ready to build? Start with [Getting Started](guides/getting-started.xmd), or browse
+the [Architecture](guides/architecture.xmd).

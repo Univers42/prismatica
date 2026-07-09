@@ -1,0 +1,64 @@
+---
+title: Compose profiles vs editions
+icon: ⧉
+order: 1105
+summary: Three dials shape the grobase stack — raw compose profiles, customer packages, and named editions — and they resolve in a fixed precedence order.
+---
+
+# Compose profiles vs editions
+
+grobase has **two orthogonal stack-shaping dimensions**, sitting above the raw
+Docker Compose profile mechanism. Confusing them is a common trap, so here is the
+full picture.
+
+## The three dials
+
+1. **Compose profiles** — the lowest layer. `COMPOSE_PROFILES` slices services
+   into logical subsets. In the root stack it defaults to `dev`.
+2. **Packages** — the customer tiers, the single source of truth for what a plan
+   includes: `nano basic essential pro max`.
+3. **Editions** — named known-good *plane sets* (see [Editions](editions.xmd)).
+
+> [!warning] Precedence: PROFILES > PACKAGE > EDITION
+> When more than one dial is set, profiles win over packages, which win over
+> editions. Set them deliberately — a stray `COMPOSE_PROFILES` will override the
+> edition you thought you asked for.
+
+## Planes are the atoms
+
+Both editions and packages are expressed in terms of **planes**. grobase names
+15 of them:
+
+```
+data  control  go  rust  adapter  background  analytics  storage
+realtime  functions  observability  ops  studio  playground  engines
+```
+
+Each plane auto-generates `up-`, `down-`, `restart-`, and `logs-` verbs, so you
+can also drive one plane at a time.
+
+## Packages compose from planes
+
+The tiers stack additively:
+
+| Package | Planes |
+|:--------|:-------|
+| **basic** | go + rust |
+| **essential** | basic + adapter + background |
+| **pro** | essential + data + storage + realtime |
+| **max** | pro + analytics + observability + functions + engines |
+
+`nano` ships standalone via `make nano-up`, not `PACKAGE=nano`; `make up
+PACKAGE=` accepts the four non-nano tiers. `ADDONS="analytics engines"` appends
+à-la-carte planes to any of them.
+
+## The root-stack gotcha
+
+> [!error] A bare `docker compose up` silently skips frontends
+> The root `COMPOSE_PROFILES` defaults to `dev`. A *manual* `docker compose up`
+> without it skips most frontends. The Makefile names services explicitly, so
+> `make all` is unaffected — always drive the stack through the Makefile.
+
+- [x] Use `make up EDITION=…` or `make up PACKAGE=…` for a named shape.
+- [x] Use `make up-<plane>` to bring up one plane.
+- [ ] Never hand-run `docker compose up` and expect the full frontend set.

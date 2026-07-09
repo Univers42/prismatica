@@ -1,0 +1,69 @@
+---
+title: Offline-First Outbox & Ledger Sync
+icon: ☁
+order: 311
+summary: Edits persist locally first and drain to the backend through an outbox with a confirm-only ledger — designed so a slow server can never turn into a request storm.
+---
+
+# Offline-First Outbox & Ledger Sync
+
+Every edit you make is written locally **first**, then drained to the backend in
+the background. The backend is the source of truth; the store and localStorage
+are a cache, reconciled last-write-wins by `updatedAt`. The mechanism that moves
+edits out is an **outbox** guarded by a **ledger**.
+
+## The moving parts
+
+```text
+edit ─▶ store + localStorage (instant)
+             │
+        pageOutbox  ─PATCH /api/pages/:id─▶  bridge ─▶ BaaS
+             │                                   │
+          ledger  ◀──────── advances ONLY ───────┘
+                            on server confirm
+```
+
+- `src/store/sync/` + `src/shared/sync/outboxLedger.ts` — the page outbox and its
+  ledger.
+- `usePageSync` mounts **once** at `App.tsx`: hydrate-then-outbox, an 800 ms
+  debounce, and a retry that backs off from 15 s toward 120 s.
+
+## The invariants that keep it safe
+
+> [!warning] Ledger advances only on confirm
+> The ledger stamp moves forward **only when the server confirms** a write. A
+> transient failure **stops the whole batch** — the sync does not keep hammering
+> the rest. This is the anti-429-storm rule, and it is deliberate.
+
+Two more invariants protect data:
+
+- Content is **lazy**. A page's stamp uses a `CONTENT_UNLOADED` sentinel, and the
+  outbox **omits `content`** when a page's body isn't loaded — so an unloaded page
+  can never wipe the server copy.
+- The first flush is **gated on hydrate completing**, so the ledger is seeded
+  before anything publishes.
+
+## The storm this design prevents
+
+> [toggle] Post-mortem: the 165-page thundering herd
+> On a freshly seeded workspace the ledger wasn't seeded yet, so **every** page
+> looked "pending." The old flush kept PATCHing the whole batch even after
+> failures — all 429'd, the ledger never advanced, and the set retried every
+> 15 s. Self-sustaining.
+>
+> The fix was pure backpressure, no raised limits:
+> 1. Break on the first transient failure, with exponential backoff.
+> 2. Gate the first flush on hydrate, so the spurious mass-publish never happens.
+> 3. Bound client concurrency and dedup identical in-flight GETs.
+
+## A second, parallel engine
+
+> [!info] Two ledgers, not one primitive
+> Second-Brain notes run their **own** outbox/ledger
+> (`features/second-brain/sync/noteSyncLedger.ts`, storage key
+> `osio-sb-synced-notes`). Despite the shared primitive's "engine-agnostic"
+> framing, the two are separate — change both if you touch ledger semantics.
+
+> [!tip] Client fix, so hard-refresh
+> Because the storm fix ships in the client bundle, an old tab keeps the old
+> behaviour until it is closed. After a fix like this, hard-refresh.

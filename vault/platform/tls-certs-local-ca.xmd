@@ -1,0 +1,77 @@
+---
+title: TLS Certs & Local CA Trust
+icon: ⇄
+order: 1208
+summary: How local development gets real HTTPS — a project CA, per-host certs, and system + browser trust regenerated on every make all.
+---
+
+# TLS Certs & Local CA Trust
+
+Local development runs on **real HTTPS**, not a self-signed warning wall. A
+project certificate authority signs the localhost certs, and `make all` installs
+that CA into the system and browser trust stores so the green padlock is genuine.
+
+## The cert material
+
+Certificates land under `apps/grobase/certs/` — generation is **delegated** to
+grobase (`make certs` → `make -C apps/grobase certs`):
+
+| File | Role |
+|:-----|:-----|
+| `track-binocle-local-ca.pem` | The local CA — the trust anchor |
+| `track-binocle-local-ca-key.pem` | The CA private key (never leaves the box) |
+| `localhost.pem` | The leaf cert served by the proxy |
+| `localhost-key.pem` | The leaf private key |
+
+> [!info] The CA is stable
+> The generator only regenerates the CA if it is *missing*, so the trust anchor
+> does not churn between runs. The leaf certs regenerate on every `make all` by
+> design — a fresh, always-valid cert with no manual renewal.
+
+## The TLS front door
+
+A single `local-https-proxy` service is the TLS terminator. It publishes the
+primary frontend host ports and mounts its nginx config from
+`infrastructure/tls/nginx.conf` (tracked and committed — a fresh clone finds it).
+
+```text
+  browser ──HTTPS──▶ local-https-proxy (nginx, TLS termination)
+                        │
+                        ├─▶ opposite-osiris (Astro)
+                        ├─▶ osionos (React)
+                        └─▶ auth-gateway (Go), bridges, …
+```
+
+## Trusting the CA
+
+```sh
+make certs-trust-local     # system store + Firefox/Chrome NSS
+```
+
+- [x] Installs the CA into the **system** trust store
+- [x] Installs into **Firefox / Chrome** NSS via `certutil`
+- [x] Idempotent — compares installed vs current CA, skips if matched
+
+> [!warning] The silent-skip trap that was fixed
+> `certs-trust-local` once used `sudo -n` (non-interactive) → on a fresh machine
+> with no cached sudo it **silently skipped** system-store trust → untrusted
+> HTTPS. Now: interactive `sudo` (one prompt) when a TTY is present and not in CI,
+> so a fresh `make all` actually trusts the CA; CI keeps the non-interactive path.
+
+## Curling with the CA
+
+To hit a local service over HTTPS without disabling verification, point `curl` at
+the CA file:
+
+```sh
+curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:4322
+curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:3001
+```
+
+> [!tip] Health probing
+> The auth gateway has **no** `/health` route — probe
+> `https://localhost:8787/api/auth/availability` instead. `make healthcheck`
+> follows the HTTP → HTTPS redirects for the website automatically.
+
+Production is separate: the frontends deploy to Vercel and the backend to fly.io
+over their own managed TLS — the local CA is a *development* convenience only.

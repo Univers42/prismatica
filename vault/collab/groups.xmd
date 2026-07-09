@@ -1,0 +1,58 @@
+---
+title: Groups
+icon: ◈
+order: 704
+summary: Named group chats and communities — many-to-many rooms with avatars, descriptions, receipts, and typing.
+---
+
+# Groups
+
+A group is a **named, many-person room**. Where a DM is opened ad-hoc between two
+people, a group has an identity — an avatar, a description, and an explicit
+membership — and everyone in it sees the same conversation.
+
+## Two flavours
+
+osionos ships two group-like constructs that share the chat plumbing:
+
+- **Group channels** — a channel of `kind = 'group'`, created via the chat
+  bridge. Extended with an avatar and a description on top of the base channel
+  schema.
+- **Communities** — larger, standalone spaces served by their own bridge module
+  (`bridge-communities`), listed and joined separately.
+
+Both appear in the People panel's **Groups** tab, grouped by kind, so a single
+surface lists the rooms you belong to regardless of which flavour they are.
+
+## Membership is the gate
+
+Access to a group's messages is governed by membership rows
+(`osionos_channel_members`), not by which workspace you happen to be in. If you're
+a member you see the history and receive live messages; if you're not, the
+listing and the messages simply aren't returned to you.
+
+> [!note] Membership ≠ workspace
+> A group's `workspace_id` is just a container. What actually decides whether you
+> can read a room is your membership row. This is why you can be in a group with
+> someone who shares none of your workspaces.
+
+## What a group conversation carries
+
+| Feature | Behaviour |
+|:--------|:----------|
+| **Read / seen receipts** | Each message tracks who has seen it |
+| **Typing indicators** | Live "… is typing" over the realtime gateway |
+| **Avatars & descriptions** | Group identity, set on the channel |
+| **Live delivery** | New messages arrive over the WebSocket |
+
+## Creating one
+
+- [x] Pick a name (and optionally an avatar + description)
+- [x] Create it — `createChannel` for a group channel, or `createCommunity`
+- [x] Add members — membership rows control who's in
+- [ ] Invite-by-link and public join flows vary by construct
+
+> [!tip] Receipts and typing are shared machinery
+> Group chat reuses the same receipt and typing primitives as 1:1 DMs — there's
+> one implementation of "who saw this" and "who's typing", used by both. See
+> [DMs, channels & the feed](dms-channels-feed.xmd).

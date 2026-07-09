@@ -1,0 +1,55 @@
+---
+title: Light & Dark Theming
+icon: ⌥
+order: 904
+summary: The data-theme axis flips the whole workspace between light and dark by re-defining the same --osio-* tokens under a [data-theme="dark"] block.
+---
+
+# Light & Dark Theming
+
+Mode switching is done the boring, reliable way: one attribute on `<html>` and a
+mirror block of token values. There is **no theme logic in JavaScript components** —
+they read `var(--osio-*)` and the attribute decides which values those resolve to.
+
+## How it works
+
+The default `:root` block holds the **light** values. A single
+`[data-theme="dark"]` block redefines the same token names with dark values:
+
+```css
+:root                { --osio-bg-page: #FAF9F5; --osio-fg-default: #1A1A18; /* light */ }
+[data-theme="dark"]  { --osio-bg-page: /* dark */; --osio-fg-default: /* light ink */ }
+```
+
+Flip `document.documentElement.dataset.theme` and every `var(--osio-…)` reference
+re-resolves. No re-render, no prop threading, no per-component conditionals.
+
+> [!note] Components must not branch on theme in JS
+> A component that reads `theme === 'dark' ? '#fff' : '#000'` breaks the moment a
+> palette changes those values. Always go through a token; let the cascade decide.
+
+## Boot without a flash
+
+The mode (and [palette](./palette-axis.xmd)) is applied **before first paint** by
+a synchronous bootstrap script in `index.html` that reads the stored choice from
+`localStorage` and stamps `data-theme` / `data-palette` on `<html>`. That kills the
+flash-of-unstyled-content (FOUC) you get when a theme is applied after hydration.
+
+1. Inline boot script reads `localStorage`.
+2. Sets `data-theme` + `data-palette` on `<html>` synchronously.
+3. React mounts into an already-correct DOM.
+
+## The dark-mode contract
+
+- [x] Every colour token has a dark counterpart under `[data-theme="dark"]`.
+- [x] `--osio-accent-text` shifts to an AA-safe tone in dark (warm terracotta `#E0937A`).
+- [x] Graph identity tokens (`--osio-graph-bg-0/1`) get dark values, so node materials track the mode.
+- [ ] No token is left light-only — an unpaired token is a dark-mode bug.
+
+> [!tip] Mode and palette are independent
+> `data-theme` answers "how bright?"; `data-palette` answers "what colours?". They
+> compose — you can run Nord-light and Nord-dark, or Warm-light and Midnight-dark.
+> See [The palette axis](./palette-axis.xmd) for why they're kept orthogonal.
+
+The docs shell you're reading follows the same `data-theme` convention, which is
+how the markengine and editor share one visual language.

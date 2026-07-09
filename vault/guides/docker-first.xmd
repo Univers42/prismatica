@@ -1,0 +1,54 @@
+---
+title: Docker-First Development
+icon: ☁
+order: 102
+summary: The hard rule — the whole toolchain runs in containers, and why the host stays empty.
+---
+
+# Docker-First Development
+
+The entire development environment runs in containers. This is not a preference —
+it is a constraint the tooling actively enforces.
+
+> [!danger] Never install dependencies on the host
+> No local Node, npm, or pnpm. **No host `node_modules`** — they break the
+> container volumes. Many app npm scripts detect host execution and proxy the
+> command back into Docker for you.
+
+## Do / don't
+
+- [x] Run commands through `make` and `docker compose`
+- [x] Shell into a running service: `docker compose exec <service> bash`
+- [x] Let the containers own the dependencies
+- [ ] ~~`npm install` on your laptop~~
+- [ ] ~~Point an app at a host-installed Postgres or Redis~~
+- [ ] ~~Add an install-time lifecycle hook~~
+
+## Supply chain is locked down
+
+Dependency installs are deliberately constrained so a compromised package can't
+run arbitrary code at install time.
+
+| App type | Install discipline |
+|:---------|:-------------------|
+| npm apps | Frozen lockfiles, `npm ci --ignore-scripts` |
+| pnpm apps | `minimum-release-age` + an `onlyBuiltDependencies` allowlist |
+
+> [!warning] Don't add install-time lifecycle hooks
+> Postinstall/preinstall scripts are exactly what the `--ignore-scripts` and
+> allowlist policies exist to neutralize. Adding one will either be ignored or
+> fail the supply-chain gate.
+
+## Working inside a container
+
+```bash
+docker compose ps                    # what's running
+docker compose logs -f osionos-app   # follow one service
+docker compose exec osionos-app bash # a shell inside it
+```
+
+> The trade you make is a slightly heavier first build in exchange for a machine
+> that reproduces the team's environment exactly — the same reason a fresh clone
+> plus `make all` works identically on any box.
+
+Next, the command that ties all of this together → [The root Makefile](root-makefile.xmd).

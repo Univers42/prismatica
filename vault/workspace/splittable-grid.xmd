@@ -1,0 +1,79 @@
+---
+title: The Splittable Editor Grid
+icon: ▤
+order: 802
+summary: The content area is a recursive grid of tabbed panes you can split, resize, and drag tabs between — with lazy-mounting so only the focused pane runs a live editor.
+---
+
+# The Splittable Editor Grid
+
+The whole content area of osionos is one recursive widget:
+`widgets/workspace-grid/`. It renders the [layout tree](layout-tree.xmd) as a
+grid of tabbed panes you can split, resize, and shuffle tabs between — the same
+muscle memory as splitting editor groups in an IDE.
+
+## The component tree
+
+```text
+WorkspaceGrid  (recursive over the layout tree)
+└─ PaneView
+   ├─ TabStrip ── TabButton …      (drag tabs between panes)
+   ├─ PaneContent                  (the dispatch chain)
+   ├─ PaneDropOverlay              (centre + 4 edge drop zones)
+   └─ active-pane ring
+PaneSplitter  (pointer-drag resize between siblings)
+```
+
+`MainContent.tsx` stays deliberately thin: it keeps the Home dashboard seed
+effect and renders `<WorkspaceGrid/>`.
+
+## Splitting and moving
+
+Dropping decides the outcome, and `paneDropZone.ts:computeDropZone` does the
+geometry:
+
+- **Centre** of a pane → the tab is added to that pane's strip.
+- **One of the 4 edges** → the pane splits and the tab opens in the new half.
+
+Tabs carry a MIME type (`application/x-osionos-tab`) so they can be dragged
+between panes. Sidebar rows join the same choreography: a page row sets
+`text/plain=pageId`, so dropping a **sidebar file** on a pane centre opens a new
+tab and dropping it on an edge splits.
+
+> [!tip] Folders open as tabs too
+> Drag a **folder** onto a pane and it opens a `folder` tab — a readable listing
+> of its children (folders first). Click a child and it opens in the same pane.
+> See [Folders & Trash](folders-and-trash.xmd).
+
+## Only the focused pane runs a live editor
+
+Mounting a full editor in every visible split would be ruinous. So the grid is
+selective, driven by the focus check in `PaneContent.tsx`:
+
+```ts
+const isFocusedPane = !paneId || activePaneId === paneId;
+```
+
+- The **focused** pane mounts the live, editable page (`LazyOsionosPage`).
+- **Unfocused** splits render a cheap read-only preview (`PageBlocksRenderer`).
+
+Per-pane editor / database / channel / console chunks are code-split via
+`React.lazy` in `widgets/page-renderer/ui/lazyViews.tsx`, always through **deep
+import paths** — importing a widget barrel would staple the whole ~1.1 MB editor
+onto the warm chunk.
+
+## Resize is DOM-only
+
+Dragging a `PaneSplitter` used to commit the entire layout tree to the store — and
+serialize it to `localStorage` — on **every** pointer-move, which could crash the
+app with two views of the same page open. It was rebuilt to be DOM-only:
+
+- [x] drag writes `flexBasis` straight onto the two adjacent cells
+- [x] the store is touched **once**, on pointer-up
+- [x] off-screen cells get `content-visibility: auto` only during the drag
+- [x] regression bench: `scripts/pane-resize-bench.mjs` (12-pane seed, real drags)
+
+> [!note] Known gaps
+> Tab reordering only **appends** on a strip drop — there is no precise
+> between-tabs index yet. Folder tabs are a flat child list with no pagination or
+> breadcrumb.

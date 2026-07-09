@@ -1,0 +1,64 @@
+---
+title: The /canvas & /layout Builder
+icon: ⎔
+order: 305
+summary: A Figma-style freeform builder that lives inside a single block — drag, align, and distribute cells on a canvas that never drops a frame.
+---
+
+# The /canvas & /layout Builder
+
+The `/layout` (and `/canvas`) slash command inserts one **layout block** that
+behaves like a Figma-style canvas: free-positioned cells, drag to move, drag to
+resize, align and distribute across a selection. Each cell can hold ordinary
+blocks — so a canvas is a page inside a block.
+
+## Two engines behind one flag
+
+The builder ships as a dual model, gated by the `osio.canvas.v2` flag:
+
+| | V1 (legacy) | V2 (current default) |
+|:--|:------------|:---------------------|
+| Model | 12-column grid + offset | Free pixel frames |
+| File | `LayoutBlockEditor.tsx` | `features/block-editor/ui/canvas/` |
+| Status | Kept for shadow → parity | Default on |
+
+> [!note] Legacy is not deleted
+> V1 stays in place under the shadow → parity → cutover discipline. Migration
+> between the two is **lossless and bidirectional** (`model/migration.ts`):
+> blocks move by reference, free positions survive through the legacy offset.
+
+## The V2 render path
+
+```text
+CanvasRoot ─▶ CanvasStage ─▶ CanvasCellView (memoized on cell identity)
+     │              │
+ canvasStore    interactionStore   (transient: guides, marquee)
+ (persisted)    "cells never re-render during a drag"
+```
+
+- `canvasStore.ts` — a vanilla zustand store, refcounted per layout block, with
+  a debounced write.
+- `canvasReducer.ts` — every action: `updateCell`, `updateCellFrames`,
+  `setCellsZ`, `duplicate`, `remove`, `undo`, `redo`.
+- `interactionStore.ts` — transient gesture state that keeps the cells still.
+
+## Performance guardrails — do not break these
+
+> [!warning] The gesture path is sacred
+> During a drag the canvas writes CSS variables (`--osio-cell-dx/dy/dw`) on every
+> animation frame and dispatches **nothing** until pointer-up. Cell editors
+> lazy-mount through a shared IntersectionObserver; the graph background runs at
+> a capped frame rate. Route new work around the pointer-down path.
+
+## In-place editing, not an inspector
+
+Selecting cells raises a floating toolbar (`CanvasSelectionToolbar`) anchored to
+the selection — fill colour, z-order, multi-select **align and distribute**
+(`alignOps.ts`), duplicate, delete. Collision resolves by **push-down**, not a
+silent revert.
+
+> [!tip] What it is used for
+> Beyond hand-built pages, `/canvas` powers live-data **showcase boards** — KPI
+> tiles, charts, and a full-width `graph_view` band bound to real database
+> mounts. A canvas is where the editor stops being a document and becomes a
+> dashboard.

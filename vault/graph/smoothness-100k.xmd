@@ -1,0 +1,66 @@
+---
+title: Smoothness at 100k Nodes
+icon: ✶
+order: 405
+summary: A benchmark caught zoom collapsing to 2fps at 100k nodes; deferring the full edge pass off motion frames took it to 28fps — a 23× tail-latency win.
+---
+
+# Smoothness at 100k Nodes
+
+The engine is built to stay smooth on graphs far larger than any real workspace. A
+synthetic benchmark pushes it to **100,000 nodes** (behind `?graphBench=N`) — and it
+was that benchmark that exposed the last big stall.
+
+## The symptom
+
+At 100k nodes, **zooming ran at ~2fps**: about 564ms average per frame, with a p95
+tail of 2666ms. Panning and idle were fine; only zoom fell off a cliff.
+
+## The cause
+
+Once you zoom in past the overview density gate, the normal per-node path runs.
+`core/render/renderFrame.ts` was calling `drawLinks` (and its arrows) **even on
+motion / low-quality frames**. Links have only a node-count gate, no edge spatial
+cull — so every frame iterated all ~200,000 edges.
+
+> [!error] Edges had no motion budget
+> Nodes already dropped to half-res and shed decorative passes during motion
+> (see [Frame Budget & DPR Cap](frame-budget-dpr.xmd)). The full edge pass was the
+> one heavy thing that *did not* respect the motion budget.
+
+## The fix
+
+The edge pass now follows the same policy as the other decorative passes: on a large
+graph, defer it to the settled frame.
+
+```ts
+// renderFrame.ts — defer the full edge pass while moving on big graphs
+if (!lq || f.state.count <= AGG_MIN_NODES) drawLinks(base);
+```
+
+Read plainly: draw all links **either** when the frame is high-quality (settled)
+**or** when the graph is small enough (`<= 15000` nodes) that edges are cheap during
+motion. Big graphs simply skip the edge pass mid-zoom and paint it once you stop.
+
+## The result
+
+| Metric | Before | After | Change |
+|:-------|-------:|------:|-------:|
+| Zoom FPS (100k) | 2 | 28 | ~14× |
+| Zoom p95 frame | 2666ms | 117ms | ~23× |
+
+> [!note] Measured, not claimed
+> Numbers come from `scripts/graph-bench.mjs` against the synthetic 100k model. The
+> benchmark runs in a headless, CPU-throttled, GPU-less container, so it
+> *under-represents* real hardware — the fix is a floor, not a ceiling.
+
+## Known residual
+
+If you park **zoomed in** on a 100k graph and stop, the settled frame still iterates
+every edge each idle frame. The motion fix hides the cost during interaction; the
+proper fix is an **edge cull** using the existing CSR adjacency in `sceneEdges.ts`.
+Tracked as follow-up work.
+
+- [x] Zoom stall found by the 100k bench
+- [x] Full edge pass deferred off motion frames on graphs > 15000
+- [ ] Steady-state edge cull via CSR adjacency (pending)

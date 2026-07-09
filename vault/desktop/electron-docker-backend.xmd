@@ -1,0 +1,81 @@
+---
+title: Electron + Docker Backend
+icon: ⚙
+order: 1001
+summary: Build the Electron desktop app that points at a lean Dockerized backend on loopback — the tested, ship-today shape.
+---
+
+# Electron + Docker Backend
+
+This is the stopgap-but-solid desktop shape: an **Electron** window running the
+osionos editor, wired to a **lean Docker backend** on the same machine over plain
+HTTP. It is the most-exercised of the three shapes.
+
+## Build the app
+
+```bash
+# Linux .AppImage + .deb
+bash apps/osionos-electron/build.sh --local
+# → dist-local/osionos-0.5.2-local.AppImage
+# → dist-local/osionos-desktop_0.5.2-local_amd64.deb
+
+# Add a cross-built Windows .exe (electron-builder's wine image):
+bash apps/osionos-electron/build.sh --local --all
+```
+
+The `--local` build bakes a specific env into the frontend:
+
+| Var | Value | Why |
+|:----|:------|:----|
+| `VITE_API_URL` | `http://localhost:4000` | The bridge is the only backend the editor calls |
+| `VITE_AUTH_MODE` | `portal` | Real local login is enforced |
+| `VITE_BAAS_*` | *empty* | The graph and Database mode run on local pages; the query router is absent |
+
+## Run the backend, then the app
+
+`install.sh` chains the whole thing: check Docker → pull the lean images from
+Docker Hub → `make local` → install the desktop app from `dist-local/`.
+
+```bash
+bash apps/osionos-electron/local-edition/install.sh
+```
+
+- [x] Docker Engine + compose plugin present
+- [x] The repo checked out (it carries the lean compose + migrations)
+- [ ] `dist-local/` artifacts built or downloaded
+- [ ] Backend up on `http://localhost:4000`
+
+> [!warning] The backend needs the repo
+> Even with a downloaded `.deb`, the **backend** is Dockerized and needs the
+> repo's compose files + migrations on the same machine. A true no-repo,
+> no-Docker install is the separate [native edition](native-edition-no-docker.xmd).
+
+## Two ways to launch
+
+> [toggle] .deb — app-menu entry
+> The installer runs `sudo dpkg -i …` and setuids `chrome-sandbox` (Ubuntu 24.04's
+> user-namespace restriction needs it). Then launch **osionos** from the app menu.
+
+> [toggle] AppImage — single file, no install
+> `chmod +x dist-local/osionos-0.5.2-local.AppImage` then run it. On Ubuntu 24.04
+> the AppImage already runs Chromium with the sandbox off (baked in), but FUSE2 may
+> be missing — `sudo apt install libfuse2t64` **or** run it with
+> `--appimage-extract-and-run`.
+
+## Sandbox handling
+
+`main.js` probes whether `chrome-sandbox` is setuid-root: when the helper can
+sandbox, the app **keeps** its sandbox; only when it cannot (a read-only AppImage
+mount or a kernel that restricts unprivileged user namespaces) does it append
+`--no-sandbox`. It is a fallback, not a blanket disable.
+
+## Start / stop the lean backend
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml --profile local up -d   # start
+docker compose -f docker-compose.yml -f docker-compose.local.yml --profile local down    # stop
+```
+
+Data lives in the `track-binocle-postgres-data` volume and survives restarts.
+
+See also: [The Fully-Local `make local` Edition](fully-local-make-local.xmd).

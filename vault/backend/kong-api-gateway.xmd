@@ -1,0 +1,64 @@
+---
+title: Kong — the API front door
+icon: ⇄
+order: 1101
+summary: Every request into grobase — auth, queries, storage, realtime — enters through one Kong gateway on port 8000, carrying an API key and (optionally) a bearer JWT.
+---
+
+# Kong — the API front door
+
+Everything a frontend does with grobase goes through **one gateway: Kong**,
+published on port **`8000`**. Frontends never talk to Postgres, GoTrue, or the
+data plane directly — Kong is the single door, and container-name DNS
+(`mini-baas-kong:8000`) routes traffic behind it.
+
+> [!info] One door, many services
+> Behind Kong live GoTrue (auth), PostgREST, the query-router, storage-router,
+> the realtime server, and the control plane. Kong routes each path prefix to
+> the right upstream.
+
+## The route map
+
+| Prefix | Upstream | Purpose |
+|:-------|:---------|:--------|
+| `/auth/v1` | GoTrue | Sign-up, login, session JWTs |
+| `/rest/v1` · `/query/v1/{dbId}/tables` | PostgREST / query-router | CRUD over a mounted database |
+| `/query/v1/txn` | query-router | ACID multi-statement transactions |
+| `/storage/v1` | storage-router | File / object storage |
+| `/realtime/v1/ws` | realtime server | WebSocket + SSE change streams |
+
+## How a request authenticates
+
+Most calls carry **three** pieces of credential material:
+
+```http
+apikey: <kong public or service key>
+X-Baas-Api-Key: mbk_...            # the tenant/app key
+Authorization: Bearer <user JWT>   # when acting as a signed-in user
+```
+
+The `apikey` gets the request *through Kong*; the `X-Baas-Api-Key` resolves to a
+tenant identity in the [control plane](go-control-plane.xmd); the bearer JWT (when
+present) identifies the signed-in user for owner-scoping.
+
+## Admin vs public surfaces
+
+- **Public** — the anon/public key opens the read+write data path.
+- **Admin** — mount registration and DDL go through admin routes
+  (`kong/admin/v1/databases` to register a mount, `kong/data/v1/schema/ddl` to
+  create tables) with a service key.
+
+> [!warning] The admin plane must never be publicly exposed
+> A hardening gate (`m157`) exists specifically to prove the Kong admin API is
+> not reachable from outside. Keep it internal.
+
+## Ports move if they're busy
+
+`make up` runs a port resolver that **auto-increments** any in-use host port
+(Kong 8000, Postgres 5432, Mongo 27017, …) to the next free one and warns on
+stderr. `make health` discovers the live Kong port at runtime, so it always
+prints the correct `localhost:<port>` even when 8000 was taken.
+
+> [!tip] Quick health probe
+> The gateway's liveness lives at `/auth/v1/health`. `make healthcheck` (root)
+> curls it along with the bridges, osionos, and the website.

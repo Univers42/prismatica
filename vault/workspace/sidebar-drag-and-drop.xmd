@@ -1,0 +1,79 @@
+---
+title: Sidebar Tree Drag-and-Drop
+icon: ⇄
+order: 805
+summary: The sidebar page tree supports HTML5 drag-and-drop reparenting with drop-zone math, spring-loaded folders, and cycle-safe moves.
+---
+
+# Sidebar Tree Drag-and-Drop
+
+The sidebar is a live tree of your workspace pages and folders, and it supports
+**HTML5 drag-and-drop reparenting** — drag a page onto a folder to nest it, or
+between two rows to make it a sibling.
+
+## The moving parts
+
+- **`model/sidebarTreeDnd.ts`** — a tiny zustand store holding the drag state:
+  `draggingId`, `dropTargetId`, `dropMode` (`inside | before | after`), and a
+  `collapseToken` (bumped to collapse everything at once).
+- **`ui/usePageRowDnd.ts`** — a per-row hook that runs the drop-zone math and,
+  on drop, calls the store's `movePage`.
+- **`ui/PageTreeItem.tsx`** — the row itself: the label `<button>` is the drag
+  **source**, the outer `<div>` is the drop **target**.
+
+## Where you drop decides what happens
+
+The hook's `computeDropMode` reads the pointer's vertical position over a row:
+
+```text
+┌──────────────────────────┐
+│  top 30%   → before      │   ← sibling, above
+│                          │
+│  middle 40% → inside      │   ← child of this row
+│                          │
+│  bottom 30% → after      │   ← sibling, below
+└──────────────────────────┘
+```
+
+Visually: an `inside` target **tints and rings** the whole row; `before` / `after`
+draw a **blue insertion line**.
+
+## Spring-loaded folders
+
+Hover a **collapsed** folder mid-drag and hold for **650 ms** — it springs open so
+you can drop deeper without letting go. The collapse-all toolbar button works the
+other way, broadcasting a `collapseToken` that every row listens for:
+
+```ts
+useEffect(() => setExpanded(false), [collapseToken]);
+```
+
+## Moves are cycle-safe
+
+`movePage` runs `isValidMove` first, which blocks two illegal moves:
+
+1. dropping a node **onto itself**, and
+2. dropping a node **into its own descendant** (which would orphan the subtree).
+
+Everything under the moved node follows for free, because children are keyed on
+`parentPageId` — reparenting the node reparents the whole subtree.
+
+## The toolbar
+
+`SidebarTreeToolbar.tsx` replaced the old `···` overflow on the **Private** and
+**Shared** sections with four explicit `IconButton`s:
+
+| Icon | Action |
+|:-----|:-------|
+| add file | create a page |
+| add folder | create a folder |
+| collapse-all | `bumpCollapse()` |
+| refresh | `fetchPages()` |
+
+> [!warning] Sibling order is not persisted yet
+> A `before` / `after` drop lands the node at the right **depth**, but it
+> **appends** among its new siblings — children are array-ordered by
+> `parentPageId`, and there is no `order`/`position` column. So the exact
+> above/below index does **not** survive a reload. Adding one to the page entry
+> and the BaaS pages table (plus a fractional index on drop) is the open
+> follow-up.

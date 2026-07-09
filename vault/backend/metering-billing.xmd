@@ -1,0 +1,61 @@
+---
+title: Metering & billing (Track B)
+icon: ▤
+order: 1107
+summary: The managed-cloud money path — usage metering, quota enforcement, Stripe billing, spend caps — is real code, but every piece is flag-gated OFF so the OSS stack stays byte-parity.
+---
+
+# Metering & billing (Track B)
+
+Track B is the **managed-cloud** lane: the path from *usage* to *a bill*. All of
+it ships, all of it is **flag-gated OFF by default**, so a self-hosted stack is
+byte-parity with the OSS edition until you opt in.
+
+> [!warning] Nothing here is on unless you turn it on
+> Every flag below defaults false. `make cloud-up` turns the whole Track-B set ON
+> via the cloud flags manifest — that is **not** a default bring-up.
+
+## The pieces, their flags, their migrations
+
+| Feature | Gate | Flag(s) | Migration |
+|:--------|:-----|:--------|:----------|
+| Usage metering | m74–m79 | `METERING_ENABLED` + `DATA_PLANE_METERING` | `040_tenant_usage.sql` |
+| Quota enforce | m80 | `QUOTA_ENFORCEMENT` + `DATA_PLANE_QUOTA_ENFORCEMENT` | — |
+| Billing / Stripe | m82 | `BILLING_ENABLED` | `041_tenant_billing.sql` |
+| Per-tenant obs | m85 | `TENANT_OBS_ENABLED` + `DATA_PLANE_TENANT_OBS` | — |
+| Backup / restore | m87 | `TENANT_BACKUP_ENABLED` | `042_tenant_backups.sql` |
+
+Plus the go-live guards: `QUOTA_STAGE`, `SPEND_CAPS_ENABLED`, `ABUSE_GUARD_ENABLED`
+(gates m89–m91).
+
+## The two-halves rule
+
+> [!error] Flip both planes or get a silent no-op
+> Metering and quota each need a **master flag in Go and a sub-flag in Rust**:
+> `METERING_ENABLED` **AND** `DATA_PLANE_METERING`; `QUOTA_ENFORCEMENT` **AND**
+> `DATA_PLANE_QUOTA_ENFORCEMENT`. Each plane reads its own chain, so setting only
+> one silently does nothing.
+
+## What a quota hit looks like
+
+When enforcement is on and a tenant is over budget, the data plane rejects **on
+the request path** with the correct HTTP status:
+
+- `402` — quota / spend exceeded (`spend:over`)
+- `403` — tenant suspended (`tenant:suspended`)
+
+Enforcing at the data plane closed a real gap: quota used to be checked only in
+the control plane, which left the actual query path as financial exposure.
+
+## Where per-tenant usage lands
+
+- **Metering** writes to `tenant_usage` (migration `040`).
+- **Per-tenant observability** treats `tenant_id` as a log **field**, never a
+  Prometheus label — so cardinality stays bounded.
+- **Backups** are Go-native `COPY … TO/FROM STDIN` over the pgx pool (no
+  `pg_dump`, no image change), with an **atomic** restore (`TRUNCATE` + `COPY` in
+  one transaction).
+
+> [!tip] Track B is one of five tracks
+> Metering/billing is the money half of the managed cloud. See [Tracks
+> A–E](tracks-a-to-e.xmd) for how B fits alongside enterprise (D) and parity (E).

@@ -24,6 +24,7 @@ const links = [
 
 		<div class="docs-teaser__panel" data-scroll-grow>
 			<Card variant="doc">
+				<div class="docs-teaser__codewrap">
 				<pre class="docs-teaser__code"><code>{`import { createClient } from '@grobase/js';
 
 const baas = createClient({ url, anonKey });
@@ -32,14 +33,24 @@ const { data, error } = await baas
 	.from('projects')
 	.select('id, name, owner:users(email)')
 	.eq('archived', false);`}</code></pre>
+				<button type="button" class="docs-teaser__copy" data-copy-code aria-label="Copy code sample">
+					<svg class="docs-teaser__copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+						<rect x="9" y="9" width="11" height="11" rx="2.5" />
+						<path d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A2.5 2.5 0 0 0 4 5.5v6A2.5 2.5 0 0 0 6.5 14" />
+					</svg>
+					<span class="docs-teaser__copy-label" data-copy-label>Copy</span>
+				</button>
+				</div>
 				<ul class="docs-teaser__links" role="list">
 					{links.map((link) => (
 						<li><a href={link.href}>
-							{link.kind === 'quickstart' && <>Quickstart</>}
-							{link.kind === 'auth' && <><span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> &amp; sessions</>}
-							{link.kind === 'postgrest' && <>PostgREST recipes</>}
-							{link.kind === 'gdpr' && <><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr> runbook</>}
-							 →
+							<span class="docs-teaser__label">
+								{link.kind === 'quickstart' && <>Quickstart</>}
+								{link.kind === 'auth' && <><span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> &amp; sessions</>}
+								{link.kind === 'postgrest' && <>PostgREST recipes</>}
+								{link.kind === 'gdpr' && <><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr> runbook</>}
+							</span>
+							<span class="docs-teaser__arrow" aria-hidden="true">→</span>
 						</a></li>
 					))}
 				</ul>
@@ -64,6 +75,7 @@ const { data, error } = await baas
 		max-width: 50ch;
 		margin-bottom: 1.25rem;
 	}
+	.docs-teaser__codewrap { position: relative; }
 	.docs-teaser__code {
 		margin: 0;
 		padding: 1rem;
@@ -75,6 +87,51 @@ const { data, error } = await baas
 		line-height: 1.55;
 		color: var(--system-text);
 		overflow-x: auto;
+	}
+	.docs-teaser__copy {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-height: 32px;
+		padding: 0.3rem 0.6rem;
+		border: 1px solid var(--system-border);
+		border-radius: var(--system-radius-sm);
+		background: color-mix(in srgb, var(--system-surface) 90%, transparent);
+		color: var(--system-text-muted);
+		font: 600 var(--system-text-2xs) / 1 var(--system-font-sans);
+		letter-spacing: 0.02em;
+		cursor: pointer;
+		transition:
+			background var(--system-duration-base) var(--system-ease-standard),
+			border-color var(--system-duration-base) var(--system-ease-standard),
+			color var(--system-duration-base) var(--system-ease-standard);
+	}
+	.docs-teaser__copy:hover {
+		border-color: var(--system-border-strong);
+		color: var(--system-text-strong);
+		background: var(--system-surface);
+	}
+	.docs-teaser__copy:focus-visible {
+		outline: 3px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+	.docs-teaser__copy.is-copied {
+		color: var(--system-success-text);
+		border-color: var(--system-success-border);
+	}
+	.docs-teaser__copy-icon { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.75; }
+	.docs-teaser__arrow {
+		margin-left: 0.35em;
+		transition: transform var(--system-duration-base) var(--system-ease-standard);
+	}
+	.docs-teaser__links a:hover .docs-teaser__arrow { transform: translateX(3px); }
+	@media (prefers-reduced-motion: reduce) {
+		.docs-teaser__copy,
+		.docs-teaser__arrow { transition: none; }
+		.docs-teaser__links a:hover .docs-teaser__arrow { transform: none; }
 	}
 	.docs-teaser__links {
 		display: grid;
@@ -99,3 +156,29 @@ const { data, error } = await baas
 		border-radius: var(--system-radius-sm);
 	}
 </style>
+
+<script>
+	// Bundled (not is:inline) so it runs under the strict production
+	// `script-src 'self'` CSP with no inline-hash allowance needed.
+	(() => {
+		for (const btn of document.querySelectorAll('[data-copy-code]')) {
+			const wrap = btn.closest('.docs-teaser__codewrap');
+			const code = wrap?.querySelector('code');
+			const label = btn.querySelector('[data-copy-label]');
+			if (!code || !(label instanceof HTMLElement)) continue;
+			btn.addEventListener('click', async () => {
+				try {
+					await navigator.clipboard.writeText(code.textContent ?? '');
+					label.textContent = 'Copied';
+					btn.classList.add('is-copied');
+					window.setTimeout(() => {
+						label.textContent = 'Copy';
+						btn.classList.remove('is-copied');
+					}, 1600);
+				} catch {
+					/* clipboard unavailable (insecure context / denied) */
+				}
+			});
+		}
+	})();
+</script>

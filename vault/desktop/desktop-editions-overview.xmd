@@ -1,0 +1,57 @@
+---
+title: Desktop Editions Overview
+icon: ◈
+order: 1000
+summary: osionos ships as a desktop app in three shapes — Electron over Docker, a no-Docker native build, and a Tauri WebKitGTK shell. Here is how to choose.
+---
+
+# Desktop Editions Overview
+
+osionos runs in the browser as part of the Track Binocle stack, but it also ships
+as a **click-the-icon desktop app**. There is not one desktop build — there are
+**three shapes**, each trading convenience against how much of the backend the
+machine has to carry.
+
+> [!note] One authority
+> The shapes are defined in `apps/osionos-electron/local-edition/README.md` and
+> `NATIVE-EDITION-DESIGN.md`, plus the Tauri project at `apps/osionos-desktop/`.
+> This page is a map; each shape has its own doc.
+
+## The three shapes
+
+| Shape | Shell | Backend | Docker? | Best for |
+|:------|:------|:--------|:-------:|:---------|
+| **Electron + Docker** | Electron | Lean stack, repo + Docker | Yes | Developers, the stopgap ship |
+| **Native (no Docker)** | Electron | Embedded Postgres + gotrue + tiny Node layer | **No** | The friction-free consumer app |
+| **Tauri / WebKitGTK** | Tauri v2 (Rust) | Local suite over HTTP loopback | Yes | Native GTK feel, small shell |
+
+Every shape runs the **same editor** and enforces **real local login** — none of
+them drops authentication or Postgres row-level security.
+
+## How to pick
+
+- **You already clone the repo and run Docker** → *Electron + Docker*. It reuses
+  the lean `make local` backend you may already know.
+- **You want to hand osionos to a non-technical user** → *Native*. Data becomes a
+  file on that person's own disk; no containers, no cloud.
+- **You want a small native window that feels like a GTK app** → *Tauri*. The
+  shell is Rust; it still boots the suite through `docker compose`.
+
+## Shared ground rules
+
+1. **Binaries are never committed to git** — they exceed GitHub's 100 MB limit and
+   are published as **Release assets** instead. See
+   [Shipping Binaries](shipping-binaries-releases.xmd).
+2. **Loopback must be IPv4.** Every desktop shape talks to the backend on
+   `127.0.0.1`, never `localhost` — a Chromium quirk that bites hard. See
+   [The localhost → 127.0.0.1 Gotcha](localhost-ipv4-gotcha.xmd).
+3. **HTTP on loopback is desktop-only.** The web and server distributions stay on
+   HTTPS; desktop drops TLS-on-loopback on purpose.
+
+> [!tip] Not sure? Start with Electron + Docker
+> It is the most-tested shape and the fastest to get running if you have the repo.
+> The native edition is the end-state, but read its doc for current status.
+
+Next: [Electron + Docker Backend](electron-docker-backend.xmd) ·
+[The Native Edition](native-edition-no-docker.xmd) ·
+[Tauri / WebKitGTK Shell](tauri-webkitgtk-shell.xmd)

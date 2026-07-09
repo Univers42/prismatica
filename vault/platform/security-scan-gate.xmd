@@ -1,0 +1,71 @@
+---
+title: The Security Scan Gate
+icon: ⚡
+order: 1204
+summary: One command runs SAST, dependency audit, container scanning, and secret detection — every scanner in its own Docker image.
+---
+
+# The Security Scan Gate
+
+Four classes of vulnerability, four scanners, **one command**. Because the repo is
+Docker-first, each tool runs inside its own official image — the host needs
+nothing but `docker`.
+
+```sh
+make baas-security-scan
+```
+
+## What runs
+
+| Scanner | Class | Catches |
+|:--------|:------|:--------|
+| **Semgrep** | SAST | Insecure code patterns, taint, injection |
+| **npm / pnpm audit** | SCA | Known-vulnerable dependencies |
+| **Trivy** | Container + FS | CVEs in images and the filesystem |
+| **TruffleHog** | Secrets | Committed keys, tokens, credentials |
+
+They run **sequentially**, each in its official Docker image, driven by
+`apps/grobase/scripts/security/run-security-scans.sh`.
+
+## Tuning the run
+
+The gate is scriptable — run one tool, skip one, or change the fail threshold:
+
+```sh
+make baas-security-scan SECURITY_ONLY=trivy        # only Trivy
+make baas-security-scan SECURITY_SKIP=trufflehog   # everything but secrets
+```
+
+- `SECURITY_FAIL_LEVEL` defaults to **`high`** — the run fails on high/critical.
+- `SECURITY_TRIVY_SEVERITY` defaults to **`HIGH,CRITICAL`**.
+
+> [!info] Passing means green, not silent
+> A gate that did not run is *uncovered surface*, not a pass. Skipped ≠ passed.
+> The scan reports each tool's result; a suppressed finding needs a linked issue
+> and a one-line reason, never a silent ignore.
+
+## Beyond the four core scanners
+
+The Makefile carries a wider security surface for when a live target is up:
+
+> [toggle] The extended security targets
+> - `make baas-zap` — OWASP ZAP **DAST** baseline against the live WAF.
+> - `make baas-security-audit` — OSS audit suite: OSV deps + IaC misconfig
+>   (always), plus Nuclei / sqlmap / web-privacy when a live target responds.
+> - `make baas-compliance-scan` — Checkov over the Helm charts (maps to ISO A.8 /
+>   SOC 2 CC6–7).
+> - `make baas-compliance-evidence-export` — assemble the auditor hand-off bundle.
+
+## Where it fits
+
+- **SAST (Semgrep)** and **manual security review** complement each other —
+  neither replaces the other. Run both.
+- The scan gate is the *dynamic* half of "done"; the
+  [supply-chain lockdown](supply-chain-lockdown.xmd) is the *preventive* half.
+- The same Semgrep + Trivy engines feed GitHub code-scanning — see
+  [Code-Scanning to Zero](code-scanning-to-zero.xmd) for how that surface was
+  driven to no open alerts.
+
+> [!success] The bar
+> Strictest flags, always. A high-severity finding fails the gate. There is no
+> "warning budget" — a warning is an error.

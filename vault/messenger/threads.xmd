@@ -1,0 +1,60 @@
+---
+title: Threads
+icon: ⎔
+order: 604
+summary: Reply under any message to open a focused side-thread, with a live reply count and a race-free root, without derailing the main channel.
+---
+
+# Threads
+
+A busy channel turns into noise when every side-conversation happens inline.
+**Threads** fix that: reply *under* a message and the exchange collapses into a
+focused branch, leaving the main flow readable.
+
+## How a thread forms
+
+Any message can be the **root** of a thread. Replies point back at that root, and
+a reply to a reply still resolves to the *same* root — a thread is always one
+level deep by design, never a nested tree.
+
+```text
+ Main channel
+ ├─ "Ship the fix?"            ← thread root
+ │    💬 3 replies             ← reply count, live
+ ├─ "Deploy went out"
+ └─ "Standup at 10"
+        └─ (open the root to see the 3 replies in a side panel)
+```
+
+## The reply count
+
+Each root carries a **reply count** that updates as replies land. On the message
+row it shows as a compact affordance — *"💬 N replies"* — and clicking it opens
+the thread.
+
+> [!info] The count stays honest
+> The reply count is maintained by the backend as replies are added or removed,
+> in a way that's **race-free** — two people replying at once can't corrupt the
+> tally, and deleting a reply decrements it correctly.
+
+## The thread panel
+
+Opening a thread doesn't navigate away. The **thread panel** slides in beside the
+channel, so you keep the room in view while you read and reply to the branch.
+
+- The panel shows the root message, then its replies in order.
+- Replying from the panel adds to the same thread.
+- Closing it returns you to exactly where you were in the channel.
+
+## Threads and the rest of the messenger
+
+- Threaded replies deliver in **realtime** like any message.
+- They respect **membership** — you only see threads in channels you belong to.
+- A reply can carry **rich media**, just like a top-level message.
+
+> [!tip] Thread, don't derail
+> If a message sparks a tangent, reply in a thread. The channel stays scannable,
+> and the tangent stays findable.
+
+Related: [Rich-media messages](rich-media-messages.xmd) ·
+[Realtime delivery](realtime-delivery.xmd).

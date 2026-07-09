@@ -57,12 +57,12 @@ const developmentCsp = [
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="swiss">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="color-scheme" content="light dark" />
-		<meta name="theme-color" content="#0a0a12" />
+		<meta name="theme-color" content="#ffffff" />
 		<meta name="description" content={description} />
 		{canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 		{noindex && <meta name="robots" content="noindex, nofollow" />}
@@ -91,7 +91,17 @@ const developmentCsp = [
 		<!-- Bypass block (WCAG 2.4.1): lives in the layout so every page has it,
 		     not just the home page. Targets the per-page <main id="main-content">. -->
 		<a href="#main-content" class="skip-link">Skip to main content</a>
+		<!-- Animated aurora backdrop — decorative; gives the glass panels something
+		     to refract. Fixed, behind everything, pointer-events:none, and frozen
+		     under prefers-reduced-motion (see _premium.scss). -->
+		<div class="aurora-bg" aria-hidden="true">
+			<span class="aurora-bg__blob aurora-bg__blob--a"></span>
+			<span class="aurora-bg__blob aurora-bg__blob--b"></span>
+			<span class="aurora-bg__blob aurora-bg__blob--c"></span>
+		</div>
 		<slot />
+		<!-- premium.ts is imported by main.ts (a second bundled <script src> in
+		     this layout was dropped by Astro's script hoisting). -->
 		<script src="../scripts/main.ts"></script>
 	</body>
 </html>

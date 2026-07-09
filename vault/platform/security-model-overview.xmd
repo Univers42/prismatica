@@ -1,0 +1,81 @@
+---
+title: Security Model Overview
+icon: ⚿
+order: 1200
+summary: How Track Binocle defends itself end to end — identity, authorization, the data wall, secrets, and the gates that keep them honest.
+---
+
+# Security Model Overview
+
+Security in Track Binocle is not a single feature — it is a set of walls, each
+independent, each verified by its own gate. If one wall is bypassed the next one
+still holds. This page is the map; every wall below has its own page.
+
+> [!info] The core principle
+> Nothing is public by default. Every request is authenticated, every read and
+> write is scoped to the caller, and the owner is derived from the credential —
+> never from a path or request body.
+
+## The walls, outside in
+
+| Wall | What it stops | Details |
+|:-----|:--------------|:--------|
+| **TLS + local CA** | Traffic snooping, MITM | [TLS Certs & Local CA](tls-certs-local-ca.xmd) |
+| **Identity** | Anonymous access | short-lived JWT + refresh-token rotation |
+| **Authorization** | Doing more than you may | route guards, RBAC, per-request scoping |
+| **Row-Level Security** | Cross-tenant data reads | [Row-Level Security](row-level-security.xmd) |
+| **Secrets isolation** | Leaked credentials | [Vault & Secrets](vault-secrets-architecture.xmd) |
+| **Supply chain** | Malicious dependencies | [Supply-Chain Lockdown](supply-chain-lockdown.xmd) |
+
+## Identity & authorization
+
+- **JWT access tokens** are short-lived; **refresh tokens rotate on each use** —
+  a stolen refresh token is invalidated the moment the real one is used.
+- Sessions are invalidated on password change and on any detected anomaly.
+- Passwords are hashed with **bcrypt** (12+ salt rounds).
+- Every protected endpoint carries a **route-level guard** — no endpoint is
+  public by default. Roles are checked at the guard layer (RBAC), never in a
+  controller or a DTO.
+
+## The data wall
+
+The Kong anonymous API key is [color=#b5532e]public by design[/color], and there
+is no Kong ACL plugin on the REST surface. That makes **Postgres RLS the only
+data wall** — a deliberate architecture that the
+[RLS hardening migration](gdpr-auth-security-migrations.xmd) closes findings
+against. This is the single most important sentence on this page.
+
+> [!warning] Never trust client-supplied ownership
+> The owner of a row is derived from the credential, not the request. There is no
+> cross-owner access *by construction* — an attacker cannot ask for another
+> tenant's `{id}` and receive it.
+
+## Verified, not claimed
+
+Security here follows one rule: **UNKNOWN = FAIL**. A wall is only "up" when a
+gate proves it. The gates that back the walls above:
+
+- [ ] Manual pen-test or a compliance framework — *explicitly out of scope*
+- [x] `make baas-security-scan` — SAST + SCA + container + secret scan
+- [x] `mini-baas-security` code-scanning driven to **zero** open alerts
+- [x] `supply-chain` — frozen lockfiles, no lifecycle scripts
+- [x] `fresh-machine` — clean clone → `make all` comes up green
+
+> [!note] Scope
+> This is a 42 school project. Formal penetration testing, SOC 2 / ISO 27001, a
+> bug-bounty program, and 24/7 incident response are all out of scope. The
+> practices here reflect what a production service at this scale actually needs —
+> security as a technical discipline, not compliance theater.
+
+## Reporting a vulnerability
+
+Do **not** open a public GitHub issue. Report privately to the Tech Lead or
+Project Manager via Discord DM, with what the vulnerability is, where it lives,
+how to reproduce it, and the impact.
+
+| Step | Deadline |
+|:-----|:---------|
+| Acknowledgment | 24 hours |
+| Initial assessment | 48 hours |
+| Fix — critical severity | 1 week |
+| Fix — medium severity | 2 weeks |

@@ -1,0 +1,63 @@
+---
+title: The Palette Axis
+icon: ⊕
+order: 905
+summary: data-palette is a second theming axis, orthogonal to data-theme — colour family and luminance mode compose instead of multiplying into one giant enum.
+---
+
+# The Palette Axis
+
+Most apps have one theme dropdown that mixes brightness and colour into a single
+list ("light", "dark", "dracula", "nord-dark"…). osionos splits them into **two
+independent attributes** on `<html>`:
+
+- `data-theme` → `light` | `dark` — the **luminance mode**.
+- `data-palette` → `mono` `contrast` `maximal` `nord` `solarized` `midnight` `rose` — the **colour family** (absence = the warm default).
+
+They are **orthogonal**: any palette runs in either mode. 7 palette values × 2
+modes, plus the base, without enumerating 16 separate themes.
+
+$$
+\text{looks} = \text{data-palette} \times \text{data-theme}
+$$
+
+## Why orthogonal, not one enum
+
+> [!info] The pre-existing axis had to stay
+> The light/dark `data-theme` axis was already load-bearing — the vendored
+> notion-database-sys and the docs markengine both depend on it. Adding colour
+> schemes *on top* as a separate `data-palette` axis left `data-theme` untouched,
+> so nothing downstream had to change.
+
+An orthogonal design also means each concern is defined once. A palette author sets
+colours; they don't re-solve "and also make a dark version of every combination" —
+the mode axis already handles brightness.
+
+## Specificity does the merging
+
+The base (`:root` / `[data-theme]`) uses **one** attribute of specificity. A palette
+block uses **two** (`[data-palette="x"][data-theme="y"]`), so it wins for the tokens
+it overrides — and everything it *doesn't* override transparently inherits the base
+for the current mode.
+
+```css
+[data-theme="dark"]                        { --osio-block-tint-blue-bg: /* base dark */; }
+[data-palette="nord"][data-theme="dark"]   { --osio-accent: /* nord */; } /* tint inherits base-dark */
+```
+
+That's why palettes only need to declare their **identity** tokens (~47), not the
+full set — block tints and secondary graph tokens fall through to the base.
+
+## The wiring
+
+| Concern | Where |
+|:--------|:------|
+| Apply / read / persist | `src/shared/config/theme.ts` — `applyPalette` · `readStoredPalette` · `persistPalette` |
+| Storage key | `localStorage` `osionos:palette` |
+| Boot (no FOUC) | synchronous script in `index.html` sets both attributes pre-paint |
+| Registry | `PaletteMeta` / `PALETTES` (Warm + generated palette metadata) |
+| Picker UI | `src/features/theme/WorkspaceThemePanel.tsx`, in Settings → Appearance |
+
+The picker is a segmented **light / dark / system** control (the `data-theme` axis)
+next to a **grid of palette cards** (the `data-palette` axis) — the two axes made
+literal in the UI. See [the eight palettes](./color-palettes.xmd).

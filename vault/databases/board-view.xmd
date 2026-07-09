@@ -1,0 +1,64 @@
+---
+title: The Board (Kanban) View
+icon: ◈
+order: 504
+summary: Regroup any live table as a kanban board — group by any column, drag a card between columns, and the move persists to the source engine.
+---
+
+# The Board (Kanban) View
+
+The Board view takes the same live rows the grid shows and lays them out as
+kanban-style cards, grouped into columns. Drag a card to another column and the
+change is written back to the source database.
+
+## Group by (almost) any column
+
+Notion-style boards usually only let you group by an enum-like property —
+select, status, checkbox. But a live table imported from an external engine often
+has *no* such column: a restaurant table might have plain-text `cuisine` and `city`
+and nothing else. So the Board opens grouping up.
+
+> [!info] What you can group by
+> Any column **except** those that make no sense as a bucket:
+
+| Groupable | Not groupable |
+|:----------|:--------------|
+| text · select · status · checkbox · number · … | title · relation · formula |
+| any distinct-valued column | rollup · id · files |
+| | created-time · last-edited-time |
+
+The grouping engine already knew how to bucket any type — select and status become
+their options, a checkbox becomes checked/unchecked, and anything else groups by
+its **distinct values**. Boards simply stopped blocking those columns.
+
+> [!example] From "None" to real columns
+> A SQLite restaurant table with only text columns used to offer *Group by: None*
+> and nothing else. Now *Group by: Cuisine* is selectable and the board renders a
+> column per cuisine — French, Thai, Greek — automatically.
+
+## Dragging a card persists
+
+Moving a card from one column to another is not a cosmetic reshuffle — it sets the
+grouped property on that record and writes it to the engine, exactly like editing
+the same cell in the grid.
+
+- [x] Drag *Pad Thai* from the **French** column onto **Thai**
+- [x] The record's `cuisine` value changes French → Thai
+- [x] The write persists — reload and the card stays put
+
+## Empty values are a real column too
+
+When a row's grouped value is blank, the Board files it under a dedicated
+*unassigned* column. Dropping a card **onto** that column **clears** the value —
+so the board is a two-way editor, not just a viewer, even for emptiness.
+
+> [!note] A note on how the move is written
+> Regardless of engine, a card move is a single per-record property update — the same
+> resilient single-operation write every cell edit uses. Earlier builds routed some
+> engines through a multi-statement transaction; that path was retired in favour of
+> one-op writes (see [Live-Write Resilience](live-write-resilience.xmd)).
+
+---
+
+Boards, tables and galleries are all just views over the same source — configure
+them from [Dashboards & View Settings](dashboards-view-settings.xmd).

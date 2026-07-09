@@ -1,0 +1,61 @@
+---
+title: Grobase Editions Overview
+icon: ⛁
+order: 106
+summary: Named, known-good backend shapes — what each edition is for and how to pick one.
+---
+
+# Grobase Editions Overview
+
+The backend — **grobase** — can be brought up in several **editions**. An edition
+is a named, known-good shape that bundles compose profiles, storage engines, and
+isolation models into a combination guaranteed to come up green.
+
+> [!info] Editions are grobase targets
+> Run them from `apps/grobase/`, not from the repo root.
+
+```bash
+# From apps/grobase/
+make editions            # list the known-good shapes
+make up EDITION=query    # start a specific one
+make doctor              # environment sanity check
+```
+
+## The shapes
+
+| Edition | What it's for |
+|:--------|:--------------|
+| `lean` | The smallest useful backend. |
+| `query` | Query-focused shape. |
+| `realtime` | Realtime event routing to the fore. |
+| `analytics` | Analytics-oriented set. |
+| `prod` | A production-like shape. |
+| `full` | Everything on — deliberately excludes the playground plane. |
+| `tetris` | Maximal shape for the red-tetris game. |
+| `migrate` | The fresh-machine default that `make all` uses. |
+
+## Why migrate is the default
+
+`make all` uses `migrate` via `GROBASE_EDITION`. It brings up all snapshot storage
+engines plus the full app / control / data planes and realtime — but deliberately
+**leaves out** the monitoring and lakehouse extras that tend to come up unhealthy
+in a constrained environment. The result is a stack that is fully green out of the
+box.
+
+```bash
+# Override the edition make all boots:
+make all GROBASE_EDITION=full
+```
+
+> [!note] Some engines stay out by design
+> A private-vendor engine is excluded from the default shape because its images
+> aren't public. The five snapshot engines that ship with the demo data are the
+> ones the default edition covers.
+
+> [toggle] Picking an edition
+> - Day-to-day frontend work → the default `migrate` (just run `make all`).
+> - Investigating a query or realtime path → the matching focused edition.
+> - Want everything, including the extras → `full`.
+> - Not sure the environment is sane → run `make doctor` first.
+
+Editions are built on top of the lower-level [compose profiles](compose-profiles.xmd).

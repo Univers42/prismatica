@@ -1,0 +1,64 @@
+---
+title: The ≤200-Line Convention & Feature Slices
+icon: ⚙
+order: 312
+summary: How osionos is organised — feature slices with a downward dependency rule, and an honour-system size limit that keeps files small.
+---
+
+# The ≤200-Line Convention & Feature Slices
+
+osionos is **feature-sliced**, and it holds itself to small files. Neither rule
+is exotic, but together they are why a 1,381-file app stays navigable.
+
+## The slice hierarchy
+
+Dependencies point **downward** — a lower layer never imports an upper one:
+
+```text
+app  ▶  pages  ▶  widgets  ▶  features  ▶  entities  ▶  shared
+```
+
+- A **feature** is one capability slice — `block-editor`, `raw-mode`,
+  `slash-commands`, `second-brain`, `settings`, `theme`, and more.
+- A **widget** is a page-level UI assembly that wires features, entities, and
+  `shared/ui` into a mountable region — the `sidebar`, `page-renderer`, the
+  routing-critical `workspace-grid`, `page-toc`, and others.
+
+> [!warning] Only one import boundary is enforced
+> The layering is **honour-system**. The single machine-enforced firewall is on
+> `packages/graph-engine/src/core/**`, which an ESLint `no-restricted-imports`
+> rule forbids from importing `@/*` or React. Everywhere else, rely on review.
+
+## The size limit
+
+The convention is **≤200 lines and ≤5 functions per file.**
+
+> [!note] Honour-system, and already stretched
+> There is no `max-lines` lint rule, and around 46 app files already exceed 200
+> lines. The biggest are known refactor targets — `LayoutBlockEditor.tsx`
+> (~2,033 lines) and `usePlaygroundBlockEditor.ts` (~1,745). The exception is
+> `global.css` (~660), the **deliberate** single home for every design token.
+> Existing violations are not licence to add more.
+
+## Splitting is the norm, not the exception
+
+The page store shows the pattern — one concern, several small files:
+
+| File | Holds |
+|:-----|:------|
+| `usePageStore.ts` | the assembler |
+| `pageStore.helpers.ts` | pure recursive block-tree ops + cache |
+| `pageStore.actions.ts` | async / network actions |
+| `pageStore.persistence.ts` | a deliberate no-op seam — do not "fix" it |
+
+## The working rules that go with it
+
+- [x] Branch osionos work from `develop` — never commit to `develop` or `main`.
+- [x] Commit message is `updated`, with **no** co-author trailer.
+- [x] Never auto-push — changes are reviewed first.
+- [ ] Keep new and edited files inside the size limit.
+
+> [!tip] When a feature function gets long
+> If a feature function outgrows the limit, a reusable primitive is usually
+> hiding inside it. Extract the primitive, test it once, and let the feature go
+> back to being thin glue.

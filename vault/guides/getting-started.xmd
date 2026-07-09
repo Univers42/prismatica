@@ -1,0 +1,63 @@
+---
+title: Getting Started
+icon: ▶
+order: 1
+summary: One command reconstitutes the whole stack. Here is the fast path from a clean clone to a running app.
+---
+
+# Getting Started
+
+The entire development environment runs in containers. **Never install
+dependencies on the host** — the toolchain is Docker-only by design.
+
+## One command
+
+`make all` is self-provisioning. From a clean clone it syncs submodules, pulls
+secrets, regenerates TLS certs, starts the grobase backend, restores demo data if
+the databases are empty, and builds the frontends with health validation.
+
+```bash
+# On a machine that holds the vault key, this reconstitutes everything:
+make all
+
+# Start the backend by hand only for a non-default edition:
+make -C apps/grobase up EDITION=full
+```
+
+> [!note] Two modes, one command
+> **With** the vault key, `make all` restores the shared secrets and demo data for
+> team parity. **Without** it, the stack comes up fully local — grobase
+> self-generates its secrets and the app derives its own env. A box with only
+> Docker + git + the clone still boots.
+
+## The front doors
+
+Once the stack is healthy, these are the surfaces you can open:
+
+| App | Tech | URL | Purpose |
+|-----|------|-----|---------|
+| opposite-osiris | Astro | `:4322` | Marketing site + auth landing |
+| osionos | React + Vite | `:3001` | Block editor / workspace |
+| auth-gateway | Go | `:8787` | Authentication & sessions |
+| livekit | WebRTC SFU | `:7880` | Self-hosted media for video rooms |
+
+## Health checks
+
+```bash
+make healthcheck            # curls every front door + the BaaS /health
+docker compose ps           # service status
+docker compose logs -f osionos-app
+```
+
+## Editing these docs
+
+1. Add or edit a `.xmd` file under `apps/opposite-osiris/vault/`.
+2. Rebuild the doc shell.
+3. Reload — the sidebar and content reflect your change.
+
+- [x] Clone the repo
+- [x] Run `make all`
+- [ ] Open `:4322` and sign in
+- [ ] Read the [Architecture](architecture.xmd) guide
+
+Next: how the three language planes fit together → [Architecture](architecture.xmd).

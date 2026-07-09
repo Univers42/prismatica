@@ -1,0 +1,52 @@
+---
+title: DMs vs Channels vs Feed
+icon: ⌥
+order: 709
+summary: The three messaging shapes — one-to-one, one-to-room, one-to-timeline — and what actually distinguishes them.
+---
+
+# DMs vs Channels vs Feed
+
+osionos has three ways to reach people, and it's worth being precise about which
+is which. They share the bridge and the realtime gateway, but their **audience**
+and **membership model** differ.
+
+## At a glance
+
+| | **DM** | **Channel / Group** | **Feed** |
+|:--|:-------|:--------------------|:---------|
+| Audience | One person | A room of members | Everyone in scope |
+| Direction | Two-way | Many-way | Broadcast timeline |
+| Membership | Implicit (you two) | Explicit member rows | Scope-based |
+| Receipts | Yes | Yes | — |
+| Typing | Yes | Yes | — |
+| Opened by | Picking a person | Joining/creating a room | Scrolling a surface |
+
+## DMs — reach anyone
+
+Opening a DM starts (or resumes) a 1:1 channel with the person you pick. Access is
+governed by **channel membership**, not by a shared workspace — so you can DM
+someone even if you have no workspace in common. If there's no shared workspace,
+the conversation is simply anchored to your own.
+
+> [!note] Why DMs work across workspaces
+> A DM is a channel with exactly two members. Because listing returns the channels
+> you're a *member* of (regardless of workspace), the workspace is just a
+> container — membership is what grants access.
+
+## Channels & groups — reach a room
+
+A channel is a named room with an explicit member list. Group channels add an
+avatar and a description. Everyone in the room sees the same history and receives
+live messages; receipts track who's seen what. See [Groups](groups.xmd).
+
+## Feed — see what's happening
+
+The feed isn't a conversation you send into; it's a **timeline you watch**. It
+surfaces activity across a scope and, like chat, refreshes over realtime with a
+polling fallback. See [The feed](the-feed.xmd).
+
+> [!tip] One realtime spine, three shapes
+> All three ride the same Rust realtime gateway for freshness and the same bridge
+> for persistence. The difference is entirely in *who the message is for* — a
+> person, a room, or a timeline.

@@ -1,0 +1,66 @@
+---
+title: Theme Tokens & Color Resolution
+icon: ✦
+order: 409
+summary: The graph reads the app's live --osio-* CSS variables at runtime, normalizes any color format to RGB, and derives light or dark mode from the background's luminance.
+---
+
+# Theme Tokens & Color Resolution
+
+The engine is framework-agnostic but **not** colour-agnostic. It has no hard-coded
+palette — every colour it paints is resolved from the app's live `--osio-*` design
+tokens, so the graph tracks the workspace's light/dark mode and warm-editorial theme
+without a second source of truth.
+
+## Resolved on the main thread, from the DOM
+
+`core/theme/tokens.ts` reads the `--osio-graph-*` custom properties off a `themeRoot`
+element (usually `document.documentElement`) and assembles a `SceneTheme`. Token
+values may be **any CSS colour format** — hex, `hsl`, or `oklch` — so they are
+normalized to RGB through a scratch canvas, after which the engine applies its own
+alpha for edges, halos, and glow.
+
+```ts
+// core/engine.ts option — where tokens come from
+themeRoot: document.documentElement; // live --osio-* variables
+```
+
+Because it touches the DOM, theme resolution happens on the **main thread** and the
+finished `SceneTheme` is handed to the renderer — the worker never reads CSS.
+
+## Light or dark, from luminance
+
+Mode is not a flag the host passes — it is **derived from the background token's
+luminance**:
+
+| Background luminance | Derived mode | Look |
+|:---------------------|:-------------|:-----|
+| `> 0.5` | `light` | cream "paper" |
+| `< 0.5` | `dark` | warm ember charcoal |
+
+The "Warm Constellation" token block in `global.css` defines both palettes. A few of
+the graph-specific variables:
+
+- `--osio-graph-bg-0` / `--osio-graph-bg-1` — the background ramp (and the luminance signal)
+- `--osio-graph-node-backing` / `-rim` / `-shadow` — the sprite "moat" and edges
+- `--osio-graph-edge` / `-edge-tag` / `-edge-note` / `-edge-hier` — relation colours by kind
+- `--osio-graph-select` / `-hover` / `-focus-thread` — interaction accents
+- `--osio-graph-halo` — the label halo that lifts text off the field
+
+On light mode the aurora field is composited with `multiply` so it tints the paper
+instead of washing it out.
+
+> [!warning] Tokens are the API — renaming is a breaking change
+> Because the engine resolves these names at runtime, **renaming an `--osio-graph-*`
+> token silently changes the graph's colours**. Treat the token names as part of the
+> engine's contract, not as free-to-refactor CSS.
+
+> [toggle] Why derive mode instead of passing a flag?
+> A single luminance check means the graph can never disagree with the page. Flip the
+> app to dark, the background token darkens, luminance drops below `0.5`, and the
+> graph's node materials, halos, and glow all follow — no separate "graph theme"
+> state to keep in sync.
+
+- [x] Live `--osio-*` tokens, resolved per theme change
+- [x] Any CSS colour format → RGB via scratch canvas
+- [x] Light/dark inferred from background luminance

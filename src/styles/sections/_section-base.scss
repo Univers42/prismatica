@@ -24,8 +24,11 @@
 .section--hero    { padding: clamp(5rem, 7vw, 7rem) 0 clamp(2.25rem, 4vw, 4rem); }
 .section--final   { padding: clamp(2rem, 4vw, 3.5rem) 0; }
 
-.section--surface { background: var(--system-surface); }
-.section--sunken  { background: var(--system-surface-sunken); }
+// Translucent so the animated aurora backdrop bleeds through for a premium
+// tinted-glass page. Opacity kept high enough that text contrast on the
+// section is unaffected (verified via the Lighthouse a11y / axe pass).
+.section--surface { background: color-mix(in srgb, var(--system-surface) 85%, transparent); }
+.section--sunken  { background: color-mix(in srgb, var(--system-surface-sunken) 82%, transparent); }
 
 .section__container {
 	width: min(1180px, 92vw);

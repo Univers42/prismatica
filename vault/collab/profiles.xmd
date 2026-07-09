@@ -1,0 +1,54 @@
+---
+title: Profiles & Presence
+icon: ◇
+order: 705
+summary: The public profile — avatar, headline, connect action — and the heartbeat that keeps presence live.
+---
+
+# Profiles & Presence
+
+Every person has a profile page, reachable from the directory or from any mention
+of them. It's the canonical "who is this" surface: their name, avatar, headline,
+and a connect action.
+
+## What a profile shows
+
+| Field | Source |
+|:------|:-------|
+| Display name | `user_profiles.display_name`, falling back sensibly |
+| Username | `users.username` |
+| Avatar | `user_profiles.avatar_url` |
+| Headline | the identity's `profile.headline` |
+| Presence | derived from `last_seen_at` |
+| Connect | opens the request flow if you're not connected |
+
+The profile widget (`widgets/profile-page`, `ProfileView`) also hosts avatar
+upload (`ImageAvatarUpload` → `POST /api/profile/avatar`).
+
+## Presence is a heartbeat
+
+Presence isn't guessed — it's measured. While your tab is open, a refcounted
+singleton posts a heartbeat every ~45 seconds, which bumps `last_seen_at`. Anyone
+whose last heartbeat landed within the online window shows as online.
+
+```text
+  your open tab ──(every ~45s)──► POST /api/profile/heartbeat
+                                        │
+                                        ▼
+                          osionos_bridge_identities.last_seen_at
+                                        │
+                     online  ⇔  last_seen_at within ~90s
+```
+
+> [!warning] Presence is per-active-tab
+> The heartbeat runs app-wide (it's mounted at the top of the app tree, not
+> buried in one screen), so it keeps firing as long as any tab is open. Close
+> every tab and, after the window lapses, you go offline — exactly as intended.
+
+> [!tip] Opt out of being found
+> Presence and directory visibility are separate from having a profile. Setting
+> `directory_opt_out` removes you from search results without deleting anything —
+> your profile still resolves for people you're already connected to.
+
+Endpoints: `POST /api/profile/avatar`, `POST /api/profile/heartbeat`. Profile
+route: `/people/:userId`.

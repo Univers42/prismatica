@@ -1,0 +1,65 @@
+---
+title: The localhost → 127.0.0.1 Gotcha
+icon: ⇄
+order: 1005
+summary: Why the desktop graph and Database mode return 502, and why every backend URL on the desktop must be 127.0.0.1 rather than localhost.
+---
+
+# The `localhost` → `127.0.0.1` Gotcha
+
+This is the single most confusing failure in the desktop builds, so it gets its
+own page. Symptom: in the **Electron desktop only**, the Second Brain graph and
+Database mode fail while everything else works.
+
+> [!error] Symptom
+> Desktop graph + Database mode requests to the BaaS return **502 Bad Gateway**,
+> even though the same requests work in the browser and with `curl`.
+
+## Root cause
+
+The desktop renderer calls the BaaS same-origin via `app://osionos/__baas/*`, and
+`main.js` relays it from the main process with `net.fetch(BAAS_TARGET + …)`.
+
+Chromium's `net.fetch` resolves **`"localhost"` → IPv6 `::1` first**. But the
+grobase **Kong binds IPv4-only** (`127.0.0.1:8000`). So a request to `[::1]:8000`
+is refused, `net.fetch` throws, and the proxy's `catch` returns **502**.
+
+```
+Chromium net.fetch("http://localhost:8000")
+        └─ resolves ::1  →  [::1]:8000  →  connection refused  →  502
+
+curl "http://localhost:8000"
+        └─ honors /etc/hosts  →  127.0.0.1:8000  →  works
+```
+
+That is why `curl` "works" and Electron does not: `curl` honours `/etc/hosts`
+mapping `localhost` to `127.0.0.1`; Chromium's resolver does not.
+
+> [!info] Not a key or route problem
+> The API keys are valid and the routes are alive. A POST to `127.0.0.1:8000`
+> returns a normal validation response — proof the route is reachable and the 502
+> was purely a resolution failure.
+
+## The fix — in the shell
+
+`main.js` sets the relay target to IPv4 and **coerces any override** to IPv4 too,
+so a stray `localhost` can never sneak back in:
+
+```js
+// MUST be 127.0.0.1, not "localhost": Chromium's net.fetch resolves
+// "localhost" to IPv6 ::1 first, but grobase Kong binds IPv4-only.
+const BAAS_TARGET = (process.env.OSIONOS_BAAS_URL || "http://127.0.0.1:8000")
+  .replace(/\/\/localhost(?=[:/]|$)/, "//127.0.0.1");
+```
+
+## The rule for every desktop shape
+
+- [x] Default backend targets are `127.0.0.1`, never `localhost`
+- [x] Any `OSIONOS_BAAS_URL` override with `//localhost` is rewritten to `//127.0.0.1`
+- [ ] If you add a new desktop backend URL, apply the same coercion
+
+> [!tip] Debugging checklist
+> Seeing a desktop-only 502? Before touching keys or routes, confirm the target
+> host is literally `127.0.0.1`. Nine times out of ten that is the whole bug.
+
+Referenced from every shape: [Desktop Editions Overview](desktop-editions-overview.xmd).

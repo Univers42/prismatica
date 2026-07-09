@@ -1,0 +1,68 @@
+---
+title: The Style-Token Guard
+icon: ⎔
+order: 907
+summary: A dependency-free script fails the build on any raw colour literal outside the token file — the mechanism that keeps the design system honest.
+---
+
+# The Style-Token Guard
+
+A design system where "components read tokens, never raw hex" is only as good as
+its enforcement. osionos enforces it with **`scripts/check-style-tokens.sh`** — a
+small, dependency-free shell guard that runs as the **final step of the quality
+gate** (`npm run test:quality`).
+
+> [!success] The rule it protects
+> Colour **values** live only in the token-definition files under
+> `src/app/styles/**` (chiefly `global.css`). Every other app CSS/SCSS surface must
+> reference `var(--osio-*)`. The guard fails the build if a raw literal escapes.
+
+## What counts as a violation
+
+The guard greps every app-authored `.css` / `.scss` file for a **bare colour
+literal** — a `#hex` (3–8 chars) or an `rgb()` / `rgba()` with numeric channels:
+
+```
+✗ raw colour literal(s) in src/features/foo/foo.scss (use var(--osio-*)):
+    42:  color: #3355ff;
+```
+
+What is **allowed**, because it references a token, not a literal:
+
+```scss
+background: color-mix(in srgb, var(--osio-accent) 14%, transparent); /* ✓ */
+border-color: var(--osio-border-default);                            /* ✓ */
+```
+
+## What it deliberately skips
+
+| Scanned | Excluded |
+|:--------|:---------|
+| all app-authored `src/**/*.{css,scss}` | `src/app/styles/**` — the canonical token files |
+| feature + widget styles | `notion-database-sys` — vendored, own gate |
+| — | `lib/markengine` — vendored, own gate |
+
+The token files are excluded because they are *supposed* to hold the hex values;
+the vendored trees have their own toolchains.
+
+## Why dependency-free
+
+> [!info] No stylelint on purpose
+> osionos runs a locked-down supply chain (7-day release-age hold, frozen
+> lockfiles). A guard that needs no npm plugin can't be a supply-chain liability,
+> and it runs the same on any machine with `bash`.
+
+## Running it
+
+```sh
+bash scripts/check-style-tokens.sh          # standalone
+npm run test:quality                        # runs it last, after tsc + eslint
+```
+
+- [x] Passes silently with `✓ style-token check passed`.
+- [x] Fails with the exact `file:line` of every raw literal.
+- [x] Exit code gates the whole `test:quality` run.
+
+This guard is what lets [eight palettes](./color-palettes.xmd) and
+[two modes](./light-dark-theming.xmd) stay coherent: no component can quietly
+hard-code a colour that a palette switch would then fail to recolour.

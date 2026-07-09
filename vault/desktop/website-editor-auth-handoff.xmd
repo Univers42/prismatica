@@ -1,0 +1,71 @@
+---
+title: Website → Editor Auth Handoff
+icon: ⊕
+order: 1010
+summary: How a signed-in Prismatica session becomes an authenticated osionos editor session — the one-time bridge_token, its short TTL, and why it is a primary login.
+---
+
+# Website → Editor Auth Handoff
+
+You sign in on the Prismatica website, click through to the osionos editor, and
+you are already logged in — no second password prompt. That seamlessness rides on
+a **one-time handoff token** minted by the bridge. This page explains it.
+
+## The flow
+
+```
+Prismatica (opposite-osiris)          osionos editor
+   signed-in session
+        │  bridge mints a one-time bridge_token
+        ▼
+   redirect  #bridge_token=<token>  ─────────────▶  reads the token from the URL hash
+                                                     exchanges it for an app-session token
+                                                     opens the workspace
+```
+
+1. The website has a valid Prismatica session.
+2. The bridge's `createBridgeHandoff` mints a short-lived token and sets it as the
+   redirect **URL hash**: `#bridge_token=<token>`.
+3. The editor reads `bridge_token` from the hash, exchanges it, and receives a
+   signed app-session token (`osionos_v1.*`).
+
+> [!note] The editor only opens after a handoff
+> The osionos app itself states it: *"This app only opens after your Prismatica
+> account creates a signed workspace handoff."* The handoff is the front door.
+
+## The token is short-lived and single-use
+
+| Property | Value |
+|:---------|:------|
+| Delivery | URL hash (`#bridge_token=…`), not a query param |
+| Lifetime | ~90 seconds by default (a `handoffTtlMs` config, overridable) |
+| Use | one-time — consumed on exchange, then pruned from the store |
+
+> [!warning] Why 90 seconds
+> A handoff token is a bearer credential in a URL. Keeping its TTL tiny and its use
+> single-shot means a leaked or logged URL is worthless almost immediately.
+
+## A handoff is a PRIMARY login
+
+This is the seam where account isolation matters most. A fresh `bridge_token`
+handoff sets `fromUserId`, and the session logic treats it as a **primary login**:
+
+- [x] REPLACE the persisted account set — this is a clean slate
+- [x] Purge the prior account's token, persona, and cached workspaces
+- [ ] Do **not** merge into existing accounts (that path is the explicit "Add account" flow)
+
+> [toggle] Why replace, not merge?
+> An earlier version merged the handoff into the account map of *all* prior users
+> and activated them together — so a new user inherited a previous user's
+> still-valid token, switchable in the UI. Treating the handoff as a primary login
+> that replaces the set closes that inheritance. Full detail in
+> [Account Switching Without Bleed](account-switching.xmd).
+
+## Under the hood
+
+The bridge signs and verifies these tokens itself (`signAppSessionToken` /
+`verifyAppSessionToken`) using HMAC secrets from its environment — the same
+self-contained session machinery the [native edition](native-edition-no-docker.xmd)
+relies on with no external session store.
+
+Related: [Authentication & Sessions](authentication-and-sessions.xmd).

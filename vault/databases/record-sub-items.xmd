@@ -1,0 +1,70 @@
+---
+title: Record Sub-Items
+icon: ⊟
+order: 508
+summary: Turn any live-DB record into an editable page with nested sub-items — notes now, promoted to real child records later — without touching the source engine.
+---
+
+# Record Sub-Items
+
+Notion lets a database row expand into nested sub-items. osionos brings that to a
+**live external record** in any engine — a Postgres row, a MongoDB document, a
+DynamoDB item — and does it **without writing to the source database at all**.
+
+## A record becomes a page
+
+Open a record and it gains an editable note page: it keeps its column values *and*
+becomes a document you can write in. Under that record you can attach hand-created
+child notes, or — where the engine allows — promote a note into a real child record.
+
+> [!info] How the hierarchy is stored
+> The parent/child edge lives entirely in osionos's own page table via a
+> `parent_page_id` link. A sub-item is just a new osionos page whose parent is the
+> record's note. Because the nesting lives in osionos, **the source engine is never
+> modified** — this works identically on Postgres, MySQL, SQL Server, SQLite,
+> MongoDB and DynamoDB.
+
+## Three ways to work with sub-items
+
+1. **In-page panel** — open a record as a page and a *Sub-items* section lists its
+   children, with inline "new sub-item" and (where possible) "new child record".
+2. **Inline nested rows** — expand a record right in the grid. Sub-items render as
+   real, **column-aligned** table rows (Notion's "nested in a toggle"): child records
+   fill every column; note-only children show a title. A connector marker anchors on
+   the title column, or the first visible column when the title is hidden.
+3. **Promote to a real child record** — only offered when the table has a
+   **self-referencing foreign key** (an org chart's `manager_id`, for example). Then
+   "new child record" inserts an actual row into the engine.
+
+> [!example] An org chart, live
+> On a Postgres `employees` table whose `manager_id` points back at `employees`,
+> expanding a manager shows their reports as aligned rows (email, role, region,
+> salary), and "New child record" adds a real employee row — reports counted 11,
+> then 12.
+
+## Two id spaces, one deterministic map
+
+> [!note] Where the ids come from
+> A grid row's id looks like `baas:<dbId>:<table>:<pk>`; the canonical osionos note
+> id is a deterministic UUID derived from that same triple. One is a client-side view
+> id, the other the persisted note — and the mapping between them is pure function, so
+> no lookup table is needed.
+
+## Where a sub-item is created matters
+
+> [!warning] Create in a workspace you control
+> Some live mounts sit in a **read-only seed workspace** — you can read its records
+> but not create pages there. So a sub-item is always created in a workspace your
+> account controls, validated against your create permission, while still linking to
+> the record wherever it lives. This keeps personal sub-items yours and avoids a 403.
+
+## Opening a sub-item
+
+Clicking a freshly created sub-item used to do nothing, because the note wasn't yet
+registered in the page store. Now osionos registers the note first, then opens it —
+so a new sub-item is clickable immediately.
+
+- [x] Attach a note under any record, in any engine
+- [x] Expand a record inline as column-aligned child rows
+- [x] Promote to a real child record where a self-FK exists
+- [x] Nothing written to the source engine for pure notes

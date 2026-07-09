@@ -1,0 +1,71 @@
+---
+title: Authentication & Sessions
+icon: ⚿
+order: 1007
+summary: How login, tokens, and sessions work across the web and desktop editions — gotrue plus the auth-gateway, Bearer tokens, and where sessions live.
+---
+
+# Authentication & Sessions
+
+Every edition of osionos — browser, Electron, native, Tauri — enforces **real
+login**. "Local" or "offline" never means "no auth". This page is the mental model
+for how identity flows through the stack.
+
+## The pieces
+
+| Component | Role |
+|:----------|:-----|
+| **gotrue** | Issues and validates credentials (the identity provider) |
+| **auth-gateway** | Session management, lockout / policy hardening, mints app sessions |
+| **osionos-bridge** | Signs and verifies the app-session tokens the editor carries |
+
+> [!note] The bridge validates — always
+> Whatever the frontend shows, the **bridge** is the authority: it validates
+> against gotrue, which returns `401 Invalid credentials` on a bad password. The
+> frontend cannot grant access the bridge would refuse.
+
+## Tokens, not cookies
+
+osionos carries a Bearer **`osionos_v1.*`** app-session token — there are **no
+cookies**. On the desktop it persists in the webview / app store; the bridge signs
+it (`signAppSessionToken`) and verifies it on every request.
+
+```
+login → gotrue verifies credentials
+      → auth-gateway mints a session
+      → bridge signs an app-session token (osionos_v1.*)
+      → editor sends it as Bearer on every call
+```
+
+## Where sessions live
+
+- **Web / desktop:** app-session token in local storage, JWT + Redis-backed
+  sessions in the lean stack.
+- **Native edition:** the bundled auth-gateway falls back to a **bounded in-memory
+  map** when no Redis URL is set — no Redis service required for a single local
+  user.
+
+> [!warning] The offline-fallback rule
+> A failed login must be **rejected in every mode**. An earlier bug let a
+> non-portal build silently fabricate a mock persona on a failed login — so any
+> password appeared to "work". The rule now: only a *genuinely offline* backend
+> (no API base at all) may fall back to an offline persona; a real auth failure is
+> always an error.
+
+## Session lifetime
+
+- App-session tokens carry a bounded TTL (a never-expiring session was a bug that
+  was fixed to a 7-day window).
+- A one-time **website → editor handoff** token has a much shorter TTL — see
+  [Website → Editor Auth Handoff](website-editor-auth-handoff.xmd).
+
+## What each edition keeps
+
+- [x] Real credential check via gotrue (all editions)
+- [x] auth-gateway hardening — lockout, policy
+- [x] Postgres **RLS** scoping data to the owner
+- [ ] TLS on loopback — dropped for desktop only (web/server stay HTTPS)
+
+Deep dives: [Account Switching](account-switching.xmd) ·
+[Per-Account Data Isolation](per-account-data-isolation.xmd) ·
+[Passkeys & WebAuthn](passkeys-webauthn.xmd)

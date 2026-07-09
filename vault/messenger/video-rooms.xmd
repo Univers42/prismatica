@@ -1,0 +1,66 @@
+---
+title: Video Rooms (LiveKit)
+icon: ☁
+order: 609
+summary: Self-hosted LiveKit video rooms — a short-lived grant from the bridge, a loopback WebRTC connection, active-speaker highlighting, raise-hand, and device switching.
+---
+
+# Video Rooms (LiveKit)
+
+The messenger's video is **self-hosted**. There's no third-party meeting vendor —
+osionos runs its own LiveKit media server as a compose service, and the app
+connects to it directly.
+
+## Getting into a room
+
+Joining is a two-step handshake:
+
+1. The client asks the bridge for a **room grant** — `POST /api/rtc/token`
+   (served by `bridge-rtc`). This mints a scoped LiveKit access token.
+2. With the grant, `livekit-client` connects to the local media server over
+   WebRTC at the loopback address `ws://127.0.0.1:7880`.
+
+> [!note] Why loopback WebSocket is allowed
+> A page served over HTTPS normally can't open an insecure `ws://`. Loopback
+> (`127.0.0.1`) is the exception — browsers treat it as a **potentially
+> trustworthy** origin, so the mixed-content rule doesn't block it. That's what
+> lets a self-hosted, cert-free local media server work from an HTTPS app.
+
+```text
+ osionos ──► bridge  POST /api/rtc/token  ──► LiveKit grant (scoped token)
+     │
+     └──► livekit-client ──► ws://127.0.0.1:7880 (self-hosted SFU) ──► peers
+```
+
+## In the room
+
+- **Active-speaker ring** — the tile of whoever's talking gets a highlight, so a
+  busy room is easy to follow.
+- **Raise hand** — a ✋ badge on your tile, signalled peer-to-peer over the
+  room's data channel (the grant includes data-publish permission).
+- **Device picker** — switch camera and microphone mid-call by enumerating
+  devices and swapping the active one without leaving the room.
+
+## Loaded only when you need it
+
+> [!tip] Video never weighs down the editor
+> `livekit-client` is a heavy dependency, so it's **code-split** — it isn't part
+> of the warm bundle. It loads lazily the moment you open a room, keeping the
+> everyday editor fast for people who never start a call.
+
+## Where the room lives
+
+Video can open as its own **video-room** surface, or embed directly inside a
+channel as a **call panel** — same media stack, different framing. The embedded
+form is covered in [In-channel call panel](in-channel-call-panel.xmd).
+
+| Piece | Role |
+|:------|:-----|
+| `bridge-rtc` | Mints the scoped LiveKit grant |
+| LiveKit SFU | Self-hosted media routing (loopback WebRTC) |
+| `livekit-client` | Browser client, lazily loaded |
+
+> [!warning] It's your infrastructure
+> Because the media server is self-hosted, video quality and capacity are yours
+> to run — there's no external SFU to lean on, which is exactly the point for a
+> privacy-first, self-hostable stack.

@@ -1,0 +1,57 @@
+---
+title: The Page Outline / TOC Rail
+icon: ⊕
+order: 310
+summary: A hover minimap of the page's headings, built entirely from the rendered DOM — it fetches nothing and only appears when it earns its place.
+---
+
+# The Page Outline / TOC Rail
+
+Long pages get a **table-of-contents rail** — `PageOutlineRail`, in the
+`widgets/page-toc` widget. It is a hover minimap pinned to the right of the
+reading column: the page's headings as a scannable strip, with the current
+section highlighted as you scroll.
+
+## Purely presentational
+
+The rail is deliberately dumb, and that is its strength. It **never fetches** and
+holds no state of its own — it reads the page that is already on screen.
+
+```text
+rendered editor DOM
+   │  MutationObserver      → headings appear / change  → rebuild the rail
+   │  IntersectionObserver  → which heading is in view   → scroll-spy highlight
+   ▼
+PageOutlineRail  (heading_1..3 only)
+```
+
+- A `MutationObserver` watches the rendered editor DOM and rebuilds the outline
+  when headings are added, removed, or edited.
+- An `IntersectionObserver` drives the scroll-spy that highlights the active
+  section.
+
+> [!info] It reads the DOM, not the block tree
+> Because it scans the *rendered* editor for `heading_1`, `heading_2`, and
+> `heading_3` blocks, it stays correct no matter how the headings got there —
+> typed, pasted, or imported from raw mode.
+
+## It only shows up when useful
+
+The rail mounts in `pages/notion-page/ui/NotionPage.tsx`, and only when two
+conditions hold:
+
+- [x] The page has **no full-page layout** (a canvas page has its own geometry).
+- [x] The page has **at least two headings** to navigate between.
+
+Otherwise the component returns `null` — no empty rail, no clutter on short
+pages.
+
+> [!tip] Import it by deep path
+> `page-toc` has **no barrel** `index.ts`, so it is imported by its deep path.
+> That is the house pattern for the newest slices — see
+> [File Convention & Slices](file-convention-and-slices.xmd).
+
+> [!note] A recent addition
+> The rail arrived on the `feat/page-toc-rail` branch. It is a good example of a
+> feature that adds real value with zero new data flow — it is a lens on state
+> that already exists.

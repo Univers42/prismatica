@@ -1,0 +1,63 @@
+---
+title: The Default Home
+icon: ✦
+order: 807
+summary: The default Home dashboard is an editable layout-block canvas of six NDS-backed sections plus a set of featured starter templates.
+---
+
+# The Default Home
+
+The default [Home variant](home-variants.xmd) — `dashboard` — is not a hard-coded
+screen. It is an **editable `surface:"home"` layout-block canvas**: real blocks
+you can rearrange, seeded on first load and re-seeded when the layout version
+bumps.
+
+The seed is built by `createHomeLayout` / `createHomeLayoutContent` (in
+`widgets/database-view/model/databaseViewCatalog.ts`) and mounted from
+`MainContent.tsx`, gated by `homeDashboardNeedsRefresh` against a
+`HOME_DASHBOARD_VERSION` constant.
+
+## The six sections
+
+1. **Greeting** — a `heading_1` that reads the time of day and the active persona.
+2. **Recently visited** — a horizontal **carousel** of recent pages.
+3. **Learn** — a carousel of learning material.
+4. **Upcoming events** — a list view.
+5. **Home views launcher** — a new `home_views` block (`HomeViewsBlock`): curated
+   views grouped by database, separated by dividers, each row carrying a status
+   pill and opening that **exact** view.
+6. **Featured templates** — a carousel of starter templates.
+
+## Reusable tools that fell out of it
+
+Building Home upgraded several primitives that any page can now use:
+
+| Primitive | What it adds |
+|:----------|:-------------|
+| Gallery **carousel** mode | `settings.galleryLayout: 'carousel'` → a single scrolling row of fixed-width cards |
+| Page-level **button** block | `buttonLabel` / `buttonHref` / `buttonVariant`; a `page://<id>` href opens that page |
+| Live read-only adapters | `recentsDatabaseState.ts`, `templatesDatabaseState.ts` project live data into the sections |
+
+## Featured templates
+
+Six starter templates ship as their own copies (never Notion's text), themed with
+`--osio-*` tokens, seeded as `isTemplate` pages:
+
+- [x] Student dashboard
+- [x] To-do list
+- [x] Class notes
+- [x] Grade calculator — with a real **formula** column, `prop("Weight") * prop("Score") / 100`
+- [x] Club homepage
+- [x] Resume
+
+> [!success] What "done" means here
+> The feature is complete and verified: six sections, working carousels, six
+> templates, zero console errors — passing the desktop Lighthouse gate. The
+> outstanding item is purely mobile perf on the entry bundle, not the Home
+> feature itself.
+
+> [!note] A hard-won bundle lesson
+> The single biggest warm-path weight was a ~458 KB `_notion_state.json`
+> statically imported deep in the database catalog. The fix was to stop pulling it
+> through widget **barrels** and to lazy-load the database block — a reminder that
+> in this app, **import paths are a performance decision**.

@@ -11,7 +11,7 @@
 #                  upstreams are RUNTIME env (envsubst), default to the local
 #                  Docker stack, and are overridable for staging/prod.
 #
-# Build context = repository ROOT (the app depends on apps/baas/sdk via file:).
+# Build context = repository ROOT (the app vendors its SDK at vendor/grobase-js).
 #   docker build -f apps/opposite-osiris/docker/services/web/Dockerfile -t opposite-osiris-web .
 # ============================================================================
 
@@ -23,14 +23,10 @@ FROM public.ecr.aws/docker/library/node:22-alpine AS build
 RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 WORKDIR /workspace
 
-# SDK first — it is a file: dependency of the app and must be built (tsc) before
-# the app installs/links it. Install WITH dev deps (typescript) so the build runs.
-COPY apps/baas/sdk apps/baas/sdk
-RUN cd apps/baas/sdk \
- && pnpm install --frozen-lockfile --ignore-scripts \
- && pnpm run build
-
-# App sources.
+# App sources — includes vendor/grobase-js, the PRE-BUILT @grobase/js SDK the app
+# links via `file:./vendor/grobase-js`. The old `apps/baas/sdk` build step was removed
+# in the baas -> grobase extraction; the SDK is now vendored (compiled lib/) inside the
+# app tree, so pnpm install just links it — no separate SDK build is needed.
 COPY apps/opposite-osiris apps/opposite-osiris
 WORKDIR /workspace/apps/opposite-osiris
 

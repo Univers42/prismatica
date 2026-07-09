@@ -1,0 +1,57 @@
+---
+title: The markengine
+icon: ⌘
+order: 3
+summary: A framework-agnostic markdown ↔ block-AST engine with zero dependencies at its core. It renders this very page.
+---
+
+# The markengine
+
+The **markengine** is a standalone markdown library that lives inside the osionos
+app. It is framework-agnostic at its core: the parser, the AST, and the HTML and
+terminal renderers have **zero external dependencies**. Only the React renderer
+needs React.
+
+## The pipeline
+
+```ts
+import { parse, renderHtml } from "@/shared/lib/markengine/markdown";
+
+const ast  = parse("# Hello\n\nSome **bold** text.");
+const html = renderHtml(ast);
+```
+
+Three phases, no coupling between them:
+
+1. **Parser** — a markdown string becomes an AST (`BlockNode[]`).
+2. **Renderers** — the AST becomes an HTML string, React elements, or ANSI.
+3. **Shortcuts** — block detection for the Notion-style block editor.
+
+> [!tip] Why this matters for docs
+> Because `parse` and `renderHtml` are pure Node functions with no DOM and no
+> React, a build script can run them ahead of time. That is exactly how this
+> shell turns `vault/*.xmd` into static HTML — no browser, no runtime engine.
+
+## What `.xmd` adds
+
+`.xmd` is not a new format — it is plain markengine markdown with a name that
+signals *"render me with the real engine, not a generic parser."* Two extras
+matter for documentation:
+
+- **Raw HTML blocks pass through.** A bare `<figure>`, `<iframe>`, or now a
+  `<video>` / `<audio>` / `<img>` / `<picture>` line renders as-is.
+- **Rich inline styles** — highlight, underline, text/background colour, callouts,
+  toggles, footnotes, and math — go beyond CommonMark.
+
+> [!warning] Raw HTML is trusted here, not everywhere
+> Passthrough is unsanitised. That is fine for a docs vault the maintainers
+> author. In the multi-user editor the same tags are content you should treat as
+> untrusted — the engine exposes a `sanitizeHtml` option for that path.
+
+## The AST is the contract
+
+Every renderer consumes the same `BlockNode` / `InlineNode` union. Add a block to
+the AST and every renderer must learn it — which keeps HTML, React, and terminal
+output in lockstep.
+
+See all of it exercised at once → [Style Showcase](style-showcase.xmd).

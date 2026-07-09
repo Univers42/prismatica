@@ -1,0 +1,67 @@
+---
+title: How Binaries Ship
+icon: ☁
+order: 1006
+summary: Desktop artifacts are never committed to git — they are built on demand and published as GitHub Release assets. Here is the publish flow and where to download.
+---
+
+# How Binaries Ship
+
+Desktop binaries are large — an `.AppImage` is around 110 MB, a `.deb` around
+80 MB — and GitHub rejects files over 100 MB in a repo anyway. So the rule is
+simple and absolute.
+
+> [!danger] Binaries are never committed to git
+> The build outputs `dist-local/`, `dist-native/`, and `temp/` are **gitignored**.
+> Artifacts are published as **GitHub Release assets** instead. Do not commit a
+> `.deb`, `.AppImage`, or `.exe`.
+
+## Publish flow (maintainers)
+
+`release.sh` builds the artifacts if they are missing, then uploads them as
+release assets — idempotently, so re-running replaces rather than duplicates.
+
+```bash
+bash apps/osionos-electron/release.sh          # build (if needed) + upload Linux assets
+bash apps/osionos-electron/release.sh --all     # also build + upload the Windows .exe
+```
+
+Internally it collects `dist-local/*.deb`, `*.AppImage`, and `*.exe`, creates the
+release once if it does not exist, then uploads with `--clobber` so the assets are
+always the latest.
+
+## Download instead of build (users)
+
+```
+1. Open the project's Releases page
+2. Grab the .deb / .AppImage / .exe asset
+3. Run the lean backend on the same machine (Electron+Docker shape)
+```
+
+> [!warning] The app downloads; the backend still comes from the repo
+> For the Electron + Docker shape, the **backend** is Dockerized and needs the
+> repo's compose files + migrations locally. So this shape is "download the app,
+> but the backend comes from the repo source + Docker." The truly no-repo,
+> no-Docker download is the [native edition](native-edition-no-docker.xmd).
+
+## Artifact matrix
+
+| Artifact | Platform | Approx size | Built by |
+|:---------|:---------|------------:|:---------|
+| `.AppImage` | Linux (portable) | ~110 MB | `build.sh --local` |
+| `.deb` | Debian/Ubuntu | ~80 MB | `build.sh --local` |
+| `.exe` (NSIS) | Windows | — | `build.sh --local --all` (wine cross-build) |
+
+## Related scaffolding
+
+- [x] `dist-local/` — Electron + Docker artifacts (gitignored)
+- [x] `dist-native/` — native-edition artifacts (gitignored)
+- [x] `temp/` — scratch build output (gitignored)
+- [ ] `dist-selfhost/` — a self-host scaffold (`gen-cert.sh`, `gen-secrets.mjs`), separate from the desktop artifacts
+
+> [!tip] Windows caveat
+> The `.exe` installs per-user via NSIS, but the backend still needs Docker
+> Desktop (WSL2) running the lean stack — so Windows here is primarily a
+> technical-user path until the native edition lands.
+
+Back to: [Desktop Editions Overview](desktop-editions-overview.xmd).

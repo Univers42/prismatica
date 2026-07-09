@@ -1,24 +1,13 @@
 ---
 import Card from '../ui/Card.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
+import FeatureIcon from '../ui/FeatureIcon.astro';
 
 const features = [
-	{
-		icon: '⚡',
-		title: 'Auth that just works',
-		kind: 'auth',
-	},
-	{
-		icon: '◍',
-		title: 'PostgREST + Postgres',
-		kind: 'database',
-	},
-	{
-		icon: '✦',
-		title: 'GDPR by default',
-		kind: 'privacy',
-	},
-];
+	{ title: 'Auth that just works', kind: 'auth' },
+	{ title: 'PostgREST + Postgres', kind: 'database' },
+	{ title: 'GDPR by default', kind: 'privacy' },
+] as const;
 ---
 
 <section class="section section--surface feature-trio" id="product">
@@ -33,7 +22,7 @@ const features = [
 			{features.map((feature) => (
 				<div data-scroll-grow>
 					<Card variant="feature" class="feature-trio__card">
-						<span class="feature-trio__icon" aria-hidden="true">{feature.icon}</span>
+						<span class="feature-trio__icon" aria-hidden="true"><FeatureIcon name={feature.kind} /></span>
 						<h3 class="ui-card__title">{feature.title}</h3>
 						{feature.kind === 'auth' && (
 							<p class="ui-card__lede"><span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> with GoTrue under the hood, social providers, magic links, and Turnstile-protected sign-ups out of the box.</p>
@@ -63,12 +52,25 @@ const features = [
 	.feature-trio__icon {
 		display: grid;
 		place-items: center;
-		width: 44px;
-		height: 44px;
+		width: 46px;
+		height: 46px;
 		border-radius: var(--system-radius-md);
-		background: var(--system-action-secondary-bg);
-		color: var(--system-action-bg);
-		font-size: 1.25rem;
-		font-weight: 700;
+		/* Warm accent chip that actually reads on a light card — the old
+		   white-on-white box was invisible in the solar palette. */
+		background: color-mix(in srgb, var(--brand-palette-primary) 14%, var(--system-surface));
+		border: 1px solid color-mix(in srgb, var(--brand-palette-primary) 30%, transparent);
+		color: var(--system-link);
+		transition:
+			background var(--system-duration-base) var(--system-ease-standard),
+			border-color var(--system-duration-base) var(--system-ease-standard);
+	}
+	@media (hover: hover) {
+		.feature-trio__card:hover .feature-trio__icon {
+			background: color-mix(in srgb, var(--brand-palette-primary) 22%, var(--system-surface));
+			border-color: color-mix(in srgb, var(--brand-palette-primary) 48%, transparent);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.feature-trio__icon { transition: none; }
 	}
 </style>

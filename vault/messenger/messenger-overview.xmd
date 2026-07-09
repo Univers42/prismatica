@@ -1,0 +1,63 @@
+---
+title: Messenger Overview
+icon: ⧉
+order: 600
+summary: The osionos messenger is a full chat surface — channels, DMs, rich media, threads, mentions, search, and video — living inside the workspace, not bolted onto it.
+---
+
+# Messenger Overview
+
+osionos grew from a Notion-style block editor into a **full collaborative
+workspace**, and the messenger is the social half of that. It feels like a
+**LinkedIn thread** for the message column and a **WhatsApp panel** for the
+conversation list — but every surface opens as a workspace tab, right next to
+your pages and databases.
+
+## What ships
+
+> [!info] One messenger, many surfaces
+> Channels, direct messages, communities, threaded replies, @mentions, unread
+> tracking, full-text search, rich media, and self-hosted video rooms — all
+> reachable from the sidebar, each opening as a `channel` pane.
+
+- **Channels & communities** — grouped conversations, member-scoped.
+- **Direct messages** — 1:1 threads with an opt-in end-to-end encryption seam.
+- **Rich media** — images, video, files, links, and **voice messages** with a
+  live waveform.
+- **Threads** — reply under any message without derailing the main flow.
+- **@mentions** — autocomplete that resolves against channel members.
+- **Unread & read state** — badges, an unread divider, and a "new messages" pill.
+- **Search** — membership-scoped full-text search across your messages.
+- **Video** — self-hosted LiveKit rooms and an in-channel call panel.
+
+## How it fits together
+
+The messenger never talks to the backend directly. Two transports do the work,
+and they must never be conflated:
+
+| Path | Transport | Carries |
+|:-----|:----------|:--------|
+| Data | The Node **bridge** (`bridge-chat` / `bridge-feed` / `bridge-profile`) | Sending, history, uploads, membership |
+| Realtime | **Kong** WebSocket (`/realtime/v1/ws`), server-published from the bridge | Live delivery of new messages & events |
+
+```text
+ You  ──►  osionos UI  ──►  bridge (bridge-chat …)  ──►  grobase / Postgres
+                │                     │
+                │  live events        └─ server-side publish ──► Rust realtime gateway
+                ▼                                                        │
+        Kong /realtime/v1/ws  ◄──────────────────────────────────────────┘
+```
+
+> [!tip] Degrades gracefully
+> Realtime delivery is gated on a valid session token. Without one, the client
+> falls back to short-interval **polling** — messages still arrive, just less
+> instantly. See [Realtime delivery](realtime-delivery.xmd).
+
+## The model, split for clarity
+
+The channel view isn't one giant hook. It splits along responsibility —
+history loading, live subscription, send actions, and channel metadata are
+separate concerns, each testable on its own.
+
+Start with [Channels](channels.xmd), or jump to
+[Rich-media messages](rich-media-messages.xmd) for the fun part.

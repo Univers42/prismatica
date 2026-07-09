@@ -1,0 +1,61 @@
+---
+title: Folders & Trash
+icon: ⛁
+order: 810
+summary: Folders and the Trash are first-class tab kinds — a folder opens as a browsable listing, Trash as its own surface — both dispatched from PaneContent.
+---
+
+# Folders & Trash
+
+Two navigational surfaces — **folders** and the **Trash** — are not separate
+screens bolted onto the app. Each is a `tab.kind` in the [layout tree](layout-tree.xmd),
+opened into a pane and rendered by the same dispatch chain as everything else.
+
+## Folders
+
+Dragging a **folder** from the sidebar onto a pane opens a `folder` tab, rendered
+by `page-renderer/ui/FolderTabView.tsx`. It is a readable listing of the folder's
+children, **folders first**. Click a child and it opens **in the same pane**:
+
+```ts
+openTab(pageEntryToTab(child), paneId);
+```
+
+A few rules make folders behave as their own kind:
+
+- `pageEntryToTab` returns `kind:"folder"` when the entry's `surface === "folder"`.
+- `tabToActivePage` returns `null` for folders — a folder is a listing, not an
+  editable page, so it never becomes the mirrored `activePage`.
+- `TabButton` shows a folder icon; `PaneContent` takes the `paneId` so children
+  open in place rather than spawning tabs elsewhere.
+
+> [!warning] Folder navigation is flat, for now
+> A folder tab lists its immediate children with **no pagination and no
+> breadcrumb**. Drilling deep just opens more tabs — a known follow-up rather than
+> a designed behaviour.
+
+## Trash
+
+The Trash is a `trash` tab. The shell opens it directly — `App.tsx`'s Trash button
+calls `openTab(trashTab())`, exactly mirroring how the Home button calls
+`openTab(homeTab())`. From there it is dispatched by the `tab.kind === 'trash'`
+guard in `PaneContent.tsx`, giving deleted items their own dedicated surface
+inside a pane.
+
+## Every surface is a kind
+
+Both fit the shell's core idea: the content area renders **kinds**, and folders
+and trash are simply two of them.
+
+| `tab.kind` | Renders |
+|:-----------|:--------|
+| `home` | the Home dashboard |
+| `folder` | a folder listing |
+| `trash` | the Trash |
+| `database` | a live database view |
+| `profile` · `console` · `channel` | collab / BaaS surfaces |
+| *default* | an editable page |
+
+> [!tip] They open like any other tab
+> Because folders and Trash are tabs, they split, resize, and drag between panes
+> just like a document does — see [the splittable grid](splittable-grid.xmd).

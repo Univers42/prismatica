@@ -1,0 +1,66 @@
+---
+title: Shadow → parity → cutover
+icon: ◐
+order: 1110
+summary: The TS→Rust data-plane migration never flips a switch — new code shadows the old, must prove identical results, and legacy code is deleted only after three gates pass.
+---
+
+# Shadow → parity → cutover
+
+grobase is a **live product mid-migration** from a TypeScript data plane to a
+Rust one. The discipline that makes that safe is a strict order: **shadow →
+parity → cutover → delete**, with deletion always last.
+
+## The three-step ladder
+
+1. **Shadow** — the Rust path runs *alongside* the TS path, serving no real
+   traffic yet. `DATA_PLANE_ROUTER_PRODUCT_MODE=shadow` (the default).
+2. **Parity** — identical requests must return **identical results** through both
+   paths. The m18 and parity gates exercise both halves.
+3. **Cutover** — only once parity holds and CI is green does Rust take over, with
+   `DATA_PLANE_ROUTER_PRODUCT_MODE=enabled`.
+
+## Two independent switches
+
+The TS→Rust cutover is a **per-request switch, not a build flag** — and it has
+two halves that move independently:
+
+```env
+# TS side — which engines forward to Rust (default off)
+RUST_DATA_PLANE_FORWARD=1
+RUST_DATA_PLANE_FORWARD_ENGINES=postgresql,mongodb
+
+# Rust side — shadow vs live (default shadow)
+DATA_PLANE_ROUTER_PRODUCT_MODE=enabled
+```
+
+The gates exercise both halves so you can prove the whole seam, not just one end.
+
+## The deletion gate (safety-critical)
+
+> [!danger] Never delete legacy TS data-plane code unless ALL THREE pass
+> 1. **m18 Live Traffic** — Rust serves real traffic with
+>    `DATA_PLANE_ROUTER_PRODUCT_MODE=enabled`.
+> 2. **Shadow Parity** — identical requests, identical results through TS *and*
+>    Rust.
+> 3. **CI Green with Forward Routing** — no regressions, gates explicitly PASS.
+
+> [!error] UNKNOWN = FAIL
+> If any gate is uncertain, it counts as a failure. Keep shadowing and
+> instrumenting — do **not** cut over on an unproven "probably fine".
+
+## Why it's built this way
+
+- **Least change, reversible first** — behavior changes are flag-gated OFF, so
+  the live baseline stays byte-parity.
+- **Deletion over addition, but deletion last** — nothing is lost until parity is
+  provably held.
+
+- [x] Shadow the new path
+- [x] Prove parity request-for-request
+- [x] Cut over behind a flag
+- [ ] Delete legacy code — only after all three gates are green
+
+This is the same shadow → parity → cutover pattern the whole monorepo uses (see
+[Architecture](../guides/architecture.xmd)); the data plane is where it matters
+most.

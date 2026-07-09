@@ -1,0 +1,86 @@
+---
+title: Data Flow of a Page Edit
+icon: ▶
+order: 212
+summary: Follow one keystroke — from the osionos editor, through the bridge and Kong, into Postgres, and back out to other viewers via realtime.
+---
+
+# Data Flow of a Page Edit
+
+This page follows a single edit through all three planes: the
+[application](application-plane.xmd) plane (the editor and the bridge), the
+[control](control-plane.xmd) plane (Kong gating access), and the
+[data](data-plane.xmd) plane (Postgres and realtime). It ties the whole
+architecture together in one concrete path.
+
+## The journey of one keystroke
+
+1. **You type.** osionos updates its in-memory block model and serializes the
+   affected page.
+2. **The client queues the write.** osionos does not fire a request per keystroke
+   — it batches writes to be sent to the bridge.
+3. **The bridge persists it.** `osionos-bridge` (`:4000`) receives the write and,
+   holding the service-role key, forwards it to postgrest through Kong.
+4. **Kong routes it.** `mini-baas-kong:8000` gates and forwards the request to
+   postgrest.
+5. **Postgres stores it.** postgrest writes the row into `mini-baas-postgres`
+   under the `osionos_*` schema.
+6. **Realtime fans it out.** A change notification propagates so other viewers of
+   the page can update.
+
+```text
+   keystroke
+      │  serialize block model
+      ▼
+   osionos (browser) ── batched write
+      │
+      ▼
+   osionos-bridge (Node, holds SERVICE_ROLE_KEY)
+      │  apikey + Bearer
+      ▼
+   mini-baas-kong:8000  ──►  postgrest  ──►  mini-baas-postgres
+                                                   │
+                                       change notification
+                                                   ▼
+                                   realtime (Rust) ──► other viewers
+```
+
+## Why the client batches
+
+> [!warning] A write-per-keystroke storm is a real failure mode
+> Sending one request per keystroke floods the bridge and Kong. Because the
+> bridge is a single IP, a burst can trip Kong's rate limit and return `429`.
+> The client batches writes and backs off on failure precisely to avoid this
+> thundering herd.
+
+## The realtime hop
+
+The last step — fanning the change out to other viewers — is the Rust data
+plane's realtime router. Postgres emits a change, a realtime producer picks it
+up, and subscribers receive it.
+
+> [!note] Payload size is bounded on the notify path
+> The database change-notification channel is size-capped. Large pages send an
+> **id-only** signal rather than the full row, so subscribers fetch the fresh
+> content instead of receiving an oversized payload.
+
+## Where each plane shows up
+
+| Step | Plane | Component |
+|:-----|:------|:----------|
+| serialize + batch | application (TS) | osionos |
+| persist with service key | application (TS) | osionos-bridge |
+| gate + route | control | Kong |
+| store | data | postgrest → Postgres |
+| fan-out | data (Rust) | realtime router |
+
+## Recap
+
+- [x] The edit never leaves the browser with a service key — the bridge holds it.
+- [x] Every write crosses Kong, the single front door.
+- [x] The realtime hop is what makes the workspace *collaborative*.
+
+> [!tip] Zoom back out
+> This one flow touches every idea in this section — the [three
+> planes](three-language-planes.xmd), the [bridge boundary](bridge-trust-boundary.xmd),
+> and the [container-DNS topology](container-dns-topology.xmd).

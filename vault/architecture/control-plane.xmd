@@ -1,0 +1,67 @@
+---
+title: The Control Plane
+icon: ⚙
+order: 202
+summary: The Go plane inside grobase — provisioning, the auth gateway, tenancy & secrets, and metering/billing: who can do what.
+---
+
+# The Control Plane
+
+The control plane is written in **Go** and decides **who** can do **what**. It is
+the plane that provisions tenants, authenticates callers, holds secrets, and
+meters usage. It lives inside the grobase backend, not in the root compose stack.
+
+> [!note] The control plane is grobase's Go half
+> The active Go control plane lives at `apps/grobase/src/control-plane/` (Go
+> module `github.com/dlesieur/mini-baas/control-plane`).
+
+## Responsibilities
+
+- **Provisioning** — creating and shaping tenants and their resources.
+- **The auth gateway** — authentication and session management.
+- **Tenancy & secrets** — isolating tenants and holding their credentials.
+- **Metering & billing** — measuring usage and turning it into charges.
+
+## How it is organised
+
+The control plane is a large Go codebase — dozens of packages under `internal/`,
+each owning one concern. Named examples from the tree:
+
+| Package area | Concern |
+|:-------------|:--------|
+| `metering` | usage measurement |
+| `backup` | data backups |
+| `tenants` | tenant lifecycle |
+| `provision` | resource provisioning |
+| `webhooks` | outbound event delivery |
+| `adapterregistry` | which data-plane adapters exist |
+| orgs / sso / scim / passkeys / audit | enterprise identity (Track-D) |
+| branching / push | parity features (Track-E) |
+
+## The auth gateway
+
+The auth gateway is the one control-plane service that also runs as a **root
+compose frontend** (`auth-gateway`, host port `8787`) — it fronts authentication
+and session management for the browser.
+
+> [!warning] The gateway has no `/health` route
+> Do not probe `/health` on the auth gateway — it does not exist. Check
+> availability at `/api/auth/availability` instead.
+
+## Tracks gate what the control plane exposes
+
+Much of the control plane's surface is **flag-gated OFF by default** so the
+open-source edition stays byte-for-byte identical to the managed one:
+
+- **Track A** — OSS self-host (shipped, always on).
+- **Track B** — managed cloud: metering → billing → tenant self-service.
+- **Track D** — enterprise: orgs / RBAC / SSO / SCIM / passkeys / audit / CMEK.
+- **Track E** — parity: DB branching, push, read-replica.
+
+> [!danger] Do not flip Track flags in shared runs
+> B / D / E are OFF by default for parity. Turning one on in a shared or
+> parity run without a gate breaks the byte-parity guarantee. When unsure, leave
+> it off.
+
+The control plane sits *above* the [data plane](data-plane.xmd): it decides
+access, the data plane moves the bytes once access is granted.

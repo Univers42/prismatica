@@ -1,0 +1,69 @@
+---
+title: Editing These Docs
+icon: ✦
+order: 112
+summary: Add or change a page by writing an .xmd file in vault/ and rebuilding the shell.
+---
+
+# Editing These Docs
+
+This documentation site is not a third-party static generator. Every page is
+authored in **`.xmd`** and rendered by the project's own **markengine** — the same
+parser that powers the live osionos editor. Write a file, rebuild, reload.
+
+> [!tip] One parser, no drift
+> Because the docs and the editor share a parser, a block that renders in the app
+> renders here too. There's no separate "docs markdown" to keep in sync.
+
+## The loop
+
+1. Add or edit a `.xmd` file under `apps/opposite-osiris/vault/`.
+2. Rebuild the doc shell (a build script assembles `vault/` into the page).
+3. Reload — the sidebar and content reflect your change.
+
+Filenames are **kebab-case**, and the folder structure under `vault/` becomes the
+navigation tree.
+
+## Every page needs frontmatter
+
+```text
+---
+title: Human Readable Title
+icon: ◆
+order: 12
+summary: One sentence describing the doc, shown in lists and the hero.
+---
+```
+
+| Field | Role |
+|:------|:-----|
+| `title` | Shown in the nav tree and breadcrumb. |
+| `icon` | One glyph (a unicode symbol, not an emoji). |
+| `order` | Integer sort within the folder — lower first. |
+| `summary` | One plain sentence for listings. |
+
+> [!note] Space your order values
+> Leave gaps (10, 20, 30…) so you can slot a new page between two existing ones
+> later without renumbering the whole folder.
+
+## Linking between pages
+
+Use a normal link with the target's path, relative to *your* file:
+
+```text
+[Getting Started](../guides/getting-started.xmd)
+```
+
+## Before you commit
+
+- [ ] Frontmatter present and complete
+- [ ] Filename is kebab-case
+- [ ] `order` doesn't collide with a sibling
+- [ ] Rebuilt and reloaded — it renders as expected
+
+> [toggle] What tooling lives here
+> The website ships a build script that turns `vault/*.xmd` into the self-contained
+> shell, plus a verifier that sanity-checks the vault. You don't call the parser
+> directly — you write `.xmd`, run the build, and read the result.
+
+Curious how the rendering works? Read [The markengine](../reference/markengine.xmd).

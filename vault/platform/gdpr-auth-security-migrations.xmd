@@ -1,0 +1,74 @@
+---
+title: GDPR & Auth-Security Migrations
+icon: ⎔
+order: 1212
+summary: Two idempotent SQL migrations that add consent tracking, deletion markers, and a tamper-evident audit log of sensitive auth events.
+---
+
+# GDPR & Auth-Security Migrations
+
+Alongside the [RLS hardening](row-level-security.xmd) migration, two more
+security-focused SQL migrations ship in `models/`. Both are **idempotent** — safe
+to re-run — and both apply to the `mini-baas-postgres` database.
+
+## GDPR migration
+
+`models/gdpr-migration.sql` (policy version 1.0.0) adds the data-subject rights
+plumbing: recorded consent, and soft-deletion markers for erasure.
+
+- A `user_consents` table records each consent with its **type**, the **IP at
+  consent**, and a foreign key to the user (`ON DELETE CASCADE`).
+- Consent types are constrained to an allowlist via helper functions —
+  `terms`, `newsletter`, `analytics`, `marketing`:
+
+```sql
+consent_type VARCHAR(32) NOT NULL
+  CHECK (consent_type = ANY (gdpr_allowed_consent_types()))
+```
+
+- Consent **withdrawal** is a first-class request type.
+- A `deleted_at TIMESTAMP` column supports **soft deletion** — the right to
+  erasure without hard-dropping referential history mid-transaction.
+
+> [!info] Consent is an audit trail, not a flag
+> Storing the IP and timestamp at the moment of consent means the record can
+> answer *when* and *from where* — the evidence a data-protection request
+> actually needs, not just a yes/no boolean.
+
+## Auth-security migration
+
+`models/auth-security-migration.sql` adds a **tamper-evident audit log** of
+sensitive authentication events.
+
+- An `auth_audit_events` table captures failed logins, password recovery, token
+  refreshes, MFA hooks, and IP shifts.
+- A constrained `event_type` — only known types are accepted; an unknown type
+  raises `Unsupported audit event type` (SQLSTATE `22023`) rather than logging
+  garbage.
+- Indexed for the two real queries: **by event type + time**, and **by
+  lower(email) + time**.
+
+```sql
+CREATE OR REPLACE FUNCTION auth_record_audit_event(
+  event_type TEXT, email TEXT DEFAULT NULL, details JSONB DEFAULT '{}'::jsonb
+) ...
+```
+
+> [!note] Retention is documented in the schema
+> The table comment states the policy directly: **retain for 13 months** unless a
+> documented legal hold applies. The retention rule lives *with* the data, where a
+> reviewer will actually find it.
+
+## The three security migrations together
+
+| Migration | Adds |
+|:----------|:-----|
+| `rls-hardening-migration.sql` | Forces RLS on every table (F1–F7) |
+| `gdpr-migration.sql` | Consent records + soft-deletion for erasure |
+| `auth-security-migration.sql` | Audit log of sensitive auth events |
+
+> [!success] All three share the same discipline
+> Idempotent, wrapped in a transaction, applied to `mini-baas-postgres`, and
+> re-runnable without harm. A migration you can run twice is a migration you can
+> trust once. Because SQL migrations are immutable once shipped, any static-analysis
+> findings against them are accepted with a reason rather than rewritten.

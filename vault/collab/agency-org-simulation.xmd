@@ -1,0 +1,60 @@
+---
+title: The Agency Org Simulation
+icon: ⛁
+order: 710
+summary: "Binocle Intelligence Agency" — a full owner-plus-20-employees organization built to prove the social, permission, and collaboration stack end-to-end.
+---
+
+# The Agency Org Simulation
+
+To prove the whole stack hangs together — social, ABAC, chat, video, feed, wikis —
+osionos ships a lived-in organization: the **Binocle Intelligence Agency**, an
+owner plus twenty employees, with real accounts, real data, and real policies.
+
+## What exists
+
+- A live tenant (`agency`) with ~11 tables and ~950 rows in its own database.
+- **21** gotrue accounts — one owner, twenty employees — each a real login.
+- An org workspace, plus ABAC: 11 `agency:*` roles and 48 policies with field
+  masks (see [ABAC permission masks](abac-permission-masks.xmd)).
+- Chat channels, DMs, a feed, self-hosted video rooms, and wiki pages with live
+  database embeds.
+- Packaged **view presets** — a cases board, a timeline, a dashboard, a locations
+  map, a reports feed, and an evidence gallery.
+
+## Running it
+
+The whole simulation is driven from `make` targets at the repo root:
+
+```sh
+make agency-all              # provision + seed the whole org
+make agency-verify           # foundation gate
+make agency-verify-platform  # platform gate (multiple sections)
+make agency-sim              # the Playwright scenario suite
+```
+
+## The verification result
+
+| Gate | Result |
+|:-----|:-------|
+| Foundation | **PASS** |
+| Platform (sectioned) | **PASS** |
+| Playwright scenarios | **12 PASS / 2 WARN / 0 FAIL** |
+
+The two WARNs are architectural and documented, not failures:
+
+- [x] 10 scenarios cover accounts, connections, chat, video, permissions, presets
+- [ ] Field masks enforce at the decision endpoint, but live reads use the tenant
+  key — so per-user data-plane masking is not yet exercised
+- [ ] The cross-client live-edit assert is verified at the event level, not the
+  rendered embed
+
+> [!example] Why simulate a whole company?
+> A single happy-path test proves a single path. An organization with twenty
+> people, layered roles, and masked fields surfaces the interactions — who can
+> DM whom, which columns a role sees, whether a channel leaks across teams — that
+> only appear at scale.
+
+> Nothing here is a mock: 21 real accounts, ~950 seeded rows, a live tenant, and
+> a policy bundle the Rust evaluator enforces at parity. The simulation *is* the
+> proof.

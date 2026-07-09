@@ -1,0 +1,65 @@
+---
+title: Home Variants
+icon: ◈
+order: 806
+summary: The Home tab has several faces — dashboard, graph, database, and workspace — each a distinct landing surface selectable by a deep-link.
+---
+
+# Home Variants
+
+Home in osionos is not a single fixed page. It is a `kind:"home"` tab (opened by
+the Home button in the shell) that can present one of several **variants**, backed
+by the `widgets/home-variants` widget.
+
+## The four faces
+
+> [!example] Dashboard
+> The default landing surface — a curated, editable canvas of sections: a
+> greeting, recently-visited pages, learning material, upcoming events, a views
+> launcher, and featured templates. See
+> [the default Home redesign](default-home.xmd).
+
+> [!tip] Graph
+> The Second-Brain **force graph** — your pages and their links rendered as a
+> constellation via the `@osionos/graph-engine` package (Canvas2D + a Web-Worker
+> d3-force layout).
+
+> [!info] Database
+> Lands directly on a live database surface — the Notion-style DB blocks with
+> charts, maps, and equation views.
+
+> [!note] Workspace
+> A workspace-oriented landing view — the broader workspace overview rather than a
+> single document.
+
+## Picking a variant
+
+The variant is chosen by a deep-link query parameter:
+
+```text
+/?home=dashboard   →  the curated dashboard
+/?home=graph       →  the force graph
+/?home=database    →  a live database surface
+/?home=workspace   →  the workspace overview
+```
+
+These four values are exactly what the Lighthouse gate probes — the perf script
+`scripts/lighthouse-categories.mjs` walks `/?home=dashboard|graph|database|workspace`
+across mobile and desktop and fails if any category dips below 90.
+
+## Why variants at all
+
+| Variant | Best when you want to… |
+|:--------|:-----------------------|
+| dashboard | resume where you left off, at a glance |
+| graph | see how ideas connect |
+| database | jump straight into structured data |
+| workspace | orient across the whole workspace |
+
+> [!warning] Perf is measured per variant
+> Because each variant is a genuinely different first paint, they are benchmarked
+> separately. On desktop the dashboard passes comfortably; a lighter
+> above-the-fold is the standing work item for mobile, where the live database
+> section is the largest-contentful element.
+
+Deep-linking details → [Deep-links](deep-links.xmd).

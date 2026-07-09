@@ -1,0 +1,59 @@
+---
+title: Slash Commands
+icon: ⚡
+order: 302
+summary: Type / to summon any block, or let markdown shortcuts convert your text the moment you type them.
+---
+
+# Slash Commands
+
+There are two ways to get a block: **ask for it** with a slash command, or
+**let the text convert itself** with a markdown shortcut. Both end at the same
+place — a typed node in the block tree.
+
+## The slash menu
+
+Type `/` at the start of an empty line and a menu appears, filtered as you type.
+Each entry inserts a block of a given type. The command set lives in the
+`slash-commands` feature, with human labels in `SLASH_DESCRIPTIONS`.
+
+- `/table` → the block-editor grid, `TableBlockEditor` — see [Tables](tables.xmd).
+- `/layout` (and `/canvas`) → the freeform builder — see
+  [Canvas & Layout](canvas-and-layout-builder.xmd).
+- Headings, lists, to-dos, callouts, quotes, code, equations, media…
+
+> [!note] Not everything is in the menu yet
+> The embedded `graph_view` block ships and renders, but exposing it in the
+> slash menu needs a source item entry, not just a description — so for now it
+> arrives through the canvas showcase boards rather than a `/graph` command.
+
+## Markdown shortcuts — convert as you type
+
+You don't have to open the menu. The **typing parser** (`detectBlockType` in
+`shortcutsDetect.ts`) watches the start of a line and transforms it in place:
+
+| You type | You get |
+|:---------|:--------|
+| `# ` … `###### ` | Heading 1–6 |
+| `- ` / `1. ` | Bulleted / numbered list |
+| `[] ` | A to-do checkbox |
+| `> ` | A toggle |
+| `"` or `\|` | A quote |
+| `#>` or `> #` | A toggle carrying a heading level |
+| `>![kind]` or `> [!kind]` | A callout of that kind |
+| ` ``` ` | A code fence |
+
+## Shortcuts nest inside containers
+
+This is the subtle part. When you type a shortcut **inside** a callout or quote,
+`applyMarkdownDetection` (in `usePlaygroundBlockEditor.ts`) creates a **child**
+of the detected type — it does not convert the container away.
+
+> [!example] Why this rule exists
+> Typing `#>` in a callout title used to turn the whole callout *into* a toggle.
+> Now it nests a toggle heading inside the callout instead. Children edited
+> directly still convert in place.
+
+- [x] Type `/` to open the menu
+- [x] Type `# ` to get a heading with no menu at all
+- [ ] Try `> [!tip] ` to drop a tip callout in one keystroke run

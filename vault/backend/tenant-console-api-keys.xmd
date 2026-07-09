@@ -1,0 +1,66 @@
+---
+title: The tenant console & API keys
+icon: ⚿
+order: 1106
+summary: A tenant resolves entirely from its credential — self-serve routes under /v1/tenants/me* never take an id, and API keys are high-entropy mbk_ tokens verified in the control plane.
+---
+
+# The tenant console & API keys
+
+A **tenant** is the unit of ownership in grobase. Everything a tenant does is
+scoped to it — and that scope is derived from the **credential**, never from a
+path parameter.
+
+## The `mbk_` API key
+
+Provisioning mints an API key of the form **`mbk_…`**. It is the tenant's (or
+app's) identity on the wire, sent as `X-Baas-Api-Key`. The [control
+plane](go-control-plane.xmd) resolves it:
+
+```http
+POST /v1/keys/verify   →   identity
+```
+
+> [!note] Keys are stored the way real platforms store them
+> An API key is a high-entropy (160-bit) random token, so it is hashed with
+> **SHA-256**, not a memory-hard KDF — exactly how GitHub, Stripe, and Supabase
+> store high-entropy tokens. There is nothing to brute-force. (This was also a
+> real performance fix — see the [Scale program](scale-program.xmd).)
+
+## Self-serve, no `{id}` by construction
+
+The tenant console surface lives under `/v1/tenants/me*` and is gated by
+`TENANT_SELFSERVE_ENABLED`:
+
+- The tenant is resolved **from the credential** — there is no `{id}` in the
+  path, so **cross-tenant access is impossible by construction**.
+- A caller can only ever read and write *its own* tenant.
+
+## Creating a fresh app-tenant
+
+With `APPS_SELFSERVE_ENABLED`, a tenant can spin up a brand-new app:
+
+```http
+POST /v1/tenants/me/apps
+```
+
+This provisions a **new app-tenant on its own fresh `CREATE DATABASE`** plus a
+scoped key. A gate (`m177`) proves the new app's database is isolated — one
+app's foreign key resolves **zero rows** of another app's mount (a 404, never a
+cross-app read).
+
+> [!tip] Where you actually click
+> Beyond the API, the `one` product edition (`make one-up`) ships an **admin UI
+> at `/_/`**, and the `studio` plane offers a management surface. The API keys
+> and self-serve routes are the same underneath.
+
+## Owner model in one line
+
+| Concern | Rule |
+|:--------|:-----|
+| Identity | From the `mbk_` key (and the user JWT when present) |
+| Scope | Per request, owner-stamped — never by pool state |
+| Isolation | Two apps' databases **never merge** |
+
+That last rule is binding: separate contract-provisioned databases, `read_scoped`,
+RLS, and per-request owner-scoping keep them apart.

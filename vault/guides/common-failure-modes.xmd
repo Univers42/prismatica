@@ -1,0 +1,63 @@
+---
+title: Common Failure Modes & Fixes
+icon: ⚑
+order: 110
+summary: The failures you're most likely to hit on a fresh machine, and the fix for each.
+---
+
+# Common Failure Modes & Fixes
+
+Most first-run problems fall into a handful of buckets. Here's how to recognize and
+resolve them.
+
+## Symptom → cause → fix
+
+| Symptom | Likely cause | Fix |
+|:--------|:-------------|:----|
+| Backend won't start on a fresh box | No `apps/grobase/.env` and no vault key | Copy `~/.config/42ctl/` over, then re-run `make all`; or start it by hand. |
+| A `make` target fails with `no such service` | A stale lean/site target referencing an extracted service | Use `make all` / the current targets instead; the lean edition is known-stale. |
+| Most frontends never start | Manual `docker compose up` without the `dev` profile | Use `make` (it names services), or set `COMPOSE_PROFILES=dev`. |
+| Browser distrusts the local HTTPS | Local CA not trusted in your store | `make certs-trust-local`. |
+| A Postgres password mismatch | Password now lives in grobase, root targets are stubs | Manage it in the grobase stack, not the root. |
+
+## Backend won't start
+
+```bash
+# Start the backend by hand:
+make -C apps/grobase up
+```
+
+> [!warning] Fresh machine, no vault key
+> On a brand-new box the backend step stops if `apps/grobase/.env` is absent and
+> there is no vault key. Copy `~/.config/42ctl/` over first, then re-run — or
+> accept the fully-local path, which self-generates secrets. See
+> [The two make all modes](make-all-two-modes.xmd).
+
+## Certificates
+
+Certs are regenerated (via grobase) on every `make all` — that's intentional. If a
+browser complains:
+
+```bash
+make certs-trust-local   # trusts the local CA in the system + browser stores
+```
+
+## Known-stale targets
+
+> [!note] A couple of legacy targets have drifted
+> Some lean-edition and standalone-site targets reference services that moved into
+> the grobase stack, so they error with `no such service`. They aren't part of the
+> mainline `make all` flow — reach for the current targets in
+> [The root Makefile](root-makefile.xmd) instead.
+
+## When a restore didn't happen
+
+If demo data didn't load, it's almost certainly because the databases weren't
+*confirmed empty* — the restore is fail-safe by design and skips on any
+uncertainty. Details in [Restoring Demo Data](restoring-demo-data.xmd).
+
+> [toggle] Host port already in use
+> If a host port a frontend wants is taken, stop whatever holds it (or stop the
+> stack with `docker compose down` and restart). Because the ports are published by
+> the proxy and a few service blocks, a conflict shows up as that one service
+> failing to bind, not the whole stack.

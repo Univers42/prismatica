@@ -1,0 +1,64 @@
+---
+title: Unread & Read Receipts
+icon: ✦
+order: 606
+summary: Per-channel unread counts, an unread divider, a "new messages" pill, and read markers — so you always know what you've missed and where you left off.
+---
+
+# Unread & Read Receipts
+
+Nothing kills a chat app faster than not knowing what you've missed. The
+messenger tracks read state **per channel, per person**, and surfaces it in three
+places.
+
+## Unread badges
+
+Each channel and DM in the sidebar carries an **unread badge** — a live count of
+messages you haven't seen. The counts seed when the app loads and update as
+messages arrive, so the rail is an at-a-glance inbox.
+
+> [!info] Counts are computed server-side
+> Your unread count is derived on the backend from a record of how far you've
+> read in each channel — not guessed on the client. That keeps the number
+> correct across devices and reloads.
+
+## The unread divider
+
+Open a channel with unread messages and a **divider** marks the exact line where
+"already read" ends and "new to you" begins. You drop straight into the first
+thing you missed, not the top or the bottom.
+
+```text
+   … earlier messages you've seen …
+ ──────────  New messages  ──────────   ← the unread divider
+   the first message you haven't read
+   and everything after it
+```
+
+## The "new messages" pill
+
+If you're scrolled up reading history when new messages land, a **"↓ N new"**
+pill appears. Click it to jump to the newest and clear the backlog. (This is the
+same pill described in [Channels](channels.xmd) — it does double duty for
+unread.)
+
+## Read markers
+
+When you view a channel, your **read position advances** — which is what powers
+everyone else's read state and clears your own badge. Reading is the act that
+marks messages read; there's no separate "mark as read" chore.
+
+## The lifecycle
+
+1. A message arrives in a channel you're a member of.
+2. Your unread count for that channel **increments**.
+3. You open the channel — the **divider** shows where you left off.
+4. Viewing it **advances your read marker**.
+5. The badge **clears**.
+
+> [!tip] Encrypted DMs are the exception
+> Read and unread state still work for end-to-end encrypted DMs, but their
+> content can't be previewed or indexed — see
+> [Direct Messages](direct-messages.xmd).
+
+Related: [Realtime delivery](realtime-delivery.xmd) keeps these counts live.

@@ -1,0 +1,76 @@
+---
+title: Rich-media Messages
+icon: ◈
+order: 603
+summary: Slash composer, media toolbar, voice messages with a live waveform, a media gallery, GIFs, emoji, and a zoomable lightbox — all served from self-hosted storage.
+---
+
+# Rich-media Messages
+
+The composer is where the messenger earns its keep. Beyond plain text it sends
+images, video, audio, files, and links — and captures **voice messages** with a
+real, tonality-tracking waveform.
+
+## Two ways in
+
+There are two entry points to attaching media, and they complement each other:
+
+1. **The slash composer** — type `/` to open a focused launcher:
+   `/image`, `/video`, `/audio`, `/url`, `/file`.
+2. **The media toolbar** — a row of buttons under the input: image, attach, GIF,
+   emoji, and the microphone.
+
+```text
+ ┌───────────────────────────────────────────────┐
+ │  Type a message…                               │
+ ├───────────────────────────────────────────────┤
+ │  🖼  📎  GIF  🙂  🎙   ← media toolbar          │
+ └───────────────────────────────────────────────┘
+    /image  /video  /audio  /url  /file   ← slash menu
+```
+
+## Voice messages
+
+Voice isn't a single tap-and-send — it's a proper recording flow:
+
+- [x] **Record** — with live, real-amplitude bars that follow your voice.
+- [x] **Pause / resume** — the timer is pause-aware.
+- [x] **Stop**, then **review** — play it back before you commit.
+- [x] **Send** — or discard and try again.
+
+The waveform you draw while recording is the same one the recipient sees, and it
+advances as the clip plays — a proper scrubber, not decoration.
+
+## The media gallery
+
+Every conversation keeps a **"Media, links & docs"** gallery in its contact
+info, so a shared image or file from weeks ago is one click away instead of a
+scroll-hunt.
+
+## Links, GIFs, and emoji
+
+> [!tip] Paste a link, get a card
+> A bare `http(s)` URL dropped into the text renders as a preview card — favicon,
+> host, and inline embeds for the video hosts that support them. No slash command
+> required; existing messages get the treatment too.
+
+- **GIFs** come from an in-app picker; the chosen GIF flows through the normal
+  upload path (so it's stored and deduplicated like any attachment).
+- **Emoji** insert from the toolbar picker.
+
+## The lightbox
+
+Click an image and it opens full-screen: **wheel-zoom anchored on the cursor**,
+drag-to-pan, and keyboard controls (`+` / `-` to zoom, arrows to pan, `0` to
+reset, `Esc` to close). It reuses the already-loaded image — no re-download.
+
+## Where the bytes live
+
+> [!note] Self-hosted storage, content-addressed
+> Attachments are stored in the self-hosted object store (a dedicated `chat`
+> bucket), owner-scoped, and **content-addressed** — the same file sent twice is
+> stored once. Images are compressed client-side before upload, and every type
+> has a size ceiling enforced on the way in.
+
+Serving a private attachment requires your session, so media is never a naked
+public URL — see [Security & UX hardening](security-and-ux-hardening.xmd).

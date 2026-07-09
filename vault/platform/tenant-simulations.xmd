@@ -1,0 +1,74 @@
+---
+title: Tenant Simulations
+icon: ⊕
+order: 1209
+summary: Three realistic multi-tenant orgs — an intelligence agency, a restaurant, and a game — that exercise isolation, ABAC, and live data end to end.
+---
+
+# Tenant Simulations
+
+The BaaS is multi-tenant, and the only honest way to prove tenant isolation is to
+run *real* tenants against it. Three simulations do exactly that, each a full org
+with accounts, roles, live data, and its own access model.
+
+| Simulation | Theme | Driver |
+|:-----------|:------|:-------|
+| **Agency** | "Binocle Intelligence Agency" | `make agency-all` |
+| **Gourmand** | A restaurant business | `make gourmand-all` |
+| **Red-Tetris** | The maximal game edition | the `tetris` edition |
+
+The seed generators live in `apps/grobase/scripts/seed/`, alongside the
+deterministic commerce demo seeder.
+
+## Agency — ABAC & collaboration
+
+A super-dashboard org with an owner plus 20 employees, exercising the full
+access-control and collaboration surface.
+
+- A live tenant mount with ~11 tables of realistic rows.
+- **ABAC**: agency roles + policies with **field masks**, enforced through a
+  permission-bundle endpoint that feeds the Rust evaluator (parity proven).
+- Chat, DMs, a video room (LiveKit), an activity feed, and wikis — all live.
+- Verified by `make agency-verify`, `make agency-verify-platform`, and a
+  Playwright scenario suite.
+
+> [!example] What agency proved about isolation
+> The agency negative tests surfaced a real cross-tenant bug — a mount `dbId`
+> acting as a **bearer capability** — and drove the fix that scoped every mount
+> lookup by tenant. Simulations are not decoration; they find live security bugs.
+
+## Gourmand — a tenant-owned database
+
+Onboards a real restaurant product (React + a Supabase-shaped schema, ~48 tables)
+as an osionos client, writing to its *own* database.
+
+- Isolation model **`tenant_owned`**: rows are owner-scoped; foreign-tenant reads
+  return **403 / 404**, never a row.
+- TLS to the tenant DB via rustls (respecting `sslmode`).
+- Real staff mirrored into accounts; customers excluded. Live pages, wikis, and
+  chat channels seeded.
+
+> [!info] Local fallback when the cloud DB is gone
+> When the upstream Supabase project was deleted, gourmand fell back to
+> reproducing the *real* schema into a local `gourmand` database on
+> mini-baas-postgres — same tables, same seeds, no dependency on a live cloud
+> tenant. The simulation survives its own backing store disappearing.
+
+## Red-Tetris — the maximal edition
+
+`tetris` is the maximal red-tetris **game edition**, a known-good grobase shape
+combining the profiles and engines the game needs. Start it the same way as any
+edition:
+
+```sh
+# from apps/grobase/
+make up EDITION=tetris
+```
+
+## The shared lesson
+
+> [!tip] Isolation is verified per tenant, per read
+> Every simulation runs the same negative test: one tenant's credential must never
+> return another tenant's row. That single assertion, repeated across three very
+> different orgs, is what makes the [RLS data wall](row-level-security.xmd) a
+> proven fact rather than a hope.

@@ -1,0 +1,76 @@
+---
+title: Frontends-Only Root Compose
+icon: ⎔
+order: 205
+summary: The root docker-compose.yml orchestrates only the frontends and joins the standalone grobase backend over an external Docker network.
+---
+
+# Frontends-Only Root Compose
+
+The root `docker-compose.yml` is a **frontends-only orchestrator**. It defines
+the application-plane services and *joins* the standalone grobase backend over an
+**external Docker network** — it does not define the backend itself.
+
+> [!info] Two Docker projects, one stack
+> The frontends are one docker-compose project. **grobase** (project name
+> `mini-baas`) is a separate docker project. They meet on a shared external
+> network, not in one compose file.
+
+## What is — and is not — a root service
+
+> [!warning] These are NOT root-compose services
+> Postgres, Kong, gotrue, postgrest, redis, pg-meta, vault, and mailpit are
+> **not** defined in the root compose. They live in the grobase stack. The root
+> stack only *reaches* them.
+
+| In the root compose | In grobase (external) |
+|:--------------------|:----------------------|
+| opposite-osiris-web (Astro) | Kong (front door, `:8000`) |
+| osionos (React + Vite) | postgrest · gotrue · redis |
+| osionos-bridge (TS) | postgres · pg-meta · vault |
+| auth-gateway (Go) | realtime (Rust) · mailpit |
+| mail / calendar (+ bridges) | |
+| local-https-proxy · livekit | |
+
+## The TLS front door
+
+A single **`local-https-proxy`** service is the TLS front door. It publishes the
+8 primary frontend host ports behind HTTPS. Two services publish their own ports
+instead of going through the proxy: **livekit** (media), and
+**opposite-osiris-web** (its debug `4323 → 8080`).
+
+```text
+   Browser ── HTTPS ──► local-https-proxy
+                          ├─► opposite-osiris-web   :4322
+                          ├─► osionos               :3001
+                          ├─► osionos-bridge        :4000
+                          ├─► auth-gateway          :8787
+                          ├─► mail / mail-bridge     :3002 / :4100
+                          └─► calendar / cal-bridge  :3003 / :4200
+```
+
+## Self-provisioning startup
+
+The whole stack comes up from one command. `make all` is **self-provisioning**:
+from a clean clone it syncs submodules, ensures secrets, regenerates TLS certs,
+**starts grobase**, restores demo data when the databases are empty, then builds
+the frontends with health validation.
+
+- [x] `make all` starts the backend if it is down
+- [x] certs regenerate on every `make all` (intentional)
+- [x] demo data restores only when engines are confirmed empty (never wipes)
+
+> [!danger] Profile gotcha
+> `COMPOSE_PROFILES` defaults to `dev`. A *manual* `docker compose up` without it
+> silently skips most frontends. The Makefile names services explicitly, so
+> `make all` is unaffected — but raw compose commands are a trap.
+
+## Two host-network simulations
+
+Beyond the eight frontends, two host-network simulation services also exist:
+`playground-simulation` and `agency-simulation`. They are org/tenant simulations,
+not part of the primary user path.
+
+> [!tip] The wiring itself
+> How the frontends *address* grobase — by container-name DNS — is its own topic:
+> the [container-DNS topology](container-dns-topology.xmd).

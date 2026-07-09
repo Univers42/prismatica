@@ -1,0 +1,63 @@
+---
+title: Health Checks & Quick Curls
+icon: ✶
+order: 104
+summary: Confirm the stack is up — the health targets, per-service curls, and one important gotcha.
+---
+
+# Health Checks & Quick Curls
+
+Once `make all` finishes, a few commands tell you whether every front door is
+actually answering.
+
+## The two health targets
+
+```bash
+make healthcheck          # curls each front door + the BaaS health route
+make check_health_apps    # UP/DOWN matrix per app, localhost AND production
+```
+
+- `make healthcheck` probes the BaaS auth health route, the bridge, osionos, the
+  website (following the HTTP→HTTPS redirect), and the auth gateway's availability
+  endpoint.
+- `make check_health_apps` produces a per-app UP/DOWN table across **both**
+  localhost and the deployed production URLs.
+
+## Poking a single surface
+
+The local TLS certificates are self-signed by a local CA, so pass that CA to
+`curl`:
+
+```bash
+# Website
+curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:4322
+
+# osionos editor
+curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:3001
+```
+
+> [!warning] The auth gateway has no /health route
+> Probe its availability endpoint instead:
+> `https://localhost:8787/api/auth/availability`. A 404 on `/health` is expected,
+> not a failure.
+
+## Everyday inspection
+
+| Command | Use it to… |
+|:--------|:-----------|
+| `docker compose ps` | See service status at a glance. |
+| `docker compose logs -f <service>` | Follow one service's logs. |
+| `make showcase` | Reprint the local URLs. |
+
+## Quick green-light checklist
+
+- [ ] `make healthcheck` returns without errors
+- [ ] `docker compose ps` shows services healthy (a few vestigial ones may lag)
+- [ ] `https://localhost:4322` serves the website
+- [ ] `https://localhost:8787/api/auth/availability` answers
+
+> [!note] Production is a separate surface
+> `make check_health_apps` also probes the deployed frontends and backend. Those
+> live independently of your local Docker stack; a red production row doesn't mean
+> your local run is broken. If something local is down, head to
+> [Common Failure Modes](common-failure-modes.xmd).

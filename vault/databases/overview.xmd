@@ -1,0 +1,65 @@
+---
+title: Live Databases Overview
+icon: ⛁
+order: 500
+summary: osionos turns any connected external database into a live, Notion-style workspace — read and write real rows without copying data.
+---
+
+# Live Databases
+
+osionos is a Notion-style block editor, but its **Database plane** does something
+Notion cannot: it renders and edits rows that live in **your own external
+databases** — Postgres, MySQL, MongoDB, and more — in real time. Nothing is
+imported or duplicated. The grid you see is a live projection of the engine.
+
+> [!info] One principle above all
+> The database view is an **interpretation layer**. It re-reads and re-shapes what
+> the engine returns, but it **never rewrites the engine's schema or data behind
+> your back**. Every write it emits is a valid, minimal write to the source table.
+
+## How the data reaches you
+
+osionos never talks to a database directly from the browser. Every request goes
+through a Node **bridge** that holds the backend credentials and enforces access,
+so the client never sees a service key.
+
+```text
+ Browser (osionos)
+    │  app-session token (Bearer)
+    ▼
+ osionos-bridge  ── holds the service-role key, checks access
+    │  /api/databases/...
+    ▼
+ grobase query-router (Rust data plane)
+    │
+    ▼
+ Postgres · MySQL · Mongo · DynamoDB · SQLite · MSSQL
+```
+
+- **Reads and writes** flow over the bridge — the trust boundary.
+- **Realtime updates** (so a neighbour's edit appears in your grid) arrive over a
+  separate live channel, degrading to short-interval polling when no token resolves.
+
+## What you can do with a live database
+
+- [x] Browse every connected database from a left-sidebar **navigator**
+- [x] Render a table as a virtualized Notion **grid** — thousands of rows
+- [x] Regroup the same data as a **Board** (kanban), gallery, or list
+- [x] Edit cells inline; changes persist straight back to the source engine
+- [x] Follow **relations** — a foreign key shows the related record's title, not a raw id
+- [x] Plot the data as **charts** and assemble **dashboards**
+- [x] Map rows with location columns on an interactive map
+
+## Where to go next
+
+| If you want to… | Read |
+|:----------------|:-----|
+| Know which engines are supported | [Supported Engines](supported-engines.xmd) |
+| Understand editing & persistence | [CRUD Across Engines](crud-across-engines.xmd) |
+| Find and open a database | [The Databases Navigator](databases-navigator.xmd) |
+| See how the plane fits the stack | [Architecture](../guides/architecture.xmd) |
+
+> [!tip] It is genuinely bidirectional
+> The interpretation layer reads engine data *and* writes valid engine data. A city
+> column can present as a map, a numeric foreign key can present as a linked record —
+> yet what lands in your table is always a plain, correct value.

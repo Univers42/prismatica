@@ -1,0 +1,64 @@
+---
+title: Serialization & Round-Trip Fidelity
+icon: ◇
+order: 309
+summary: Blocks serialize to a specific markdown dialect so that parsing them back is lossless for block type — and where it is not, it fails gracefully.
+---
+
+# Serialization & Round-Trip Fidelity
+
+Round-trip means: take a page, serialize it to markdown, parse that markdown
+back, and get the **same blocks**. osionos achieves this for block *type* by
+making the serializer speak exactly the dialect its strict parser reads.
+
+## The two halves must agree
+
+```text
+block tree ──pageMarkdownSerialize──▶ markdown ──parseMarkdownToBlocks──▶ block tree
+             (services/page-actions)              (the AST parser)
+```
+
+The fix was to rewrite `pageMarkdownSerialize.ts` so it emits the **AST parser's**
+dialect — not the typing-shortcut dialect. Get this wrong and a `> ` toggle
+serializes as a quote on the way out and parses back as a quote on the way in.
+
+## The emitted dialect
+
+| Block | Serialized form |
+|:------|:----------------|
+| Headings | `#` … `######` |
+| Toggle | `> [>]` (or `#{N}>` when it has a heading level) |
+| Callout | `> [!icon] Title` |
+| Quote | `> ` prefixed lines |
+| Equation | `$$ … $$` |
+| Table | GFM pipe table |
+| Code | fenced, with language |
+| Lists / to-dos | `-` / `1.` / `[ ]`, children nested by 2-space indent |
+
+> [!success] Lossless for type
+> The serialize → parse cycle is lossless for block **type** across the eight
+> core block families. It is exercised by `tests/canvas/markdown-roundtrip.test.ts`
+> and by a live raw-mode Save scenario in the e2e suite.
+
+## Toggle heading level survives
+
+A toggle that carries a heading level serializes to the compact editor-native
+opener `#{N}>` (for example `##> summary`), and the parser accepts both that and
+the plain `> [>]`. So a toggle heading round-trips, and pasting `##> foo` also
+yields one.
+
+## What does *not* round-trip — and why that is fine
+
+> [!note] Graceful degradation, not data loss
+> - **`collapsed`** is pure view state — there is no markdown for "this toggle is
+>   folded", so it is dropped. Type and content survive.
+> - **A heading level set on a quote or callout** has no clean opener like the
+>   toggle's `#>`; encoding it would pollute the source, so it degrades to plain
+>   type + content.
+
+> [!warning] Children flatten differently
+> Quote children flatten into the quote's content and adjacent paragraphs merge
+> on a soft-break; callout children preserve structurally. If a quote's structure
+> matters, give its children distinct types.
+
+See the two parsers this all rests on in [The markengine](the-markengine.xmd).

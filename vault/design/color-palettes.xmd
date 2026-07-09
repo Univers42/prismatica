@@ -1,0 +1,64 @@
+---
+title: Colour Palettes
+icon: ✶
+order: 902
+summary: Eight switchable design-school palettes — Warm Editorial default plus Monochrome, High Contrast, Maximal, Nord, Solarized, Midnight, and Rosé Pine.
+---
+
+# Colour Palettes
+
+osionos ships **eight** colour palettes, each with a full **light and dark**
+variant. They are picked in **Settings → Appearance** and persist per browser.
+Every palette overrides the same set of identity tokens, so the whole workspace —
+editor, sidebar, database grids, and the force graph — recolours in one switch.
+
+## The eight
+
+| Palette | Character | Light accent |
+|:--------|:----------|:-------------|
+| **Warm Editorial** *(default)* | cream + terracotta, serif headings | [bg=#cc785c][color=#ffffff] #CC785C [/color][/bg] |
+| **Monochrome** | pure black-and-white, no hue | [bg=#0a0a0a][color=#ffffff] #0A0A0A [/color][/bg] |
+| **High Contrast** | WCAG-AAA, maximal legibility | [bg=#0b3d91][color=#ffffff] #0B3D91 [/color][/bg] |
+| **Maximal** | neon, high-energy | [bg=#e5007a][color=#ffffff] #E5007A [/color][/bg] |
+| **Nord** | cool arctic blues | [bg=#4f739f][color=#ffffff] #4F739F [/color][/bg] |
+| **Solarized** | the classic muted precision palette | [bg=#1a72b8][color=#ffffff] #1A72B8 [/color][/bg] |
+| **Midnight** | Tokyo-Night deep indigo | [bg=#7c5cd3][color=#ffffff] #7C5CD3 [/color][/bg] |
+| **Rosé Pine** | soft muted rose | [bg=#7c6699][color=#ffffff] #7C6699 [/color][/bg] |
+
+Swatches above show each palette's **light-mode accent**; every palette also
+defines a dark-mode variant (e.g. Warm's dark accent is
+[bg=#e0937a][color=#1a1a18] #E0937A [/color][/bg], which stays AA-legible as text).
+
+## How a palette is built
+
+Warm Editorial is the **base** — it has no `[data-palette]` block at all, so it
+falls through to the root `:root` / `[data-theme]` tokens and stays byte-identical
+to "no palette selected". Each of the other seven is a pair of attribute blocks:
+
+```css
+[data-palette="nord"][data-theme="light"] { --osio-accent: #4F739F; /* ~47 tokens */ }
+[data-palette="nord"][data-theme="dark"]  { --osio-accent: /* dark */; /* … */ }
+```
+
+Each block redefines the **identity** tokens (background, foreground, border,
+accent, status, graph identity). Block tints and secondary graph tokens are left
+to **inherit** the per-mode base — a two-attribute palette selector out-specifies
+the one-attribute base, so the overrides win without repeating everything.
+
+> [!tip] The graph follows the palette for free
+> The force-graph engine derives node materials from the luminance of
+> `--osio-graph-bg-0/1`. Because a palette sets those, switching palettes recolours
+> the Second-Brain graph with no engine change.
+
+## Choosing one
+
+> [toggle] Which palette should I use?
+> - **Reading all day?** Warm Editorial or Solarized — low glare, warm neutrals.
+> - **Low vision / bright room?** High Contrast — authored to WCAG AAA.
+> - **Night owl?** Midnight or Nord dark.
+> - **Screenshots / demos?** Maximal reads well on a projector.
+> - **Print-like minimalism?** Monochrome.
+
+Each palette was contrast-verified before shipping — see
+[Accessibility & contrast](./accessibility-contrast.xmd). For the mechanics of the
+two independent axes, read [The palette axis](./palette-axis.xmd).

@@ -1,0 +1,75 @@
+---
+title: Co-presence on the Realtime Gateway
+icon: ⚡
+order: 711
+summary: How the Shared-space adapter maps carets, presence, and summon onto the Rust realtime gateway's WebSocket protocol.
+---
+
+# Co-presence on the Realtime Gateway
+
+The awareness layer speaks one protocol: the Rust **realtime-agnostic** gateway's
+JSON WebSocket frames. This is how each co-presence concept lands on a real frame.
+
+## The protocol frames
+
+The gateway defines a fixed set of tagged JSON frames. Clients send some; the
+server sends others.
+
+| Client → server | Server → client |
+|:----------------|:----------------|
+| `AUTH` (first frame) | `AUTH_OK` |
+| `SUBSCRIBE` / `SUBSCRIBE_BATCH` | `SUBSCRIBED` / `UNSUBSCRIBED` |
+| `UNSUBSCRIBE` | `EVENT` |
+| `PUBLISH` / `BROADCAST` | `PRESENCE` |
+| `TRACK` / `UNTRACK` | `PONG` / `ERROR` |
+| `PING` | |
+
+Each frame's payload is capped at **64 KB**.
+
+## The mapping
+
+Co-presence concepts map cleanly — and where the gateway lacks a primitive, the
+adapter synthesizes one instead of inventing a wire feature:
+
+| Concept | Realized as |
+|:--------|:------------|
+| Who's here | `TRACK` / `UNTRACK` → server `PRESENCE` snapshots (**native**) |
+| Caret / selection / focus / activity / nav | `BROADCAST` with an event + payload |
+| Summon (request → reply) | **synthesized** over `BROADCAST` (a correlation id + a client-side timeout) |
+| A shared file | uploaded durably via the bridge — **never** on the wire |
+
+> [!note] Presence is native; request/reply is not
+> The gateway ships presence as a first-class primitive, so the adapter never
+> fakes heartbeats or TTLs for it. It does *not* ship request/reply, so summon is
+> built on top of broadcast with a correlation id and a timeout — an honest
+> synthesis, marked as such.
+
+## The handshake
+
+The one adapter follows a strict order — auth first, then subscribe to the
+space's topic, then start tracking presence:
+
+```text
+open socket
+  └─► AUTH { token }                        (MUST be the first frame)
+        └─► AUTH_OK
+              └─► SUBSCRIBE { topic: "collab:<spaceId>" }
+                    └─► SUBSCRIBED
+                          └─► TRACK { topic, meta: presence }
+                                └─► server PRESENCE snapshots flow in
+```
+
+The topic is always `collab:<spaceId>`. The token comes from the membership-gated
+bridge endpoint, so the subscribe is scoped to exactly that one space (see
+[Namespace isolation & the collab gate](collab-namespace-isolation.xmd)).
+
+## Resilience
+
+If the socket drops, the adapter reconnects with capped exponential backoff, then
+**re-auths, re-subscribes, re-tracks** presence, and flushes any queued outbound
+frames — so a blip doesn't strand you as a ghost in the roster.
+
+> [!tip] osionos already spoke this protocol
+> The live-database views use the same gateway. The Shared-space adapter reuses
+> that WebSocket type rather than opening a second, parallel transport — one way
+> in, one protocol.

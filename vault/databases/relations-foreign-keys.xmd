@@ -1,0 +1,72 @@
+---
+title: Relations & Foreign Keys
+icon: ⊕
+order: 506
+summary: Foreign keys render as linked records showing the related row's title — resolved from real constraints where they exist, inferred by naming where they don't.
+---
+
+# Relations & Foreign Keys
+
+A foreign key in a live table does not show up as a bare number. osionos renders it
+as a **relation**: a clickable tag carrying the *title* of the record it points to,
+just like a Notion linked-record property. Editing it means picking a related row,
+and what gets written back is the plain key value.
+
+## Two ways a link is discovered
+
+Not every engine reports its foreign keys, so osionos finds them two ways:
+
+1. **Real constraints** — Postgres and MySQL expose their foreign keys through the
+   information schema, so those links are exact and authoritative.
+2. **Naming heuristic** — SQLite, SQL Server, MongoDB and DynamoDB don't hand over
+   constraint metadata, so a convention-based inference kicks in.
+
+> [!info] The inference rule
+> A column named like `<base>_id` or `<base>_ref` is matched to a table named for
+> `<base>` (plural-aware, so `product_id` finds `products`). Ownership and tenancy
+> columns such as `owner_id` and `tenant_id` are deliberately **skipped** — they are
+> plumbing, not relations. A real constraint always wins over the guess.
+
+## Resolving the title
+
+Showing a link is only half the job — the grid also has to display the target
+record's *name*, which means the referenced rows have to be in hand.
+
+> [!note] Referenced rows are eager-loaded
+> When a table loads, osionos also loads the rows of each referenced table (bounded
+> to a safe limit) so relations render with real titles instead of blanks. If a
+> particular target row can't be resolved, the tag falls back to a clickable id
+> segment — never an empty cell.
+
+## Relations can cross database boundaries
+
+A foreign key's target table sometimes lives in a **different** mount entirely — an
+IoT `device.product_ref` pointing at a `products` table in a separate commerce
+database.
+
+> [!example] Cross-mount resolution
+> Cross-mount links resolve when the target is unambiguous: the engine looks in the
+> **same** mount first, and otherwise accepts **exactly one** other accessible mount
+> that has a matching table. If two mounts could match, the link is left unresolved
+> rather than guessing wrong. Cross-mount lookups only ever reach mounts your account
+> can access.
+
+## Editing a relation
+
+Picking a related record is friendlier than typing a number, and it stays
+write-safe:
+
+| Action | Result |
+|:-------|:-------|
+| Choose a row in the relation picker | its primary key is written to the FK column |
+| The value is number-typed | it's coerced back to the column's type |
+| You clear the relation | the key is unset |
+
+So the reading experience is "linked records", but the stored value is always a
+correct, minimal foreign-key value — the source table never learns it is being
+presented as a relation.
+
+---
+
+Location columns get the same treatment as relations — see
+[Places, Maps & Geocoding](place-map-geocoding.xmd).

@@ -1,0 +1,69 @@
+---
+title: Frame Budget & DPR Cap
+icon: ⚡
+order: 404
+summary: While the camera moves, the engine renders at half resolution and drops decorative passes; when it settles, it paints one crisp final frame.
+---
+
+# Frame Budget & DPR Cap
+
+Retina displays render four times the pixels. The engine spends that budget only
+when it will be seen — full quality on the *settled* frame, reduced quality *while
+you are moving*.
+
+## Adaptive device pixel ratio
+
+`core/render/sceneCamera.ts` derives two DPR values from the real one:
+
+```ts
+// sceneCamera.ts
+this.qualityDpr     = Math.min(dpr, 2);            // crisp ceiling — capped at 2
+this.interactiveDpr = Math.max(1, qualityDpr * 0.5); // half-res while in motion
+```
+
+Even a 3× display is capped at `2` for the crisp frame. During motion the canvas is
+resized to `interactiveDpr` (roughly half-resolution), then restored to `qualityDpr`
+for the final settle frame.
+
+## Motion vs. settle
+
+Any pan, zoom, drag, or simulation tick bumps a `motionUntil` timestamp. While that
+window is live, the frame is marked `lowQuality` and skips the expensive decorative
+work:
+
+| Pass | Drawn while moving? |
+|:-----|:-------------------:|
+| nodes + links | yes |
+| glow / edge-flow | no |
+| glass cards | no |
+| hub arcs | no |
+| labels | no |
+
+Labels are the subtle part: they stay baked at `qualityDpr` and are blitted in
+screen space, so toggling the interactive DPR does **not** force a re-bake. Hover
+glow also stays crisp — an animating hover effect is not the same as camera motion.
+
+## The background has its own budget
+
+The aurora "Warm Constellation" backdrop runs on a **separate canvas and loop** so
+it never competes with the graph:
+
+- DPR clamped to `1` (`Math.min(dpr, 1)`) — the soft field is imperceptible at 1×.
+- Redraw throttled to ~12fps via `BG_FRAME_MS = 80`; the field drifts a full cycle
+  over many minutes, so 60fps would be wasted work.
+
+> [!tip] Why this was necessary
+> A continuous 60fps backdrop doing full-screen fills plus fresh radial gradients
+> every frame at 2× DPR saturated the main thread even at idle. Capping its DPR and
+> throttling its loop freed the budget for the graph itself.
+
+## The idle-stop loop
+
+When nothing is moving and the layout has settled, the render loop stops entirely —
+no frames, no CPU. It wakes on the next interaction. Combined with the per-frame
+label bake budget of `6`, the engine spends effort strictly in proportion to what
+is changing on screen.
+
+- [x] Half-res in motion, crisp on settle
+- [x] DPR capped at 2 (graph) / 1 (background)
+- [x] Loop halts at idle

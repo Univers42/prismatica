@@ -1,0 +1,58 @@
+---
+title: Tables
+icon: ▤
+order: 307
+summary: The /table block is a keyboard-navigable grid — distinct from the heavier live-database data grid, and easy to confuse with it.
+---
+
+# Tables
+
+The editor has a `/table` block: a lightweight, in-page grid you type directly
+into. It is the markdown table, made editable — arrow keys move between cells,
+you add rows and columns inline, and you drag rows to reorder them.
+
+## Two grids, do not confuse them
+
+This is the single most important fact about tables in osionos.
+
+| | Block `/table` | Live-database grid |
+|:--|:---------------|:-------------------|
+| Component | `TableBlockEditor.tsx` | `notion-database-sys` `TableView.tsx` |
+| Nature | A markdown block | A data-source view |
+| DOM hook | `data-table-cell` / `role="gridcell"` | Its own grid attributes |
+| Opens via | `/table` in the editor | a `database` pane |
+
+> [!warning] The URL can point at the wrong one
+> A URL like `#source=adapter&view=v-prod-table` opens the **live-database**
+> grid, not the `/table` block. Table-editing work (focus mode, arrow-nav,
+> add-row/col, drag handles) targets `TableBlockEditor` — the markdown block.
+
+## What the block table gives you
+
+- **Keyboard grid** — arrow keys move the caret cell to cell; the cells expose
+  `role="gridcell"` for assistive tech.
+- **Add rows and columns** inline, from the edges.
+- **Row drag handles** to reorder.
+- **Focus mode** for editing a single table without page noise.
+
+> [!tip] Mirror the data-grid's logic
+> The two grids "share some connection of logic." When extending the block
+> table, study the live data-grid's keyboard, context-menu, and settings modules
+> for consistency — but implement in `TableBlockEditor`, keeping files within the
+> [≤200-line convention](file-convention-and-slices.xmd).
+
+## Tables in markdown
+
+Block tables serialize as **GFM pipe tables**, so they survive a raw-mode
+round-trip cleanly:
+
+```md
+| Plane       | Language   | Owns             |
+|:------------|:----------:|-----------------:|
+| Application | TypeScript | What users touch |
+| Data        | Rust       | Moving bytes     |
+```
+
+- [x] Insert a table with `/table`
+- [x] Navigate cells with the arrow keys
+- [ ] Round-trip it through [raw mode](raw-mode-split-pane.xmd) and confirm the pipes survive

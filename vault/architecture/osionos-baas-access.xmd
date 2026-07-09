@@ -1,0 +1,72 @@
+---
+title: How osionos Reaches the BaaS
+icon: ◇
+order: 211
+summary: osionos has two routes to grobase — the server-side bridge for workspace data, and the direct Kong client for auth. They carry different trust.
+---
+
+# How osionos Reaches the BaaS — Bridge vs Kong
+
+osionos reaches the grobase backend by **two distinct routes**, and confusing
+them is the source of many bugs. One goes through the server-side **bridge**; the
+other goes straight to **Kong** from the browser. They serve different purposes
+and carry different credentials.
+
+## The two routes side by side
+
+| | **Bridge route** | **Direct Kong route** |
+|:--|:-----------------|:----------------------|
+| Runs where | server (`osionos-bridge`, `:4000`) | browser client |
+| Credential | `SERVICE_ROLE_KEY` | anon key + user session |
+| Reaches | Kong → postgrest | Kong (`:8000`) → gotrue |
+| Used for | workspace & page reads/writes | authentication |
+| Trust | full-access (bypasses RLS) | user-scoped |
+
+## Route 1 — the bridge (data)
+
+Page loads and page writes go through the **bridge**, not the browser client.
+The bridge holds the service-role key, sends it as both `apikey` and Bearer to
+postgrest, and returns the data to osionos.
+
+> [!info] Page loads go through the bridge
+> The osionos schema is served by grobase's postgrest under `/rest/v1/osionos_*`.
+> When you open a workspace, the bridge fans those reads out to Kong on your
+> behalf. This is why `VITE_BAAS_*` client settings do **not** control page
+> loading — that path is server-side.
+
+## Route 2 — direct to Kong (auth)
+
+For authentication, the browser talks to **Kong** at port `:8000`, which gates
+`/auth/v1/*` (gotrue) with key-auth.
+
+```text
+   ┌── osionos (browser) ─────────────────────────────┐
+   │                                                  │
+   │  auth ────────────────────────► mini-baas-kong:8000 ──► gotrue
+   │                                                  │
+   │  page data ──► osionos-bridge ──► mini-baas-kong:8000 ──► postgrest
+   │                (service key)                     │
+   └──────────────────────────────────────────────────┘
+```
+
+## Two failure modes to recognise
+
+> [!warning] Kong gates auth with an API key
+> A call to `/auth/v1/*` **without** the anon key returns `401 "No API key
+> found"`. Health probes and clients must send the key.
+
+> [!error] Kong rate-limits the bridge
+> Because the bridge is a single IP fanning out many `/rest` calls at once,
+> Kong's per-IP rate limit can trip and return `429`, which the bridge surfaces
+> as a failed load. Opening a very large workspace is the classic trigger.
+
+## The takeaway
+
+- Data problems → look at the **bridge → postgrest** path, not `VITE_BAAS_*`.
+- Login problems → look at the **browser → Kong → gotrue** path and the anon key.
+- The bridge is the [trust boundary](bridge-trust-boundary.xmd); Kong is the
+  [container-DNS front door](container-dns-topology.xmd).
+
+> [!tip] See both routes in motion
+> A single page edit exercises the bridge route end to end — trace it in the
+> [page-edit data flow](page-edit-data-flow.xmd).

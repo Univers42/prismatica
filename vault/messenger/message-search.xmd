@@ -1,0 +1,60 @@
+---
+title: Message Search
+icon: ⌘
+order: 607
+summary: Full-text search across your messages, scoped to the channels you belong to, with a this-channel / everywhere toggle and highlighted snippets.
+---
+
+# Message Search
+
+Conversation history is only useful if you can find things in it. The messenger
+ships **full-text search** backed by a proper text index, scoped tightly to what
+you're allowed to see.
+
+## Where you search from
+
+A search control lives in the channel header. Open it and you get a query box
+with a **scope toggle**:
+
+- **This channel** — search only the current conversation.
+- **Everywhere** — search across all the channels you belong to.
+
+## Results you can act on
+
+Matches come back as **snippets** — a highlighted excerpt with the author and
+channel — so you can recognise the message before you open it. Clicking a result
+takes you to it in context.
+
+> [!info] Real full-text search
+> Search is powered by a generated text-search index over message content, not a
+> naive substring scan. That means it matches on word stems and ranks results,
+> the way you'd expect a search box to behave.
+
+## Membership is the hard boundary
+
+> [!warning] You can only find what you can see
+> Every search is **filtered by your channel membership** on the server. An
+> outsider searching for a term that exists in a channel they don't belong to
+> gets **zero hits** — the index never leaks messages across the membership
+> line.
+
+## What isn't searchable
+
+| Content | Searchable? | Why |
+|:--------|:-----------:|:----|
+| Channel & group messages | Yes | Indexed, membership-scoped |
+| Non-encrypted DMs | Yes | Same index |
+| End-to-end encrypted DMs | **No** | The server can't read ciphertext |
+
+> [!note] The E2E trade-off, again
+> Encrypted DMs are deliberately excluded from the index — this is the same
+> trade-off described in [Direct Messages](direct-messages.xmd). Privacy and
+> server-side indexing are mutually exclusive, and E2E chooses privacy.
+
+## In short
+
+- [x] Full-text, index-backed
+- [x] This-channel or everywhere
+- [x] Membership-scoped — no cross-channel leaks
+- [x] Highlighted snippets with author + channel
+- [ ] Encrypted DM contents — not indexed, by design

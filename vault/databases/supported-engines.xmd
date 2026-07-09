@@ -1,0 +1,65 @@
+---
+title: Supported Engines
+icon: ⎔
+order: 501
+summary: One grid, many engines — Postgres, MySQL, MongoDB, DynamoDB, SQLite and SQL Server, each with a known capability profile.
+---
+
+# Supported Engines
+
+A single osionos database view can front several very different engines. The
+**Rust data plane** inside grobase owns one connection pool per engine and exposes
+each behind a uniform contract, so the grid does not care whether a table lives in
+Postgres or DynamoDB — it asks the same questions and gets the same shapes back.
+
+## The engines
+
+| Engine | Family | Introspects schema | DDL (create/drop table) |
+|:-------|:-------|:------------------:|:-----------------------:|
+| PostgreSQL | Relational | Yes | Yes |
+| MySQL | Relational | Yes | Yes |
+| SQLite | Relational | Yes | Yes |
+| SQL Server (MSSQL) | Relational | Yes | No |
+| MongoDB | Document | Yes (by sampling) | Yes |
+| DynamoDB | Key-value / wide-column | Yes (by sampling) | No |
+
+> [!note] "Introspect by sampling"
+> Document and key-value engines have no fixed column list. For MongoDB and
+> DynamoDB the data plane **samples a bounded set of rows** and infers the columns
+> and their types (int versus float is split from the JSON number itself), so the
+> grid still gets a typed schema to render.
+
+## Capabilities drive the UI
+
+Each engine advertises what it can do. The view reads these flags and adapts —
+rather than guessing and failing.
+
+- **Introspect** — can the engine describe a table's columns? All six can.
+- **Schema DDL** — can osionos create or drop a table here? SQL Server and DynamoDB
+  say *no*, so for those engines the lifecycle is **op-based** on tables that already
+  exist (insert / update / delete), with no create-or-drop step.
+- **Aggregate** — can the engine compute grouped totals server-side? This powers
+  "Live · all rows" charts; where it is unavailable the client aggregates a sample.
+
+> [!example] A concrete tenant
+> The demo `agency` tenant exposes **seven** live databases at once — a SQLite
+> restaurant DB, a DynamoDB IoT store, a MongoDB activity log, a MySQL ops DB and a
+> pair of Postgres commerce/agency DBs — all browsable side by side in the same
+> navigator.
+
+## Isolation is not a capability — it is a guarantee
+
+> [!warning] DynamoDB never scans across tenants
+> When the data plane samples a DynamoDB table to infer its schema, it issues a
+> **Query on the owner's partition**, never a cross-tenant `Scan`. The hidden
+> `owner_pk` envelope is stripped before the row reaches the grid, and the logical
+> sort key is surfaced as `id`. A table without that owner-partition shape is simply
+> omitted rather than exposed.
+
+Bounded, owner-scoped sampling is the rule for every inferred engine — see
+[Per-Account Database Isolation](account-database-isolation.xmd) for the whole story.
+
+---
+
+Next: how editing works uniformly across all of these →
+[CRUD Across Engines](crud-across-engines.xmd).

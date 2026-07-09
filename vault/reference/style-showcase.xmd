@@ -1,0 +1,182 @@
+---
+title: Style Showcase
+icon: ✶
+order: 4
+summary: Every block and inline type the markengine understands, exercised and combined to prove the render and surface edge cases.
+---
+
+# Style Showcase
+
+This page deliberately uses **every** block and inline construct the markengine
+supports, and combines them, so the shell's styling is proven against the real
+engine output.
+
+## Headings
+
+# Heading level 1
+## Heading level 2
+### Heading level 3
+#### Heading level 4
+##### Heading level 5
+###### Heading level 6
+
+## Inline text styles
+
+Plain text, then **bold**, *italic*, and ***bold italic together***. GFM
+~~strikethrough~~ still works. In this engine `__double underscores__` mean
+**underline**, not bold — a deliberate divergence from CommonMark. You can also
+use the tag forms: [b]bold[/b], [i]italic[/i], [u]underline[/u], [s]strike[/s],
+and [mark]a marked highlight[/mark]. The `==equals==` form ==also highlights==.
+
+Inline `code` sits mid-sentence, and the rich form [code]keeps **nested** styles[/code].
+Colour is available too: [color=#cc785c]terracotta text[/color] and
+[bg=#f5e6df]a warm highlight background[/bg]. Styles nest —
+**bold with [color=#b5532e]coloured italics *inside*[/color]**.
+
+A hard line break comes from two trailing spaces:
+…and this sentence sits on the next line.
+
+Emoji shortcodes render inline: :warning: :check: :smile: :wave:
+
+## Links, footnotes, mentions
+
+A [regular link](https://example.com), a [titled link](https://example.com "Hover me"),
+and a claim that needs a source.[^src] Internal page mentions look like
+[[page:getting-started]] — with no resolver they fall back to the raw id, which is
+itself a useful edge case to see.
+
+[^src]: This is the footnote definition. Footnotes collect at the point they are defined.
+
+## Blockquote
+
+> A blockquote holds **formatted** text and can span multiple lines.
+> It is the base of the callout and toggle constructs below.
+
+## Callouts
+
+Callouts are `> [!kind] title` blocks. The engine passes the *kind* straight
+through as a class, so the shell can theme any of them:
+
+> [!note] Note
+> Neutral information the reader should not miss.
+
+> [!tip] Tip
+> A shortcut or better way to do something.
+
+> [!info] Info
+> Context that supports the surrounding text.
+
+> [!warning] Warning
+> Proceed carefully — this can bite.
+
+> [!error] Error
+> Something is wrong and needs fixing.
+
+> [!success] Success
+> The happy path completed.
+
+> [!example] Example
+> A worked illustration.
+
+> [!faq] FAQ
+> A question people actually ask.
+
+> [!todo] Todo
+> Still to be done.
+
+## Toggles
+
+> [toggle] Click to expand this toggle
+> Hidden content lives here. It can hold **formatting**, `code`, and even lists:
+> - first hidden point
+> - second hidden point
+
+## Lists
+
+Unordered, with nesting and mixed markers:
+
+- First level
+  - Second level (indented)
+    1. Ordered inside unordered
+    2. Second ordered item
+- Back to first level with `inline code`
+
+Ordered, starting mid-sequence:
+
+3. Third
+4. Fourth
+5. Fifth
+
+Task list:
+
+- [x] A completed task
+- [ ] An open task with a [link](https://example.com)
+- [x] Another done item :check:
+
+## Table
+
+Columns show left / centre / right alignment:
+
+| Plane | Language | Owns | Latency budget |
+|:------|:--------:|------|---------------:|
+| Application | TypeScript | What users touch | 100 ms |
+| Control | Go | Who can do what | 20 ms |
+| Data | Rust | Moving bytes | 2 ms |
+
+## Code block
+
+```ts
+export function renderDocs(source: string): string {
+  const ast = parse(source);          // markdown → BlockNode[]
+  return renderHtml(ast, {            // BlockNode[] → HTML
+    classPrefix: "md",
+    externalLinks: true,
+  });
+}
+```
+
+## Math
+
+Inline math like $E = mc^2$ sits in a sentence. Block math stands alone:
+
+$$
+\int_{0}^{\infty} e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+$$
+
+> [!note] Known ceiling
+> Math is emitted as raw TeX. Rendering it to typeset math needs a client-side
+> library (KaTeX/MathJax); the shell shows the source, styled, until then.
+
+## Raw HTML and media
+
+The engine now passes media tags straight through. Here an inline `<svg>` renders
+self-contained — no external asset:
+
+<figure class="xmd-figure">
+<svg viewBox="0 0 320 120" width="320" height="120" role="img" aria-label="Three warm bars">
+<rect x="16" y="70" width="80" height="40" rx="6" fill="#cc785c"></rect>
+<rect x="120" y="40" width="80" height="70" rx="6" fill="#d89a80"></rect>
+<rect x="224" y="20" width="80" height="90" rx="6" fill="#b5532e"></rect>
+</svg>
+<figcaption>An inline SVG, passed through untouched as a raw HTML block.</figcaption>
+</figure>
+
+Bare `<video>` and `<audio>` tags also survive parsing (they render empty players
+here because no asset is attached — real assets arrive with the screenshots):
+
+<video controls width="100%" style="max-width:480px;border-radius:10px"></video>
+
+## Thematic break
+
+Content above the rule.
+
+---
+
+Content below the rule.
+
+## Definition lists — a documented gap
+
+The AST has a `definition_list` node, but **there is no markdown syntax that
+produces it** — it can only be constructed programmatically. So a `term: def`
+written here is just a paragraph. This is exactly the kind of edge case this page
+exists to surface. :bulb:

@@ -1,0 +1,64 @@
+---
+title: Design System Overview
+icon: ◆
+order: 900
+summary: One token file, one warm-editorial default, and two orthogonal theming axes — the shape of the Track Binocle design system.
+---
+
+# Design System Overview
+
+Track Binocle's look is **warm and editorial** — a cream canvas, serif headings,
+a single terracotta accent. But the important thing is not the colours; it is
+that every colour, radius, shadow, and font in [osionos](../reference/markengine.xmd)
+resolves through **one layer of CSS custom properties**. Change the layer, and the
+whole workspace re-skins itself without touching a single component.
+
+> [!info] The one rule
+> Components read tokens; they never hard-code a colour and never branch on the
+> theme in JavaScript. A button is `var(--osio-accent)`, not `#cc785c`. That single
+> discipline is what makes eight palettes and two modes possible at all.
+
+## The pieces, top to bottom
+
+| Layer | What it is | Where it lives |
+|:------|:-----------|:---------------|
+| **Tokens** | `--osio-*` custom properties (colour, type, space, motion) | one file: `global.css` |
+| **Tailwind `@theme`** | maps utility classes onto the tokens (CSS-first, no config) | same file |
+| **`data-theme`** | light / dark mode axis | `<html>` attribute |
+| **`data-palette`** | 8 colour schemes, orthogonal to mode | `<html>` attribute |
+| **Guard** | forbids raw hex outside the token file | `check-style-tokens.sh` |
+
+## Two axes, not one dropdown
+
+Most apps ship "light / dark". osionos separates **mode** from **palette**:
+
+- `data-theme` = `light` or `dark` — the luminance mode.
+- `data-palette` = `mono`, `nord`, `midnight`, … — the colour family.
+
+They multiply. Nord-dark and Nord-light are the *same* palette in two modes; Nord
+and Solarized are two palettes that each honour whichever mode you're in. See
+[The palette axis](./palette-axis.xmd) for why this is orthogonal by design.
+
+## What each doc in this folder covers
+
+- [Token architecture](./token-architecture.xmd) — the `--osio-*` naming and families.
+- [The warm-editorial default](./warm-editorial-default.xmd) — terracotta, cream, serif.
+- [Colour palettes](./color-palettes.xmd) — all eight, with swatches.
+- [Light & dark theming](./light-dark-theming.xmd) · [Palette axis](./palette-axis.xmd).
+- [Tailwind v4 CSS-first](./tailwind-v4-css-first.xmd) · [Style-token guard](./style-token-guard.xmd).
+- [Accessibility & contrast](./accessibility-contrast.xmd).
+- [Website token layers](./website-token-layers.xmd) — the Astro site's own `--brand-*`/`--system-*`.
+- [Web performance](./web-performance-lighthouse.xmd) · [CSP architecture](./csp-architecture.xmd).
+
+> [!tip] Two design systems, one philosophy
+> osionos (the editor) uses `--osio-*` tokens; the marketing site you are reading
+> uses a two-layer `--brand-*` / `--system-*` split. Different names, same idea:
+> semantics reference identity, components reference semantics, nobody writes a
+> raw hex.
+
+## The payoff
+
+Because colour values exist in exactly one place, adding a ninth palette is a new
+attribute block — not a sweep across hundreds of components. And because a
+[dependency-free guard](./style-token-guard.xmd) fails the build on any raw hex
+that escapes that file, the discipline holds even under pressure.

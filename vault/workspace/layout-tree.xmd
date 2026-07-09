@@ -1,0 +1,80 @@
+---
+title: The Tab / Pane Layout Tree
+icon: ⎔
+order: 801
+summary: How osionos "routes" without react-router — a zustand split-tree of panes and tabs, dispatched by a kind guard-chain in PaneContent.
+---
+
+# The Tab / Pane Layout Tree
+
+osionos has **no `react-router`**. What would be routing in a normal single-page
+app is instead a **layout tree** held in a zustand store, plus a dispatch chain
+that maps each open tab to a view.
+
+## The store
+
+The render source of truth is the `useWorkspaceLayout` store — a small module
+under `src/widgets/workspace-grid/model/`:
+
+| File | Responsibility |
+|:-----|:---------------|
+| `workspaceLayout.ts` | the zustand store (the tree + its actions) |
+| `layoutTree.ts` | the node types |
+| `layoutMutations.ts` | pure tree operations |
+| `layoutPersist.ts` | save/restore to `localStorage` (`osionos.workspace.layout.v1`) |
+| `layoutSync.ts` | mirror the active tab into the legacy page store |
+| `pageToTab.ts` | turn a page/folder entry into a tab |
+| `paneDropZone.ts` | drop-target geometry (centre vs. edges) |
+
+## The tree shape
+
+Every node is one of two things:
+
+```ts
+// a leaf: a strip of tabs with one active tab
+type PaneNode = { tabs: Tab[]; activeTabId: string };
+
+// a branch: children laid out in a row or column
+type SplitNode = {
+  direction: "row" | "column";
+  children: LayoutNode[];
+  sizes: number[];
+};
+```
+
+Splitting a pane replaces a `PaneNode` with a `SplitNode` whose children are the
+old pane and the new one. Closing the last tab in a pane collapses it back out of
+the tree.
+
+## The dispatch chain
+
+A tab does not know how to render itself — a single component decides. In
+`widgets/page-renderer/ui/PaneContent.tsx`, `PaneContentImpl` runs an
+`if (tab.kind === …)` guard chain:
+
+- [x] `home` → the Home dashboard
+- [x] `folder` → a folder listing
+- [x] `trash` → the Trash
+- [x] `database` → a live database view
+- [x] `profile` · `console` · `channel` → collab / BaaS surfaces
+- [ ] *default* → an editable page (`PageTabView`)
+
+> [!tip] It is a chain, not a switch
+> Grep for `switch (tab.kind)` and you'll find nothing — the dispatch is an
+> ordered `if` chain, so new tab kinds are added by inserting a guard, not a case.
+
+## Two sources of truth, kept in sync
+
+For historical reasons "the open page" lives in **two** places: the layout store
+and the legacy `usePageStore.activePage`. They mirror each other, in **both
+directions but through two different seams**:
+
+1. tab → `activePage` via `layoutSync.ts:mirrorActiveTab` (fired from the store's
+   `commit`).
+2. `activePage` → tab via `syncFromActivePage` + `pageToTab.ts:activePageToTab`,
+   committed with `mirror=false` so the sync does **not** loop back.
+
+> [!warning] Edit both seams together
+> Change one side without its mirror — or make the reverse sync mirror back — and
+> the header, the graph highlight, and session-restore all desync. This is the
+> single most delicate invariant in the shell.

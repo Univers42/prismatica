@@ -1,0 +1,76 @@
+---
+title: Connections & Follows
+icon: ⇄
+order: 701
+summary: The connection request lifecycle — pending, accepted, declined, withdrawn — and how the edge model keeps both sides in sync.
+---
+
+# Connections & Follows
+
+Connecting with someone in osionos works like a LinkedIn invite: you send a
+**request**, they accept, and you become mutual connections. There is no silent
+one-way follow — every edge is consented on both sides.
+
+## The lifecycle
+
+1. You send a request → the edge is `pending`.
+2. The other person **accepts** → `accepted` (you are now connected).
+3. …or **declines** → `declined`.
+4. You can **withdraw** a pending request → `withdrawn`.
+
+A withdrawn or declined edge is not a dead end — sending again **reactivates**
+the same row back to `pending`, so the addressee gets a fresh invitation to
+accept.
+
+```text
+        send                accept
+  ──────────────►  pending ─────────► accepted
+                     │  ▲
+            withdraw │  │ resend
+                     ▼  │
+                 withdrawn / declined
+```
+
+## The endpoints
+
+Every route lives on the bridge and is scoped to the caller's session token.
+
+| Method | Path | Purpose |
+|:-------|:-----|:--------|
+| `POST` | `/api/connections` | Send a request (creates the `pending` edge) |
+| `GET` | `/api/connections` | List your edges by status |
+| `PATCH` | `/api/connections/:id` | Accept, decline, or reactivate |
+| `DELETE` | `/api/connections/:id` | Remove a connection or withdraw a request |
+
+## The edge shape
+
+Each edge carries a **nested** `peer` object — the person on the other side —
+not a bare id:
+
+```json
+{
+  "connection": {
+    "id": "…",
+    "status": "pending",
+    "peer": { "id": "…", "name": "Amara Diallo", "avatar": "…" }
+  }
+}
+```
+
+When a request is created, the bridge publishes a `connection_requested` event to
+the addressee's personal topic (`user:<id>`), so their notification bell lights up
+live without a refresh.
+
+> [!warning] Withdraw is a two-tap action
+> The outgoing "Requested" pill needs **two** clicks to withdraw (the second
+> confirms). A single stray click used to silently cancel invitations — the
+> confirm step exists precisely to stop that.
+
+> [toggle] Why one row per pair, and a uniqueness key
+> A connection is a single row keyed by an unordered pair of user ids, so A→B and
+> B→A resolve to the same edge. A duplicate request only conflicts (409) while the
+> edge is `pending` or `accepted`; once it's `withdrawn` or `declined`, sending
+> again simply flips it back to `pending`.
+
+Blocking and reporting are separate, deliberate actions — see
+`POST /api/social/reports` and `DELETE /api/social/blocks`.

@@ -1,0 +1,62 @@
+---
+title: Editions
+icon: ◈
+order: 1104
+summary: An edition is a named, known-good shape of the grobase stack — combining planes, engines, and isolation models — chosen with a single make variable.
+---
+
+# Editions
+
+An **edition** is a *named set of planes* — a known-good shape of the grobase
+stack that combines profiles, engines, and isolation models. Instead of hand-
+picking services, you name a shape:
+
+```bash
+# From apps/grobase/
+make editions               # list them
+make up EDITION=query       # start a known-good shape
+make doctor                 # environment sanity check
+```
+
+## The shapes
+
+| Edition | What it is |
+|:--------|:-----------|
+| **lean** | The minimal shape. |
+| **query** | The default — data + go + rust + adapter + background planes. |
+| **realtime** | Adds the realtime plane on top. |
+| **analytics** | Adds the analytics plane. |
+| **prod** | Production posture — no dev ports, resource limits. |
+| **full** | Everything on — but deliberately **excludes** the `playground` plane. |
+| **tetris** | The maximal red-tetris game edition. |
+| **migrate** | The fresh-machine default that root `make all` uses. |
+
+> [!info] `migrate` is what a clean clone brings up
+> Root `make all` starts grobase with `GROBASE_EDITION ?= migrate`: all snapshot
+> engines (postgres, mongo, mysql, mssql, minio) + the full app/control/data
+> plane + realtime — **minus** the monitoring/lakehouse extras (loki, prometheus,
+> grafana, trino, studio, functions) that come up unhealthy in a constrained
+> environment. The result is a fully-green stack.
+
+## Editions vs the everything shape
+
+- `make up EDITION=full` gives you the everything-on shape *except* `playground`
+  (its assets aren't in the repo).
+- Want the truly maximal shape from the root? `make all GROBASE_EDITION=full`.
+
+> [!tip] Editions are one of two dials
+> Editions are the plane dial. There is a second, orthogonal dial — customer
+> **packages** (tiers) — and both defer to raw compose **profiles**. See
+> [Compose profiles vs editions](profiles-vs-editions.xmd) for how the two
+> interact and which one wins.
+
+## Related product editions
+
+Two product shapes ship as their own bring-up targets rather than editions:
+
+- **`make nano-up`** → `binocle-nano` — the SQLite-only ~5 MB build.
+- **`make one-up`** → `binocle-one` — nano plus OAuth/OIDC, MFA, SMTP, storage,
+  and the admin UI at `/_/`.
+
+See the [Rust data plane](rust-data-plane.xmd) for how these are cut from one
+codebase via cargo features.

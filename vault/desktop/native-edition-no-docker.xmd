@@ -1,0 +1,76 @@
+---
+title: The Native Edition (No Docker)
+icon: ⚡
+order: 1002
+summary: The end-state consumer app — embedded Postgres, a bundled auth layer, and the bridge, all as native processes. No Docker, no cloud, data as a file on disk.
+---
+
+# The Native Edition (No Docker)
+
+The Electron + Docker shape is honest but heavy: it still asks the user to run
+nine containers. The **native edition** removes Docker entirely. On first launch
+the app spawns its backend as **native child processes**, and the user's data
+becomes a plain file on her own disk.
+
+> [!info] Status
+> The design is validated end-to-end on real binaries; what remains is packaging.
+> Treat this as the shipping *target*, and check the current build state before
+> relying on it. Modules live in `apps/osionos-electron/native/`.
+
+## The architecture — a process supervisor
+
+Electron's main process becomes a small **supervisor** that starts three native
+binaries on loopback and points the unchanged bridge at them:
+
+```
+Electron main ──spawns──▶ postgres (embedded binary, PGDATA in userData)
+                        ▶ PostgREST (static binary) ──▶ postgres
+                        ▶ auth-gateway (bundled Node) ──▶ PostgREST
+                        ▶ bridge-api.mjs ──▶ PostgREST + auth-gateway  (serves :4000)
+                        ▶ loads the bundled frontend (app://)
+```
+
+The chosen approach embeds the services and leaves the **1,500-line bridge
+unchanged** — so the constrained `apps/osionos/app` submodule is never touched,
+and the gateway's hardening plus Postgres **RLS** are preserved.
+
+## What actually gets bundled
+
+| Piece | Form | Notes |
+|:------|:-----|:------|
+| Postgres | embedded platform binary | `PGDATA` under `app.getPath('userData')` |
+| PostgREST | single static binary | the data path; a loopback `/rest/v1` shim keeps the bridge unchanged |
+| auth-gateway | bundled Node (~232 KB) | it is a Node script, not a Go binary; no live gotrue, no Redis |
+| bridge | `bridge-api.mjs` + Node built-ins only | zero-dependency, portable |
+
+> [!success] Two hard assumptions, both proven
+> **Stock Postgres is enough** — the whole osionos schema applies on
+> `postgres:16-alpine` with a ~10-line bootstrap (pgcrypto + the `anon` /
+> `authenticated` / `service_role` roles). And **the bridge is zero-dependency** —
+> it imports only Node built-ins, so bundling it means shipping Node plus a couple
+> of files.
+
+## First run
+
+The `native/firstrun.mjs` step, once, on a fresh machine:
+
+1. Initialises `PGDATA` under the user-data directory.
+2. Generates and persists local secrets (a JWT secret, signed `service_role` /
+   `anon` tokens, session secrets) to a mode-600 `secrets.json`.
+3. Applies the osionos migrations **in order** — the one gotcha is that `user.sql`
+   must precede `auth-security-migration` (an FK on `public.users`).
+4. Creates the single local user and a private workspace.
+
+A companion `native-migrate.sh` can import an existing account.
+
+## Why Kong is dropped
+
+Kong only did routing and API-key gating. A single local user needs neither, so
+the bridge points straight at PostgREST. Fewer processes, less to supervise.
+
+> [!tip] Verify it is really offline
+> The acceptance bar: pull the network cable, launch, and complete a page
+> round-trip. Data must also survive restarts and app upgrades.
+
+Related: [Electron + Docker Backend](electron-docker-backend.xmd) ·
+[Authentication & Sessions](authentication-and-sessions.xmd)

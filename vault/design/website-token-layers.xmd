@@ -1,0 +1,82 @@
+---
+title: Website Token Layers
+icon: ⧉
+order: 909
+summary: The opposite-osiris marketing site uses its own two-layer token split — raw --brand-* identity beneath semantic --system-* roles — bridged by a legacy-alias barrel.
+---
+
+# Website Token Layers
+
+The editor uses `--osio-*` [tokens](./token-architecture.xmd). The **marketing site**
+you're reading right now (opposite-osiris, Astro + SCSS) has its own design system,
+built as a deliberate **two-layer split**. Same philosophy, different names.
+
+## Two layers: brand under system
+
+| Layer | Prefix | Holds | File |
+|:------|:-------|:------|:-----|
+| **Brand** | `--brand-*` | raw identity — paper, ink, canvas, fonts, palette hues, the binocle mascot | `_brand-tokens.scss` |
+| **System** | `--system-*` | semantic UI roles — bg, surface, text, action, input, dialog, focus, spacing, radius, shadow | `_system-tokens.scss` |
+
+The rule is directional: **system references brand**, components reference system.
+
+```scss
+// brand: an identity value
+--brand-canvas-bg: #fdfaf2;
+// system: a role that points at the identity
+--system-bg: var(--brand-canvas-bg);
+// component: only ever touches the role
+background: var(--system-surface);
+```
+
+## The barrel and its legacy aliases
+
+`_tokens.scss` is the barrel. It `@use`s both layer files and adds a thin **legacy
+alias layer** so components written before the split keep compiling unchanged:
+
+```scss
+@use 'brand-tokens';
+@use 'system-tokens';
+:root {
+  --paper: var(--brand-paper);      // legacy name → layer token, no behaviour change
+  --ink:   var(--brand-ink);
+}
+```
+
+> [!note] Aliases are a migration seam, not the target
+> Each alias either points at a layer token (a pure rename) or resolves a
+> documented contrast fix. New components should reach for `--system-*` directly.
+
+## Brand is a full illustrated identity
+
+Unlike the utilitarian editor tokens, the website's `--brand-*` layer carries a
+character system — the "binocle" mascot has tokens for its shell, lens, iris, cheek,
+and a whole set of **mood** variants (`--brand-mood-happy-shell`,
+`--brand-mood-love-lens`, …), plus sketch/paper textures and highlighter fills.
+
+## Theme modes are named, not just light/dark
+
+The site's `data-theme` axis carries **named moods**, each redefining the brand
+canvas which the system layer then inherits:
+
+- `solar` (warm light) · `ember` (deep warm dark) · `forest` (deep green dark) ·
+  `aurora` · `night` · `dark`.
+
+```scss
+:root[data-theme='ember'] { --brand-canvas-bg: #0d0806; /* system-bg follows */ }
+```
+
+Semantic status colours are derived, not hand-picked, via `color-mix` over the brand
+palette:
+
+```scss
+--system-success-bg: color-mix(in srgb, var(--brand-palette-secondary) 14%, var(--brand-canvas-bg));
+```
+
+> [!tip] Same idea, two apps
+> osionos: `--osio-*` (one layer). Website: `--brand-*` → `--system-*` (two layers).
+> Both forbid raw hex in components; both flip whole themes by re-defining identity
+> tokens under a `data-theme` block. Learn one, you understand the other.
+
+The website's tokens feed directly into its [performance](./web-performance-lighthouse.xmd)
+and [CSP](./csp-architecture.xmd) story — no inline styles, all classes.

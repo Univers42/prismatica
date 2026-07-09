@@ -1,0 +1,66 @@
+---
+title: Accessibility & Contrast
+icon: ◇
+order: 908
+summary: WCAG contrast is a build gate, not a hope — every palette pair is machine-checked, and the warm accent is split to keep small text legible.
+---
+
+# Accessibility & Contrast
+
+Accessibility in Track Binocle is verified, not asserted. Contrast is checked by a
+script, a11y regressions show up in Lighthouse and pa11y, and the one colour that
+*can't* pass AA as text is structurally prevented from being used that way.
+
+## Contrast is a gate
+
+Every non-default [palette](./color-palettes.xmd) is validated by
+**`scripts/theme-contrast-check.mjs`**, which parses the palette blocks straight out
+of `global.css` and asserts WCAG ratios for each token pair — **AA** for normal
+pairs, **AAA** for the High Contrast palette.
+
+> [!success] Machine-verified, not eyeballed
+> The check runs a full matrix across all palettes and both modes. New palettes are
+> admitted with **no exemptions** — a pair that fails is a failing build, not a
+> waiver.
+
+A small number of pre-existing **Warm** allowances are explicitly allowlisted (e.g.
+white-on-terracotta as a 3:1 *fill*, a muted syntax-comment tone); every other
+palette clears the bar clean.
+
+## The terracotta split
+
+The warm accent `#CC785C` is ~3.4:1 on white — fine as a fill, **not** AA for small
+text. The token system encodes that difference so a developer can't get it wrong:
+
+| Use | Token | Passes |
+|:----|:------|:------:|
+| Fills, icons, focus rings | `--osio-accent` `#CC785C` | 3:1 (fill) |
+| **Links & small text (light)** | `--osio-accent-text` `#B5532E` | AA |
+| Accent text (dark) | `#E0937A` on dark canvas | AA |
+
+> [!warning] The most common a11y bug here
+> Using `--osio-accent` for a text link. It looks right and fails contrast. If it
+> reads as words, it must be `--osio-accent-text`. See
+> [the warm default](./warm-editorial-default.xmd).
+
+## Beyond colour
+
+Contrast is necessary but not sufficient. The stack also checks structure:
+
+- **ARIA correctness** — semantics must have valid children (a `role="table"` needs
+  table-shaped rows; a decorative group takes `role="group"`, not a fake table role).
+- **Focus visibility** — a global `:focus-visible` accent ring, honouring the tokens.
+- **Target size** — the remaining osionos a11y deduction is dense icon-button
+  target-size, a deliberate information-density tradeoff on a desktop-class tool.
+- **Automated passes** — `eslint-plugin-jsx-a11y` (lint), **pa11y** and Lighthouse
+  a11y (rendered pages) on the marketing site's [audit toolchain](./web-performance-lighthouse.xmd).
+
+## The bar we hold
+
+- [x] All palettes: WCAG **AA** machine-verified (High Contrast: **AAA**).
+- [x] osionos desktop Lighthouse a11y in the mid-90s after ARIA fixes.
+- [x] Marketing site: pa11y **0** issues on the production build.
+- [x] Contrast failures fail the build — "unknown" counts as fail.
+
+> A palette is not "done" when it looks good; it's done when the contrast matrix is
+> green and the a11y passes are clean.

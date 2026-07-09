@@ -1,0 +1,77 @@
+---
+title: Charts
+icon: ⚡
+order: 510
+summary: A pure aggregation engine feeding 50+ chart presets across two rendering libraries, computing on the full dataset server-side when the engine allows.
+---
+
+# Charts
+
+Any live database view can become a chart. Under the hood sits a small **pure
+aggregation engine** — no rendering, just grouping and maths — feeding a large
+gallery of chart presets. The same aggregation logic runs on both the client and the
+server, so the two paths agree.
+
+## The aggregation engine
+
+Charts are computed, not hard-coded. The engine handles:
+
+- **Grouping** — including multi-select and relation multi-membership.
+- **Aggregates** — count, sum, average, min, max, median.
+- **Breakdown** — a second dimension → stacked or multi-series.
+- **Date bucketing** — auto, day, week, month, quarter, year.
+- **Shaping** — sort modes, omit-zero, cumulative running totals.
+- **Caps** — a ceiling on groups and sub-groups, with the overflow folded into an
+  **"Other"** bucket so a chart never explodes into thousands of slices.
+
+## Two engines, one result
+
+Chart presets render through **two** libraries, both consuming the *same* computed
+result:
+
+| Renderer | Role |
+|:---------|:-----|
+| The legacy set | a handful of core chart types, kept for parity |
+| The extended set | the large majority of presets — richer chart families |
+
+> [!info] Kept off the warm path
+> Both rendering libraries are loaded **lazily**, in their own async chunks, so the
+> editor's startup bundle never pays for charting code until a chart is actually
+> shown.
+
+## Server truth for live data
+
+Aggregating only the first few hundred sampled rows would lie about a 25,000-row
+table. So where the engine supports it, charts push the aggregation **down to the
+database**:
+
+> [!success] "Live · all rows"
+> For engines that advertise the aggregate capability (Postgres today), a chart runs
+> a real grouped query over the **whole** table and the badge reads *Live · all
+> rows*. Where that isn't available — other engines, or client-only features like
+> median, date maths and custom filters — it falls back to aggregating the loaded
+> sample and says so.
+
+## Colour by rule
+
+Chart categories and series honour the same **conditional-colour** rules the tables
+and boards use, so a status that is red in the grid is red in the chart. See
+[Dashboards & View Settings](dashboards-view-settings.xmd) for how those rules are
+written.
+
+## Exporting a chart
+
+A rendered chart can leave osionos three ways:
+
+- [x] **PNG** — a raster image of the chart
+- [x] **SVG** — the vector the chart already renders as
+- [x] **CSV** — the underlying aggregated numbers
+
+No extra dependency is pulled in for this — export reuses the browser's own
+serialization and canvas.
+
+> [toggle] Why the aggregation engine is pure
+> Keeping grouping and maths as pure functions — separate from any renderer or
+> network call — means the client sample path and the server "all rows" path can share
+> the exact same sort, cap and cumulative logic. That shared core is what keeps the
+> two paths in parity rather than quietly disagreeing.

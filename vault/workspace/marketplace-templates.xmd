@@ -1,0 +1,86 @@
+---
+title: Marketplace & Template System
+icon: ⊕
+order: 808
+summary: A VS Code-style marketplace where apps are database record-pages with data-driven custom headers, functional install, and a shared cross-workspace catalog.
+---
+
+# Marketplace & Template System
+
+osionos ships a **VS Code-style Marketplace**: developers add apps, users browse
+and install them, and each app opens as a rich detail page. The whole thing reuses
+the workspace's own primitives — records **are** pages.
+
+## Apps are pages
+
+Each marketplace app is a child page in `osionos_pages` with a `databaseId`. It
+opens full-page through the normal database-block path
+(`DatabaseBlock.tsx → NotionPage.tsx`) and carries child sub-pages —
+**Details · Features · Changelog · Installation · Categories · Resources** —
+becoming read-only once published.
+
+The catalog is a **shared, system-owned** workspace, read across workspaces via a
+service-role bridge endpoint:
+
+| Constant | Value |
+|:---------|:------|
+| `MARKETPLACE_WORKSPACE_ID` | `5a4b1c2d-1111-4111-8111-000000000001` |
+| `MARKETPLACE_DATABASE_ID`  | `5a4b1c2d-2222-4222-8222-000000000002` |
+
+## The header-template engine
+
+Instead of one fixed page header, a marketplace app renders a **data-driven
+header**. The engine lives in `entities/page/model/` (`headerTemplate.ts`,
+`recordTemplate.ts`, `templateRegistry.ts`):
+
+```text
+HeaderTemplate
+└─ regions:  aside | main | meta | actions
+   └─ slots:  media · title · author · link · stat · rating · text · badge · action
+      └─ each slot binds a property key or a core field
+```
+
+The registry is keyed by `databaseId`; a `null` entry falls back to the classic
+header. `PageHeader.tsx` early-returns the `TemplateHeader` when one resolves.
+
+> [!tip] Visual header designer
+> Non-developers can rearrange a header without code, via
+> `features/template-designer/` — a modal with a live preview and HTML5
+> drag-and-drop of slots across regions. Overrides persist per-database (locally
+> under `osio-header-templates.v1`, and server-shared through a bridge endpoint so
+> a team sees the same layout).
+
+## Functional install
+
+Installing is not cosmetic — apps actually launch. An installed app opens as a
+`kind:"embed"` iframe tab (`EmbedAppView`) at its launch URL, and the sidebar +
+activity rail grow install-driven launchers.
+
+Install is a **three-state** control:
+
+- [x] **Install** → then Open / Deactivate / Uninstall
+- [x] **Auto-Update** toggle
+- [x] **Activate** again when deactivated
+
+Three apps ship in the seed: **Mail**, **Calendar**, and **Desktop** — each with
+its six child sub-pages and a real install count (no fabricated ratings or
+downloads).
+
+## The bridge surface
+
+The modular bridge exposes the marketplace over HTTP:
+
+| Route | Purpose |
+|:------|:--------|
+| `GET /api/marketplace/apps` | service-role, cross-workspace list of published apps + caller drafts |
+| `GET /api/marketplace/apps/:id` | one app with its child pages |
+| `POST /api/marketplace/apps` | create a private **draft** (+ 6 sub-pages) |
+| `PATCH /api/marketplace/apps/:id` | owner-only edit |
+| `POST /api/marketplace/publish` | flip to public + lock as read-only |
+| `GET · POST /api/marketplace/installed` | per-user install state |
+
+> [!note] Templates vs. marketplace
+> "Template" appears twice: the **starter page templates** on
+> [the default Home](default-home.xmd), and this **header-template** engine that
+> shapes how a record page presents itself. They are different systems that happen
+> to share a word.

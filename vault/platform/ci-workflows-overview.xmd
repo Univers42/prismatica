@@ -1,0 +1,65 @@
+---
+title: CI Workflows Overview
+icon: ⚙
+order: 1206
+summary: The seven GitHub Actions workflows that gate every push — build, release, security, supply chain, and a full fresh-machine rebuild.
+---
+
+# CI Workflows Overview
+
+Seven workflows live under `.github/workflows/`. Together they cover build,
+release, publish, security, supply chain, and the ultimate integration test — a
+clean machine rebuilding the whole stack from scratch.
+
+## The seven workflows
+
+| Workflow | Role |
+|:---------|:-----|
+| `baas-ci` | Build + test the BaaS on every change |
+| `baas-release` | Cut and publish a BaaS release |
+| `baas-cli-publish` | Publish the BaaS CLI artifact |
+| `colleague-docker-pipeline` | Manual (`workflow_dispatch`) Docker pipeline |
+| `mini-baas-security` | Trivy + Semgrep → GitHub code-scanning |
+| `supply-chain` | Frozen-lockfile installs, no lifecycle scripts |
+| `fresh-machine` | Clean clone → `make all` → everything green |
+
+## What each layer proves
+
+- **Correctness** — `baas-ci` runs the BaaS test suite; the shadow → parity →
+  cutover discipline means Rust and TypeScript paths are compared, not swapped
+  blind.
+- **Security** — `mini-baas-security` feeds
+  [code-scanning](code-scanning-to-zero.xmd); the standalone
+  [security scan gate](security-scan-gate.xmd) runs the same engines locally.
+- **Supply chain** — `supply-chain` proves
+  [frozen lockfiles](supply-chain-lockdown.xmd) install with scripts disabled.
+- **Integration** — `fresh-machine` is the
+  [clone → make all gate](fresh-machine-gate.xmd), the strongest signal of all.
+
+## Operational realities
+
+> [!warning] A PAT cannot dispatch or set secrets
+> The Personal Access Token available in the repo can **read** runs, but a `403`
+> blocks it from dispatching workflows or setting Actions secrets. Re-trigger a
+> path-scoped workflow by **pushing a matching change** — empty commits do not
+> trigger it. Three Actions secrets (the vault42 keystore, contract, and
+> passphrase, all by name) are set by a human, never the agent.
+
+> [!info] Green means one uninterrupted run
+> `mini-baas-security` uses `concurrency: cancel-in-progress`, so rapid pushes
+> cancel earlier runs — a superseded run reads red without a real failure. A
+> single clean run is the source of truth.
+
+## Everything-green discipline
+
+> [toggle] Why flaky reds are hardened, not ignored
+> Transient registry timeouts used to redden the security gate. The fixes: retry
+> `cargo-audit` install ×3, make docker-prefetch non-fatal, and retry the Trivy
+> image build ×3 with `continue-on-error` so a registry timeout cannot fail the
+> gate. The rule behind it: **a commit is not done while any workflow is red** —
+> and a red that is genuinely flaky is *hardened*, not waved through.
+
+> [!success] The standing rule
+> Check **all** workflows, not just the one you touched. `make all` must leave the
+> local stack healthy, and CI must be green on an uninterrupted run before a
+> change is called done.

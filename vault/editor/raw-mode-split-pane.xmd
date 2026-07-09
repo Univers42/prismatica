@@ -1,0 +1,56 @@
+---
+title: Raw-Mode Split-Pane Editing
+icon: ⧉
+order: 304
+summary: Edit the markdown source of a page side by side with its blocks, and reconcile your edits back into the tree on save.
+---
+
+# Raw-Mode Split-Pane Editing
+
+Raw mode (`features/raw-mode`) is a **split-pane markdown-source editor**. On one
+side you see the page's blocks; on the other you edit the plain-markdown source
+of those same blocks. It is the escape hatch for people who would rather type
+markdown than click through a slash menu.
+
+## The round-trip, both directions
+
+```text
+  blocks  ──serialize──▶  markdown source   (what you see in raw mode)
+    ▲                          │
+    └────── parse ◀────── you edit + Save
+```
+
+- **Blocks → source** is done by `pageMarkdownSerialize.ts`, which emits the
+  markdown dialect the AST parser understands.
+- **Source → blocks** is done by `parseMarkdownToBlocks` — the full CommonMark +
+  GFM parser, *not* the typing parser.
+
+> [!info] Save uses the strict parser
+> Raw-mode Save and paste both go through `parseMarkdownToBlocks`, so the source
+> you write is read as real CommonMark: `> ` is a blockquote, `> [>]` is a
+> toggle, `> [!kind]` is a callout. Typing shortcuts (`detectBlockType`) never
+> touch the Save path.
+
+## What survives the trip
+
+> [toggle] Round-trip fidelity in one glance
+> - **Preserved:** block *type* and content for headings, lists, to-dos, code
+>   (with language), quotes, callouts, toggles, equations, and GFM tables.
+> - **Toggle heading level** survives via the compact `#{N}>` opener.
+> - **Lost by design:** `collapsed` (pure view state) and a heading level set on
+>   a quote or callout — there is no clean markdown form, so they degrade
+>   gracefully to plain type + content.
+
+The full accounting lives in [Serialization & Round-Trip](serialization-round-trip.xmd).
+
+## Why a separate parser at all
+
+Typing `> ` should feel like starting a toggle; pasting a document should read
+`> ` as a quote the way every other markdown tool does. Raw mode sits firmly on
+the **document** side of that split, so it always uses the strict AST parser —
+never the keystroke heuristics.
+
+> [!tip] Mental model
+> Raw mode is a *view* of the same tree, not a different document. Edit it, hit
+> Save, and the reconciled blocks flow straight back into the page — and into
+> the [offline-first sync](offline-first-sync.xmd) that persists them.

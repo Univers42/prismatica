@@ -1,0 +1,70 @@
+---
+title: Row-Level Security & Hardening
+icon: ▤
+order: 1202
+summary: Why Postgres RLS is the only data wall in the BaaS, and how the hardening migration forces it on every table.
+---
+
+# Row-Level Security & Hardening
+
+In most stacks a gateway ACL is the first line of defense on the database. In the
+grobase BaaS there **is no** Kong ACL plugin on the REST surface, and the anon
+API key is public by design. That leaves exactly one wall standing.
+
+> [!danger] RLS is the only data wall
+> The Kong anon apikey is public; there is no ACL plugin on `/rest/v1`. **Postgres
+> RLS + grants are the ONLY thing** keeping tenant A's rows away from tenant B.
+> If a table has RLS off, its rows are readable by anyone with the public key.
+
+## The hardening migration
+
+`models/rls-hardening-migration.sql` closes live-verified findings **F1–F7** from
+the internal RLS audit. It is **idempotent and portable** — safe to re-run — and
+it does three things to every table it touches:
+
+```sql
+ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.%I FORCE  ROW LEVEL SECURITY;
+CREATE POLICY %I ON public.%I FOR ALL TO service_role
+  USING (true) WITH CHECK (true);
+```
+
+- **ENABLE** turns RLS on.
+- **FORCE** makes it apply even to the *table owner* — the subtle gap most
+  RLS setups miss.
+- A `service_role` bypass policy keeps trusted server paths working.
+
+## Tenant isolation policies
+
+Beyond the blanket enable, the migration writes explicit policies on the
+tenant-routing tables so that a caller only ever sees their own mounts:
+
+- [x] `tenant_databases_select` — read only your tenant's databases
+- [x] `tenant_databases_insert` — write only under your tenant
+- [x] `tenant_databases_update` — mutate only your own rows
+- [x] `tenant_databases_service_role_all` — server bypass, scoped
+
+> [!example] The bug this prevents
+> A mount `dbId` was once a **bearer capability** — any valid tenant key plus a
+> known `dbId` resolved and read *any* tenant's mount, cross-tenant. The fix
+> scoped the lookup with `WHERE id = $1 AND tenant_id = $2`; a foreign key now
+> returns 404, not another tenant's data. That is what makes tenant isolation
+> *true* rather than aspirational.
+
+## Where RLS sits among the walls
+
+RLS is the **innermost** data wall. Everything in front of it — TLS, identity,
+authorization — reduces the attack surface, but a request that slips through all
+of them still meets RLS at the row. Deny-by-default is the posture: a table with
+no matching policy returns nothing.
+
+> [!tip] Verifying a table is covered
+> The parity gates exercise own-tenant and foreign-tenant reads: a foreign
+> tenant's key against your mount must return **403 or 404**, never a row. If it
+> returns data, the wall is down — that is a release blocker.
+
+## Related migrations
+
+RLS hardening ships alongside two more security migrations —
+[GDPR & auth-security](gdpr-auth-security-migrations.xmd) — all three idempotent
+and applied to the `mini-baas-postgres` database.

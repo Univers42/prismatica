@@ -1,0 +1,61 @@
+---
+title: Spatial Grid & Label Cache
+icon: ▤
+order: 403
+summary: A uniform spatial-hash grid culls and hit-tests at 10k+ nodes with zero steady-state allocation; a bitmap label cache kills the per-frame shadow-blur text cost.
+---
+
+# Spatial Grid & Label Cache
+
+Two caches carry the zoomed-in render path: one answers *"which nodes are on
+screen?"* cheaply, the other stops the biggest per-frame text cost from ever
+recurring.
+
+## The spatial-hash grid
+
+`core/render/spatialGrid.ts` builds a **uniform grid** over the columnar position
+arrays. It serves two jobs: **frame culling** (skip off-screen nodes) and
+**pointer hit-testing** (find the node under the cursor) at 10k+ nodes.
+
+Its design keeps it allocation-free in steady state:
+
+- **Counting-sort into reused `Int32Array`s** — no per-frame garbage.
+- Rebuilt **lazily**, only when the position *version* changes. Layout ticks bump
+  the version; queries between ticks reuse the same build.
+- Cell size is at least `64` world units, which keeps a point query to a **3×3
+  neighbourhood** even at the maximum hit reach.
+
+```text
+   position version changes ──► markStale()
+                                    │
+   next query ──► rebuild() (O(n) counting sort, reused buffers)
+                                    │
+   subsequent queries between ticks ──► reuse the same grid
+```
+
+## The label cache
+
+Text was the single biggest frame cost at scale. The old path drew every label with
+**two shadow-blurred `fillText` calls per frame** — shadow-blurred text costs about
+a millisecond each, so 480 labels was roughly half a second, every frame.
+
+`core/render/labelCache.ts` bakes each unique label **once** — halo included — into
+a small canvas at the device pixel ratio. Frames then just `drawImage` the bitmap.
+
+| Knob | Value | Why |
+|:-----|:------|:----|
+| `MAX_LABELS` | `700` | LRU cap above the label budget |
+| `BAKES_PER_FRAME` | `6` | new bakes allowed per frame |
+
+> [!warning] The budget is load-bearing
+> Without a per-frame bake budget, a moving viewport over 10k *distinct* labels
+> would bake dozens of shadow-blur canvases every frame and thrash the cache. The
+> `BAKES_PER_FRAME = 6` limit spreads baking out; skipped labels simply appear
+> within a few frames.
+
+The cache also re-bakes when the theme colour, halo, or DPR changes (it clears and
+rebuilds), so labels stay crisp across light/dark and retina toggles.
+
+- [x] Grid: cull + hit-test, zero steady-state allocation
+- [x] Labels: bake once, blit forever, LRU + per-frame budget
+- [x] Both keyed off the columnar `SceneState`, not per-node objects

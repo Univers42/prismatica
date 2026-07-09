@@ -1,0 +1,56 @@
+---
+title: The Root Makefile
+icon: ⌘
+order: 103
+summary: The single authoritative entry point — drive the stack through make, never raw compose.
+---
+
+# The Root Makefile
+
+All lifecycle goes through the **root `Makefile`**. It is the authority: a thin
+coordinator that `include`s a tree of fragments under `infrastructure/makes/`, each
+owning one slice of the workflow.
+
+> [!info] One entry point, on purpose
+> The Makefile names services explicitly and joins the right networks and
+> profiles. Driving the stack with raw `docker compose up` skips that wiring and
+> can silently start the wrong subset — see the profile gotcha in
+> [Compose Profiles](compose-profiles.xmd).
+
+## The commands you reach for
+
+| Command | What it does |
+|:--------|:-------------|
+| `make all` | Self-provisioning full stack — see [the pipeline](make-all.xmd). |
+| `make bootstrap` | Alias for the same self-provisioning flow. |
+| `make healthcheck` | Curl every front door + the BaaS health route. |
+| `make check_health_apps` | UP/DOWN matrix on localhost *and* production. |
+| `make showcase` | Print the local URLs. |
+| `make certs` / `make certs-trust-local` | Regenerate / trust the local TLS CA. |
+| `make seed-live-demo` | Load the deterministic live-database demo dataset. |
+| `make pulls` / `make pushes` | Fetch / push submodules. |
+| `make update_web` | Rebuild + hard-reload the osionos editor after edits. |
+
+## Where the backend targets live
+
+Editions, environment sanity checks, and other backend shapes are **grobase**
+targets — run them from `apps/grobase/`, not the root:
+
+```bash
+make -C apps/grobase up EDITION=query   # a specific edition
+make -C apps/grobase editions           # list the known-good shapes
+make -C apps/grobase doctor             # environment sanity check
+```
+
+See [Grobase Editions](grobase-editions.xmd) for the full list.
+
+> [!note] Some legacy targets are stubs or stale
+> A few old secret-management targets now just print "this lives in grobase", and
+> a couple of lean-edition targets have drifted since services moved to the
+> grobase stack. When a target errors with `no such service`, check
+> [Common Failure Modes](common-failure-modes.xmd) before assuming your setup is
+> broken.
+
+> The rule of thumb: if you're about to type `docker compose` by hand, first check
+> whether a `make` target already does it — it almost always does, and it does it
+> with the correct profiles and networks.

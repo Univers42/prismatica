@@ -70,7 +70,11 @@ const tiers = [
 							{tier.emphasized && <Badge tone="accent" size="sm">Most popular</Badge>}
 						</div>
 						<p class="pricing__price">
-							<span class="pricing__amount">{tier.price}</span>
+							<span
+								class="pricing__amount"
+								data-count-to={/^€(\d+)$/.exec(tier.price)?.[1]}
+								data-count-prefix={/^€\d/.test(tier.price) ? '€' : undefined}
+							>{tier.price}</span>
 							<span class="pricing__cadence">{tier.cadence}</span>
 						</p>
 						<p class="ui-card__lede">{tier.summary}</p>
@@ -100,6 +104,26 @@ const tiers = [
 	}
 	.pricing__cell { height: 100%; }
 	.pricing__cell .ui-card { height: 100%; }
+
+	/* The emphasized tier earns a warm accent ring + top rule so "Most popular"
+	   reads at a glance, not just from the badge. Scoped to pricing so the
+	   shared .ui-card--emphasized (dark ink) is untouched elsewhere. */
+	.pricing__cell--emphasized .ui-card {
+		border-color: var(--brand-palette-primary);
+		box-shadow:
+			var(--system-shadow-3),
+			0 0 0 1px color-mix(in srgb, var(--brand-palette-primary) 42%, transparent);
+	}
+	.pricing__cell--emphasized .ui-card::before {
+		content: '';
+		position: absolute;
+		inset: 0 0 auto;
+		height: 3px;
+		border-radius: var(--system-radius-lg) var(--system-radius-lg) 0 0;
+		background: linear-gradient(90deg,
+			var(--brand-palette-primary),
+			color-mix(in srgb, var(--brand-palette-primary) 55%, var(--brand-palette-secondary)));
+	}
 
 	.pricing__head {
 		display: flex;

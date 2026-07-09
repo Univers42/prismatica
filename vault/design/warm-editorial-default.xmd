@@ -1,0 +1,64 @@
+---
+title: The Warm-Editorial Default
+icon: ◈
+order: 903
+summary: Cream canvas, warm ink, hairline borders, and a single terracotta accent (#CC785C) — the default look and the base every other palette layers on.
+---
+
+# The Warm-Editorial Default
+
+The default palette is **warm and editorial** — closer to a well-set book than a
+dashboard. It is also the [base palette](./color-palettes.xmd): it defines no
+`[data-palette]` block, so it *is* the root token layer that every other palette
+overrides on top of.
+
+## The core five
+
+| Role | Token | Light value | Swatch |
+|:-----|:------|:-----------:|:------:|
+| Canvas | `--osio-bg-page` | `#FAF9F5` | [bg=#faf9f5][color=#1a1a18] cream [/color][/bg] |
+| Sheet | `--osio-bg-surface` | `#FFFFFF` | [bg=#ffffff][color=#1a1a18] white [/color][/bg] |
+| Ink | `--osio-fg-default` | `#1A1A18` | [bg=#1a1a18][color=#faf9f5] warm ink [/color][/bg] |
+| Hairline | `--osio-border-default` | `#EBE8E0` | [bg=#ebe8e0][color=#1a1a18] border [/color][/bg] |
+| Accent | `--osio-accent` | `#CC785C` | [bg=#cc785c][color=#ffffff] terracotta [/color][/bg] |
+
+## The terracotta AA gotcha
+
+[color=#b5532e]This is the single most important rule in the warm palette.[/color]
+Terracotta `#CC785C` on white is roughly **3.4:1** — fine as a *fill* (button
+backgrounds, active states, icons all clear the 3:1 bar) but it **fails WCAG AA
+for small text**. So the token set splits the accent in two:
+
+- `--osio-accent` `#CC785C` — fills, active states, focus rings, icons.
+- `--osio-accent-text` `#B5532E` — **links and small accent text** (AA-safe).
+- In dark mode, accent text uses `#E0937A`, which is AA-safe on the dark canvas.
+
+> [!warning] Never use `--osio-accent` for a text link
+> If it reads as a word, use `--osio-accent-text`. If it's a shape or a fill, use
+> `--osio-accent`. Getting this backwards passes visually and fails the contrast
+> gate.
+
+Supporting accent tokens: hover `--osio-accent-hover` `#BD6A4D`, on-accent text
+`--osio-accent-fg` `#FFFFFF`, and a tint `--osio-accent-subtle` `#F7ECE5`.
+
+## Intent colours stay distinct from the brand
+
+The **update / sync** action is deliberately **blue** (`--osio-update` `#2563EB`)
+so it never blends into terracotta. Status colours are their own hues:
+
+- `--osio-danger` `#B42318` · `--osio-success` `#287D3C` · `--osio-warning` `#B45309`
+
+## Typography: self-hosted, serif-led
+
+> [!info] Fonts ship in-repo, not from a CDN
+> Three variable `woff2` faces are self-hosted (no npm font dependency): **Inter**
+> for body, **Newsreader** (serif) for headings, and **JetBrains Mono** for code.
+> Headings being serif is what gives the "editorial" feel.
+
+- `font-display: swap` paints text immediately with a fallback.
+- A **metric-matched "Inter Fallback"** (built over Arial with `ascent-override` /
+  `size-adjust`) means the swap causes **zero layout shift** — CLS 0.
+
+Together the cream canvas, serif headings, and hairline borders read as a document,
+not an app — and the [style-token guard](./style-token-guard.xmd) keeps any stray
+hex from breaking that consistency.

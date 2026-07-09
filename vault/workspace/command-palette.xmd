@@ -1,0 +1,68 @@
+---
+title: The ⌘K Command Palette
+icon: ⌘
+order: 804
+summary: The centre bar doubles as a command palette — search pages by default, prefix with > to run commands — sharing one result shape across every data source.
+---
+
+# The ⌘K Command Palette
+
+The [top bar](global-top-bar.xmd)'s centre input is a two-in-one: a **page
+search** and a **command palette**. Which one you get depends on a single
+character.
+
+## Two modes, one input
+
+| You type | Mode | What it does |
+|:---------|:-----|:-------------|
+| `report notes` | Search | fuzzy-finds pages across the workspace |
+| `> split pane` | Command | runs an action from the command registry |
+
+The `>` prefix is the switch — the same convention VSCode uses. Because command
+mode is detected **only** inside this input, it never collides with the editor's
+in-document slash (`/`) menu or its formatting chords.
+
+## Opening it
+
+- **`⌘K`** (or `Ctrl K`) — focus the bar in search mode
+- **`⌘⇧P`** — open it straight into command mode
+
+`⌘K` was chosen precisely because it was **free**: the editor already owns
+`⌘B / ⌘I / ⌘U / ⌘E`, `⌘⇧L` (link), and `⌘⇧X`, so the palette claims a chord that
+steps on nothing.
+
+## One result shape
+
+Search and commands render through a single `PaletteResult` shape. That is the
+design's leverage point:
+
+```ts
+// The bar renders results, not sources. Swap the source,
+// keep the shape, and the UI doesn't change.
+interface PaletteResult {
+  id: string;
+  title: string;
+  // …kind, icon, and an action to run on select
+}
+```
+
+> [!tip] Why the uniform shape matters
+> The palette's data source has already been swapped once — from an in-memory
+> scan of loaded pages to a bridge-backed search over the whole workspace — with
+> **no change to the rendering UI**, precisely because both feed the same result
+> type.
+
+## Behaviour
+
+- [x] debounced remote query (so typing doesn't flood the bridge)
+- [x] an instant local fallback while the network is in flight
+- [x] a visible "Searching…" state
+- [x] keyboard-first selection
+
+> [!faq] Does it search my nested pages?
+> Yes. Search is served by the bridge, which lists every workspace row — not just
+> the handful cached in the client — so deeply nested child pages are found. The
+> earlier client-only version missed them and surfaced mostly "Untitled".
+
+The palette's model lives in `widgets/top-bar/model/` (`commands.ts`, `search.ts`,
+`usePalette.ts`); the UI is `TopBarSearch`.

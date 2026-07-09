@@ -1,0 +1,65 @@
+---
+title: Namespace Isolation & the Collab Gate
+icon: ⚿
+order: 707
+summary: How a Shared space guarantees a non-member receives zero data — scoped realtime tokens, protected namespaces, and the m175 gate.
+---
+
+# Namespace Isolation & the Collab Gate
+
+Live co-presence is only safe if a non-member can't quietly subscribe and watch.
+Getting that guarantee right took a specific fix at two layers — the bridge that
+mints tokens, and the Rust gateway that authorizes them.
+
+## The gap it closes
+
+> [!danger] The default is permissive
+> The realtime gateway authorizes a subscribe against the JWT's `namespaces[]`
+> claim. A namespace-less or wildcard token — the kind a raw app JWT gets — was
+> granted `["*"]` by the permissive fallback, which could reach **any**
+> `collab:<spaceId>` topic. A stranger could subscribe to a Shared space they
+> were never added to.
+
+## The fix, in two parts
+
+**1 — A membership-gated, scoped token (bridge).**
+The bridge mints a short realtime token whose `namespaces` claim is exactly the
+spaces you belong to. A `collab:<spaceId>` topic has no `/`, so its whole string
+*is* its namespace — meaning the token grants precisely one space, nothing wider.
+
+| Method | Path | Gate |
+|:-------|:-----|:-----|
+| `POST` | `/api/collaboration/:id/realtime-token` | owner-or-member → **403** otherwise |
+
+**2 — Protected namespaces (gateway).**
+A `"*"` wildcard grant no longer covers a configured protected prefix. Reaching a
+protected namespace requires an **exact** grant. Members already present their
+scoped `["collab:<id>"]` token, so they're unaffected; everyone else loses
+wildcard reach into `collab:` — and only `collab:`.
+
+```text
+REALTIME_PROTECTED_NAMESPACES=collab:
+```
+
+> [!success] Why not just flip the global fallback to deny?
+> Because it would break live-DB. Live-database subscriptions use dynamic,
+> per-table topics (`table:<dbId>:<table>`) that can't be pre-enumerated, so a
+> blanket deny would lock them out. Protecting **only** the `collab:` prefix
+> isolates Shared spaces without a breaking global cutover.
+
+## Verified behaviour
+
+With `REALTIME_PROTECTED_NAMESPACES=collab:` set, a live WebSocket smoke test
+confirmed all four cases:
+
+- [x] wildcard token → a `collab:` topic — **denied**
+- [x] member-scoped token → its own `collab:` topic — **subscribed**
+- [x] wildcard token → chat / live-DB topics — **still works** (unaffected)
+- [x] member token → a *different* collab space — **denied**
+
+> [!note] The gate that guards it
+> `scripts/verify/m175-collab-namespace-isolation.sh` exercises the gateway's
+> authorization decision directly (the pure `can_subscribe_to_scoped` logic) plus
+> byte-parity tests proving an **empty** protected list changes nothing. The
+> feature is flag-gated and byte-parity by default — enforcement only turns on
+> when the env var is set.

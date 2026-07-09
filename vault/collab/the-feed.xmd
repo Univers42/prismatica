@@ -1,0 +1,47 @@
+---
+title: The Feed
+icon: ✦
+order: 703
+summary: An activity stream that surfaces what's happening across a workspace, served by the bridge and refreshed over realtime.
+---
+
+# The Feed
+
+The feed is the workspace's activity stream — a scrollable surface of what people
+are doing and sharing, distinct from the point-to-point delivery of DMs and
+channels. Where a DM is a conversation, the feed is a **broadcast timeline**.
+
+## How it fits
+
+The feed is one of osionos's realtime surfaces, alongside chat and the live-DB
+views. It is served by the bridge (`bridge-feed`) and, like chat, gets its
+freshness from the Rust realtime gateway — falling back to periodic polling when
+no realtime credential is available.
+
+> [!info] Realtime, with a safety net
+> Cross-client freshness is gated by a realtime token. When one resolves, updates
+> arrive over the WebSocket; without one, the surface degrades to a poll. Nothing
+> silently breaks — it just gets slower.
+
+## Interacting
+
+The feed carries an action bar (`FeedActionBar`) for reacting to and engaging
+with items. An individual item can be removed via the bridge:
+
+| Method | Path | Purpose |
+|:-------|:-----|:--------|
+| `DELETE` | `/api/feed/:page` | Remove a feed entry |
+
+## Feed as a view preset
+
+Because osionos treats views as first-class, an organization can present its feed
+as a tailored database view. In the agency simulation, for instance, a **reports
+feed** is one of the packaged view presets — the same feed machinery, themed for
+a specific team's workflow.
+
+> [!note] Where the feed sits among the three shapes
+> DMs, channels, and the feed each answer a different question:
+> **DMs** — "talk to one person"; **channels** — "talk to a room"; **feed** —
+> "see what's happening". They share the bridge and the realtime gateway but keep
+> distinct audiences. See [DMs, channels & the feed](dms-channels-feed.xmd) for
+> the full comparison.

@@ -10,6 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+import './premium';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
 import { authConfig } from '../lib/auth-config';
@@ -18,7 +19,7 @@ import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VE
 import { type NotificationKind, type NotificationOptions, dismissAll, notify } from './notifications';
 import { checkPasswordStrength, passwordRuleResults } from './password-strength';
 
-type ThemeName = 'aurora' | 'solar' | 'ember' | 'forest';
+type ThemeName = 'swiss' | 'aurora' | 'solar' | 'ember' | 'forest';
 
 type PortalMode = 'start' | 'connect';
 
@@ -126,7 +127,7 @@ function randomBetween(minimum: number, span: number): number {
 function randomIndex(length: number): number {
 	return Math.floor(secureRandom() * length);
 }
-const THEMES: ThemeName[] = ['aurora', 'solar', 'ember', 'forest'];
+const THEMES: ThemeName[] = ['swiss', 'aurora', 'solar', 'ember', 'forest'];
 const authClient = useAuth();
 const COMMON_EMAIL_DOMAINS = ['gmail.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'yahoo.com', 'proton.me', 'protonmail.com', 'live.com'];
 const EMAIL_DOMAIN_ALIASES: Record<string, string> = {
@@ -288,7 +289,7 @@ function writeStorage(key: string, value: string): void {
 }
 
 function isThemeName(value: string | null | undefined): value is ThemeName {
-	return value === 'aurora' || value === 'solar' || value === 'ember' || value === 'forest';
+	return value === 'swiss' || value === 'aurora' || value === 'solar' || value === 'ember' || value === 'forest';
 }
 
 function normalizeTheme(value: string | null): ThemeName | null {
@@ -296,7 +297,7 @@ function normalizeTheme(value: string | null): ThemeName | null {
 		return value;
 	}
 	if (value === 'light') {
-		return 'solar';
+		return 'swiss';
 	}
 	if (value === 'dark' || value === 'night') {
 		return 'aurora';
@@ -306,12 +307,15 @@ function normalizeTheme(value: string | null): ThemeName | null {
 
 /** Chooses the initial theme from storage or system preference. */
 function initialTheme(): ThemeName {
-	return normalizeTheme(readStorage(THEME_KEY)) ?? (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'aurora' : 'solar');
+	// Swiss (light, Vignelli/Müller-Brockmann) is the premium default; a stored
+	// preference or the toggle still wins. Aurora (dark) is one tap away.
+	return normalizeTheme(readStorage(THEME_KEY)) ?? 'swiss';
 }
 
 /** Returns the compact icon for the selected theme. */
 function themeIcon(theme: ThemeName): string {
 	const icons: Record<ThemeName, string> = {
+		swiss: '▦',
 		aurora: '✦',
 		solar: '☼',
 		ember: '◒',
@@ -322,6 +326,7 @@ function themeIcon(theme: ThemeName): string {
 
 function themeDisplayName(theme: ThemeName): string {
 	const labels: Record<ThemeName, string> = {
+		swiss: 'Swiss',
 		aurora: 'Aurora',
 		solar: 'Solar',
 		ember: 'Ember',
@@ -2413,6 +2418,15 @@ function bindLogoutControls(): void {
 	});
 }
 
+/** Runs a callback once the main thread is idle (keeps decorative work off the
+ * critical path so it doesn't inflate Total Blocking Time). Falls back to a
+ * short timeout where requestIdleCallback is unavailable. */
+function whenIdle(fn: () => void): void {
+	const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback;
+	if (typeof ric === 'function') ric(fn, { timeout: 2000 });
+	else window.setTimeout(fn, 200);
+}
+
 /** Starts all client-side page behavior. */
 function init(): void {
 	dismissAll();
@@ -2420,13 +2434,16 @@ function init(): void {
 	applyMotionPreference(readStorage(MOTION_KEY) === 'true');
 	ensureButtonLabels();
 	bindPasswordToggles();
-	renderPaperGrain();
-	mountMascot();
 	bindInteractions();
 	bindLogoutControls();
 	bindScrollReveal();
 	void mountBaasStatus();
 	void rehydrateAndReflectAuth();
+	// Purely decorative — mount after first paint so they never block interaction.
+	whenIdle(() => {
+		renderPaperGrain();
+		mountMascot();
+	});
 }
 
 // ---------- Scroll reveal ----------
@@ -2434,7 +2451,7 @@ function init(): void {
 function bindScrollReveal(): void {
         if (typeof IntersectionObserver === 'undefined') return;
         if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        const candidates = document.querySelectorAll<HTMLElement>('[data-scroll-rise], [data-scroll-grow], [data-reveal]');
+        const candidates = document.querySelectorAll<HTMLElement>('[data-scroll-rise], [data-scroll-grow], [data-reveal], .section__head');
         if (candidates.length === 0) return;
         const io = new IntersectionObserver((entries) => {
                 for (const entry of entries) {

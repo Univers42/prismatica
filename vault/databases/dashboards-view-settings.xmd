@@ -1,0 +1,78 @@
+---
+title: Dashboards & View Settings
+icon: ⊞
+order: 509
+summary: Compose dashboards where every widget is a view, pick and manage data sources, colour rows by rule, and drag widgets into a grid — with server-backed automations.
+---
+
+# Dashboards & View Settings
+
+Every view of a live database — table, board, chart, gallery, calendar — shares one
+settings surface. Dashboards assemble those views into a grid where **each widget is
+itself a view**, so a dashboard is a composition of the same building blocks, not a
+separate feature.
+
+## Widgets are views
+
+A dashboard row holds up to **four** widgets, up to **twelve** in total, each one a
+live view rendered compactly. Switch between **Edit** and **View** modes, drag a
+widget to reflow the grid, and rename or hide any widget's title.
+
+> [!info] Drag-to-arrange
+> Widget drag-and-drop is geometry-driven: dropping between slots reflows the row,
+> dropping in a gutter starts a new row, and a full four-wide row refuses a fifth.
+> The layout commits once, on drop — nothing is written mid-drag.
+
+## Picking and managing data sources
+
+A view has a **source picker** backed by a catalog that composes three kinds of
+source into one list:
+
+| Source kind | Examples |
+|:------------|:---------|
+| **Live mounts** | every connected external database and its tables |
+| **Workspace** | workspace files and folders |
+| **Known databases** | previously bound databases in the workspace |
+
+"Manage data sources" then gives Notion-style container semantics — a primary source
+plus linked and derived sources, each showing where it is used. A source you don't
+own is **read-only**: edits apply in the view but do not persist to a foreign engine.
+
+## Conditional colour
+
+A row, card or chart series can be tinted by rule:
+
+> [!tip] Rule = filter + colour, first match wins
+> Each rule is an ordinary filter paired with a colour token. The first rule that
+> matches a record wins, and the colour flows to the table row tint, the board and
+> gallery accent, and the chart's category or series.
+
+> [!warning] Select rules store option ids, cells hold labels
+> A subtle mismatch to know about: a rule on a *select* column stores option **ids**,
+> but a live cell often holds the raw **label**. The colour resolver retries against
+> the option's value so the tint still lands — a gotcha caught by end-to-end tests.
+
+## Global filters
+
+A dashboard can filter **across** its widgets by property name and type, so one
+control narrows every view that shares that field — a simple cross-source filter, in
+the spirit of Notion's.
+
+## Automations run server-side
+
+Rules that react to a write — set a property, send a notification, call a webhook —
+run in the **query-router**, not the browser:
+
+- [x] Stored server-side and evaluated on the write path
+- [x] Fire after both single-op and transactional writes
+- [x] A `set property` action re-enters the query once (no runaway chaining)
+- [x] Webhooks are HTTPS-only with a guard against private-host targets
+
+> [!note] Local vs live
+> Automations only run server-side for live database mounts. Purely local,
+> in-session databases run an honest client-side copy of the same rules.
+
+---
+
+The chart engine that powers dashboard widgets has its own page →
+[Charts](charts.xmd).

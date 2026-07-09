@@ -1,0 +1,58 @@
+---
+title: The markengine in the Editor
+icon: ⇄
+order: 303
+summary: How the editor uses the markengine — two parsers, one for typing and one for pasting whole documents, feeding a single block AST.
+---
+
+# The markengine in the Editor
+
+The **markengine** (`src/shared/lib/markengine/`) is the bridge between markdown
+text and the block tree. The docs shell you are reading is rendered by it; the
+editor uses it for something more demanding — turning what you type or paste into
+live, editable blocks.
+
+> The AST is the contract. Markdown becomes `BlockNode[]`, and every consumer —
+> the typing shortcuts, the raw-mode importer, the read-only renderer — speaks
+> that same shape.
+
+## Two parsers, on purpose
+
+The editor deliberately runs **two** parsers, each tuned for a different moment:
+
+1. **`detectBlockType`** (`shortcutsDetect.ts`) — the **typing** parser. Fast,
+   line-oriented, forgiving. It reads `> ` as a toggle and `"` / `|` as a quote,
+   because that is what feels right mid-keystroke.
+2. **`parseMarkdownToBlocks`** (`markdown/shortcuts.ts` → `parse` AST →
+   `astToBlocks`) — the **paste / raw-mode Save** parser. A full CommonMark + GFM
+   AST. Here `> ` is a *blockquote*, toggles are `> [>]`, and callouts are
+   `> [!kind]`.
+
+> [!warning] The same `>` means two things
+> In the typing parser `> ` starts a toggle; in the AST parser `> ` is a quote.
+> This is not a bug — it is the reason two parsers exist. Mixing them up is how
+> round-trips lose block types. See [Serialization](serialization-round-trip.xmd).
+
+## How the editor imports it
+
+The markengine has **no package alias**. It is pulled in through the generic
+`@ → src` alias:
+
+```ts
+import { parseMarkdownToBlocks } from "@/shared/lib/markengine";
+```
+
+Its core parser and renderers are pure Node functions with **zero external
+dependencies**, which is exactly why they can run in a build script, in a test,
+or in the browser without a DOM.
+
+## A quirk worth knowing
+
+The markengine sub-tree is **eslint-ignored** by the app, yet all of
+`lib/markengine` still lives in the app's TypeScript compile graph — so a type
+error there can break the quality gate even though the linter never looks at it.
+
+> [!tip] See it end to end
+> The exported functions are `parseMarkdownToBlocks`, `parseInlineMarkdown`, and
+> `detectBlockType`. For the reverse direction — block tree back to markdown —
+> read [Serialization & Round-Trip](serialization-round-trip.xmd).

@@ -1,0 +1,59 @@
+---
+title: Channels & Communities
+icon: ▤
+order: 601
+summary: Channels are the member-scoped rooms of the messenger; communities group related channels above the plain groups.
+---
+
+# Channels & Communities
+
+A **channel** is a room. Membership decides who can read and write it — the
+messenger never shows you a channel you aren't a member of, and every read and
+write is scoped to your identity at the bridge.
+
+## The channel list
+
+The left rail lists what you can see, in a deliberate order:
+
+1. **Communities** — named collections of channels, pinned at the top.
+2. **Groups** — multi-person channels below the communities.
+3. **Direct messages** — 1:1 conversations (their own list — see
+   [Direct Messages](direct-messages.xmd)).
+
+> [!info] Communities group channels
+> A community is a grouping layer *above* ordinary groups — think of it as a
+> workspace-within-the-workspace. Channels belong to a community; members join
+> the community and see its channels together.
+
+## Inside a channel
+
+Opening a channel mounts the message column. It is built for long histories and
+fast scanning:
+
+- **Author grouping** — consecutive messages from the same person collapse into
+  one visual block, so a back-and-forth reads as a conversation, not a wall.
+- **Date dividers** — a subtle separator marks each new day.
+- **Smart auto-scroll** — you stick to the bottom while you're there, but
+  scrolling up to read history *doesn't* yank you back down when a new message
+  lands.
+- **A "new messages" pill** — when you're scrolled up, a "↓ N new" chip tells
+  you how many arrived and jumps you to them.
+
+## Drafts that survive
+
+> [!tip] Your half-written message is safe
+> Each channel keeps its **own draft**. Switch channels mid-sentence and come
+> back — the text is still there. Drafts are keyed per channel, so they never
+> bleed across conversations.
+
+## Sending
+
+- **Enter** sends the message.
+- **Shift + Enter** inserts a newline.
+
+The composer is more than a text box — it opens a slash menu and a media
+toolbar. That's covered in [Rich-media messages](rich-media-messages.xmd).
+
+> [!note] Membership is the boundary
+> Search, history, threads, and uploads are all filtered by the channels you
+> actually belong to. There is no "peek" into a channel you haven't joined.

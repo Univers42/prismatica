@@ -1,0 +1,68 @@
+---
+title: The Data Plane
+icon: ⚡
+order: 203
+summary: The Rust plane inside grobase — query execution, database drivers, transaction handling, and realtime event routing.
+---
+
+# The Data Plane
+
+The data plane is written in **Rust** and does one thing: **move bytes, fast and
+predictably**. Once the [control plane](control-plane.xmd) has decided a caller
+is allowed, the data plane executes the query, drives the database, and routes
+realtime events. It has no garbage-collection pauses on the hot path — that is
+the whole reason it is Rust.
+
+## What it owns
+
+- **Query execution** — running the request against the target engine.
+- **Database drivers** — talking each engine's wire protocol.
+- **Transaction handling** — grouping operations atomically.
+- **Realtime event routing** — fanning changes out to subscribers.
+
+## Two Rust workspaces
+
+> [!info] Where the Rust lives
+> The query router is at `apps/grobase/src/data-plane-router/`. The realtime
+> stack is a separate Cargo workspace under
+> `apps/grobase/infra/docker/services/realtime/realtime-agnostic/`.
+
+The realtime workspace is split into small crates, each a clean seam:
+
+| Crate group | Role |
+|:------------|:-----|
+| `realtime-core` / `-engine` / `-server` | the engine and its host |
+| `realtime-gateway` / `-auth` / `-client` | edge, auth, and client |
+| `realtime-db-postgres` / `-mongodb` | database change producers |
+| `realtime-bus-inprocess` / `-irc` | pluggable EventBus backends |
+
+## Capability-aware routing
+
+The data plane is **engine-agnostic** by design: the same request can target
+different database engines, and the router forwards to the right adapter. The
+realtime workspace names its crate seams "-agnostic" for the same reason —
+Postgres and MongoDB are just two producers behind one engine.
+
+```text
+   request ──► data-plane-router (Rust)
+                    │  capability check
+        ┌───────────┼───────────┬───────────┐
+        ▼           ▼           ▼           ▼
+     Postgres     MySQL       Mongo      … other engines
+```
+
+## Forward routing vs the legacy path
+
+The data plane is the subject of the project's migration story. A legacy
+TypeScript data path is being replaced by the Rust router under the
+**shadow → parity → cutover** discipline.
+
+> [!warning] The Rust path is gated, and the TypeScript path is not deleted lightly
+> Forward routing runs the Rust plane in product mode
+> (`DATA_PLANE_ROUTER_PRODUCT_MODE=enabled`). The legacy TypeScript data-plane
+> code is only removed once **all three** safety gates pass — see the
+> [migration safety gates](migration-safety-gates.xmd).
+
+> [!tip] Related reading
+> The realtime router is what carries a page edit to other viewers — trace it in
+> the [page-edit data flow](page-edit-data-flow.xmd).

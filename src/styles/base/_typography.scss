@@ -58,7 +58,10 @@
 	src: local('Caveat'), url('/fonts/caveat.woff2') format('woff2');
 	font-weight: 400 700;
 	font-style: normal;
-	font-display: swap;
+	/* Decorative annotation face (74KB, below-the-fold hand-drawn labels).
+	   `optional` drops it out of the critical bandwidth race on throttled
+	   connections — falls back with zero layout shift, swaps in when cached. */
+	font-display: optional;
 }
 
 @font-face {
@@ -85,6 +88,9 @@ body {
 	line-height: 1.6;
 	letter-spacing: 0;
 	color: var(--system-text);
+	// Opaque theme ground so the fixed aurora backdrop (behind translucent
+	// sections) always renders over a solid base and text stays readable.
+	background-color: var(--system-bg);
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;

@@ -1,0 +1,61 @@
+---
+title: Block Types Overview
+icon: ⛁
+order: 301
+summary: Every page is a tree of blocks. Some are leaves, some are containers that hold children — this is the vocabulary.
+---
+
+# Block Types Overview
+
+A page is a **tree of blocks**. Each block has a type, its own content, and —
+if it is a container — a `children` array serialized as JSON. The type decides
+how the block renders, how Enter behaves inside it, and whether it can hold
+other blocks.
+
+## Two families
+
+Blocks fall into two categories, defined in `blockCategories.ts`:
+
+- **Leaf blocks** — hold text or a payload, but not other blocks. Paragraphs,
+  headings, code, tables, equations, media, and the embedded `graph_view`.
+- **Container blocks** — *parentable*, *enterCreatesChild*, and
+  *selfRendersChildren*. They nest other blocks infinitely. Callouts and quotes
+  are the canonical containers.
+
+> [!info] What "selfRendersChildren" buys you
+> A container renders its own children, so the read-only renderer must **not**
+> also render them — doing both was a real double-render bug in callouts, since
+> fixed. See [Callouts & Citations](callouts-and-citations.xmd).
+
+## The catalogue
+
+| Block | Family | Notes |
+|:------|:-------|:------|
+| `paragraph` | leaf | The default; plain rich text |
+| `heading_1` · `heading_2` · `heading_3` | leaf | Feed the [outline rail](page-outline-and-toc-rail.xmd) |
+| `bulleted_list` · `numbered_list` · `to_do` | leaf | Lists and checkboxes |
+| `toggle` | container | Collapsible; can carry a heading level |
+| `callout` | container | Semantic, typed, tinted |
+| `quote` | container | Renders as `<blockquote>`, supports citation |
+| `code` | leaf | Fenced, language-tagged |
+| `table` | leaf | The `/table` block editor grid |
+| `equation` | leaf | Block math (`$$…$$`) |
+| `layout` | leaf | The `/canvas` / `/layout` freeform builder |
+| `database_inline` | leaf | An embedded live-DB view |
+| `graph_view` | leaf | The force-graph, embedded as a block |
+| `media` | leaf | Image / video / audio asset |
+
+## Rendering: two paths, one tree
+
+The same block tree flows through two renderers, and both must understand every
+type:
+
+- `BlockEditor.tsx` — the editable path (what you type into).
+- `ReadOnlyBlock.tsx` — the read-only path (previews, unfocused panes,
+  published views).
+
+> [!warning] Add a type, teach both renderers
+> A new block type is defined in `types.ts` and `blockCategories.ts`, then
+> rendered in **both** `BlockEditor.tsx` and `ReadOnlyBlock.tsx`. Heavy blocks
+> (like `graph_view`) also register in the defer-mount predicates so they don't
+> load until they scroll into view.

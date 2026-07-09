@@ -1,0 +1,57 @@
+---
+title: The Workspace Shell
+icon: ⧉
+order: 800
+summary: osionos is a VSCode-style workspace shell — a global top bar, a drag-and-drop sidebar tree, and a splittable grid of tabbed panes, all without a router.
+---
+
+# The Workspace Shell
+
+**osionos** started life as a Notion-style block editor and grew into a full
+collaborative workspace. The chrome around the editor is modelled on an IDE: a
+persistent **top bar**, a **sidebar tree**, and a content area that is a
+**splittable grid of tabbed panes** rather than one active document.
+
+This section documents that shell — the pieces you interact with before you type
+a single block.
+
+## The three regions
+
+> [!info] Top bar
+> A global chrome bar mounted at the top of the app shell: logo, `File · Edit ·
+> Selection · View · Help` menus, a centre search/command bar, an Update button,
+> and — on the desktop build — window controls. Widget: `widgets/top-bar/`.
+
+> [!example] Sidebar
+> A live tree of your workspace pages and folders, with HTML5 drag-and-drop
+> reparenting, spring-loaded folders, and a small toolbar (add file, add folder,
+> collapse-all, refresh). Widget: `widgets/sidebar/`.
+
+> [!tip] Workspace grid
+> The content area. A recursive tree of panes — each pane is a strip of tabs —
+> that you can split horizontally or vertically and resize by dragging the
+> dividers. Widget: `widgets/workspace-grid/`.
+
+## What makes it "IDE-like"
+
+- **Everything opens as a tab.** A page, a folder, the Home dashboard, the Trash,
+  a database view, a chat channel, a profile, the BaaS console — each is a
+  `tab.kind` rendered inside a pane.
+- **Panes split like editor groups.** Drag a tab (or a sidebar row) to a pane's
+  edge and it splits; drop it in the centre and it becomes a tab there.
+- **State survives reload.** The whole layout tree is persisted to `localStorage`,
+  so your split arrangement comes back when you return.
+
+## No router under the hood
+
+There is **no `react-router`**. "Routing" is a zustand store — the layout tree —
+and a dispatch chain that decides what each tab renders. The URL is used only for
+deep-links (like `?home=` or a `bridge_token` hand-off), never for navigation.
+
+Read next → [The layout tree](layout-tree.xmd), then
+[the splittable grid](splittable-grid.xmd).
+
+> [!note] Docker-first
+> osionos runs only in containers. It reaches the grobase backend through a Node
+> **bridge**, never directly — the bridge holds the service-role key and is the
+> trust boundary for every workspace read and write.

@@ -1,0 +1,71 @@
+---
+title: Live-Write Resilience
+icon: ⚙
+order: 511
+summary: Why live cell edits stick — one row's failed write can no longer revert a whole table, and every engine now writes one operation per cell.
+---
+
+# Live-Write Resilience
+
+Editing a live database means writing over a network to a real engine, where a write
+can occasionally fail. The hard problem is not the rare failure — it is making sure a
+single failed write cannot take your *other* edits down with it. This is the story of
+how osionos made live cell edits stick.
+
+## The symptom
+
+Users saw their edits **revert after about eight changes**: a handful of edits, then
+`cell write dropped after 8 failed attempts — reloading server truth`, and cells
+snapping back to their old values.
+
+## The amplifier: one stuck write reverted everything
+
+The retry policy itself was fine — a write retries on a server-side failure up to
+**eight** attempts with a growing back-off. The damage came from what happened on
+*give-up*.
+
+> [!error] The real bug
+> On giving up, the client asked for a **whole-mount reload** — which reverted
+> **every unsaved edit** in that table, not just the one row that couldn't save. A
+> single stuck cell nuked all your work for that database. That is why edits appeared
+> to "all revert after ~8 changes".
+
+## The fix: reconcile one row, never the mount
+
+> [!success] Row-scoped recovery
+> Give-up now **refetches just the failing record** (a single `get` on that primary
+> key) and reconciles only that row to server truth. It falls back to a full reload
+> *only* if even that single refetch fails — meaning the backend is genuinely
+> unreachable. So "resetting that row to server truth" is the recovery **working**,
+> non-destructively, not a bug.
+
+## The durable fix: one operation per cell
+
+The failures traced back to a fragile **multi-statement transaction** path used for
+some engines, where a begin and an execute shared a pinned connection that could go
+stale in between.
+
+> [!info] Transactions retired for cell edits
+> osionos now writes **one operation per cell for every engine** — a single update
+> against the table, the same path inserts and deletes already used. A one-cell edit
+> never needed multi-statement atomicity, and per-cell saves are exactly Notion's
+> model. Removing the pinned-transaction path removed the class of failures that
+> caused the reverts.
+
+## Two guards that keep the fix honest
+
+| Guard | Why it matters |
+|:------|:---------------|
+| Treat a missing affected-row count as **one** row touched | MySQL reports **0** rows on an unchanged-value update — reading it strictly would fake a failure and revert the cell |
+| **Lenient, guarded date formatting** | a `0000-00-00` or unparseable date used to throw and crash the whole database block; it now degrades to the raw string |
+
+> [!warning] One residual to know
+> If a cell's value can't be encoded to a real column write — a place, a relation, or
+> a read-only derived column — the write is skipped, and the next poll shows server
+> truth. That is correct behaviour, not a lost edit: those types persist through their
+> own dedicated paths.
+
+---
+
+This is why the [Board](board-view.xmd) card-move and every
+[grid](grid-table-view.xmd) edit persist reliably today.

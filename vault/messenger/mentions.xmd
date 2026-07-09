@@ -1,0 +1,61 @@
+---
+title: @Mentions
+icon: ⊕
+order: 605
+summary: Autocomplete-driven @mentions that resolve only against channel members, highlight the messages that name you, and never leak identities.
+---
+
+# @Mentions
+
+Type `@` and the messenger helps you name someone. Mentions turn a message into a
+directed signal — the person you named knows it was meant for them.
+
+## Autocomplete
+
+As you type `@`, an inline picker suggests people, matching by handle. It reuses
+the workspace's people search, so the same directory that powers the rest of the
+app powers mentions too.
+
+> [!info] Members only, self excluded
+> A mention only resolves to people who are **members of that channel** — you
+> can't `@` someone into a room they aren't in. The resolver also **skips
+> yourself** and caps how many mentions a single message can carry, so a message
+> can't be turned into a mass-ping.
+
+## What a mention looks like
+
+- In the composer, the picked name becomes a **`@handle` chip**.
+- In the rendered message, the mention renders as an accented `@handle`.
+- A message that **mentions you** gets its whole row accented, so it stands out
+  when you're scanning back through history.
+
+## The parsing is careful
+
+> [!warning] An email is not a mention
+> The mention parser is written to **not** trip over `name@example.com` — an
+> email address in a message stays an email address. Only a genuine `@handle`
+> becomes a mention.
+
+## Mentions drive notifications
+
+A resolved mention is one of the events that produces a **notification** for the
+named person — alongside replies and new DMs. Notifications are deduplicated and
+never fire for your own actions.
+
+| Trigger | Notifies |
+|:--------|:---------|
+| `@handle` a member | That member |
+| Reply to their message | The message author |
+| New DM | The recipient |
+| Your own message | No one |
+
+## Quick reference
+
+- [x] `@` opens autocomplete
+- [x] Resolves against channel members only
+- [x] Self-mentions are dropped
+- [x] Per-message mention cap
+- [ ] Cross-channel mentions — not supported by design
+
+See how the named person finds the message later →
+[Message search](message-search.xmd).

@@ -1,0 +1,77 @@
+---
+title: Monorepo Directory Map
+icon: ▤
+order: 209
+summary: A guided map of the top-level tree — apps, grobase, models, infrastructure, scripts, and the authorities that orchestrate them.
+---
+
+# Monorepo Directory Map
+
+A tour of the repository's top-level layout — enough to know where a thing lives
+without opening every folder. Only the non-obvious entries are called out.
+
+## `apps/` — the products
+
+| Path | What it is |
+|:-----|:-----------|
+| `apps/grobase/` | nested independent BaaS repo (own `.git` + CLAUDE.md) |
+| `apps/osionos/app/` | the block editor (React + Vite submodule, branch from `develop`) |
+| `apps/opposite-osiris/` | the Astro website + auth (this site) |
+| `apps/mail/` · `apps/calendar/` | Gmail / Calendar bridge submodules |
+| `apps/osionos-desktop/` | Tauri desktop shell |
+| `apps/osionos-electron/` | Electron desktop app |
+| `apps/baas.bak/` | pre-extraction BaaS snapshot — untracked, large |
+
+> [!warning] `apps/baas.bak/` is git-status noise
+> It is a large *untracked* directory that is **not** gitignored, so it shows as
+> `?? apps/baas.bak/` on every `git status`. Do not commit it, and do not mistake
+> it for a live source tree — the original `apps/baas/` source is deleted.
+
+## Other top-level directories
+
+- `models/` — root-app SQL migrations (calendar + mail bridges, GDPR / RLS
+  hardening, and the osionos messenger + social suite). Idempotent, with RLS.
+- `infrastructure/makes/` — the Makefile fragments the root Makefile `include`s.
+- `scripts/` — root dev helpers (health checks, the rebuild-server daemon).
+- `tools/seeds/` — seed helpers.
+- `playground/datas/` — tracked sample datasets used by the live-DB demo/seeders.
+- `dist-selfhost/` — a self-host scaffold.
+- `vendor/` — side-project submodules (not part of the runtime stack).
+- `wiki/` — a substantial human-authored doc set.
+
+## The authorities
+
+> [!info] Three files govern orchestration
+> - `docker-compose.yml` — frontends-only topology + the external mini-baas network
+> - `docker-compose.local.yml` — a lean overlay
+> - `Makefile` — the root coordinator that `include`s `infrastructure/makes/*.mk`
+
+## A one-glance tree
+
+```text
+   ft_transcendence/
+   ├─ apps/
+   │  ├─ grobase/          nested BaaS repo (Go + Rust + TS)
+   │  ├─ osionos/app/      React editor (submodule)
+   │  ├─ opposite-osiris/  Astro site (submodule, this doc)
+   │  ├─ mail/ calendar/   bridge submodules
+   │  ├─ osionos-desktop/  osionos-electron/
+   │  └─ baas.bak/         untracked snapshot (noise)
+   ├─ models/              root-app SQL migrations
+   ├─ infrastructure/makes/  Makefile fragments
+   ├─ scripts/  tools/  playground/datas/  vendor/  wiki/
+   ├─ docker-compose.yml   frontends-only authority
+   └─ Makefile             root coordinator
+```
+
+## The lifecycle authority
+
+- [x] All lifecycle goes through the **root Makefile** — it is the authority.
+- [x] `make all` is self-provisioning (submodules → secrets → certs → backend →
+  data → frontends → healthcheck).
+- [ ] Do not drive the production paths with raw `docker compose` — see the
+  [profile gotcha](frontends-only-compose.xmd).
+
+> [!tip] The nested-repo detail
+> Why some of these directories carry their own Git history is covered in the
+> [submodule & nested-repo layout](submodule-layout.xmd).

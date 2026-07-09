@@ -1,0 +1,70 @@
+---
+title: Container-DNS Topology
+icon: ☁
+order: 206
+summary: How the frontends address the grobase backend — by container name over the external mini-baas network, not by localhost or fixed IPs.
+---
+
+# Container-DNS Topology
+
+The frontends and grobase run as **two separate Docker projects**. They talk over
+a shared **external Docker network** using **container-name DNS** — one container
+finds another by its name, and Docker's embedded DNS resolves it. No hard-coded
+IPs, no host `localhost` between services.
+
+> [!info] The network
+> The external network is declared as `mini-baas`; its real Docker name is
+> `mini-baas_mini-baas`. The root frontends attach to it so they can resolve
+> grobase's containers by name.
+
+## The names the frontends use
+
+All BaaS and auth traffic is addressed by container name:
+
+| Target container | Address | Role |
+|:-----------------|:--------|:-----|
+| Kong | `mini-baas-kong:8000` | BaaS front door |
+| gotrue | `mini-baas-gotrue` | auth |
+| postgrest | `mini-baas-postgrest` | REST over Postgres |
+| redis | `mini-baas-redis:6379` | cache / pub-sub |
+| realtime | `mini-baas-realtime:4000` | realtime gateway |
+
+```text
+   ┌──────────── mini-baas_mini-baas (external network) ────────────┐
+   │                                                                │
+   │   osionos-bridge ──► mini-baas-kong:8000 ──► postgrest / gotrue│
+   │   auth-gateway   ──► mini-baas-kong:8000                       │
+   │   frontends      ──► mini-baas-realtime:4000                   │
+   │                       mini-baas-redis:6379                     │
+   └────────────────────────────────────────────────────────────────┘
+```
+
+## Kong is the front door
+
+Most traffic does not hit postgrest or gotrue directly — it goes through **Kong**
+at `mini-baas-kong:8000`, which gates and routes it. osionos consolidated on this
+single Kong backend on port `:8000`.
+
+## The localhost / IPv6 trap
+
+Container-name DNS resolves cleanly *inside* the Docker network. The desktop
+(Electron) build is different: it runs on the host and reaches Kong over
+`localhost` — and there Chromium's `net.fetch` resolves `localhost` to IPv6
+`::1`, while mini-baas Kong is **IPv4-only**.
+
+> [!danger] Desktop must use `127.0.0.1`, not `localhost`
+> Because Kong is IPv4-only, the Electron target coerces `localhost → 127.0.0.1`
+> in `main.js`. In the browser osionos points `VITE_BAAS_URL` at
+> `http://127.0.0.1:8000`. Using the literal `localhost` there yields a dead
+> IPv6 connection.
+
+## Why container DNS and not fixed IPs
+
+- **Portable** — a container's IP changes between runs; its name does not.
+- **Decoupled** — the frontends do not need to know grobase's internal addressing.
+- **Two-project friendly** — the external network is the only contract between
+  the [frontends-only root compose](frontends-only-compose.xmd) and grobase.
+
+> [!tip] The privileged hop
+> One frontend — the bridge — does more than address grobase by name: it holds
+> the service-role key. See the [bridge trust boundary](bridge-trust-boundary.xmd).

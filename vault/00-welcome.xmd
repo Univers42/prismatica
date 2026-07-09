@@ -1,0 +1,45 @@
+---
+title: Welcome to Prismatica
+icon: ◆
+order: 0
+summary: The warm-editorial documentation shell for Track Binocle — authored in .xmd, rendered by our own markengine.
+---
+
+# Prismatica Docs
+
+Prismatica is the marketing-and-auth front door for **Track Binocle**, the
+Docker-first monorepo behind [osionos](reference/markengine.xmd) — a Notion-style
+block editor that grew into a full collaborative workspace.
+
+This documentation site is not built with a third-party static generator. Every
+page you are reading is authored in **`.xmd`** — an extended markdown dialect — and
+rendered by the project's own **markengine**, the exact parser that powers the live
+editor. Write a `.xmd` file in `vault/`, rebuild, and the shell you see updates.
+
+<figure class="xmd-figure">
+<img src="assets/app-workspace-home.png" alt="The osionos workspace: a VSCode-style shell with a page explorer, channels, and a live-database home pane." />
+<figcaption>osionos in action — the Notion-style block editor grew into a full workspace: a page tree, channels, agents, and a live-database home, all in a VSCode-style shell.</figcaption>
+</figure>
+
+> [!tip] One source of truth
+> Docs and the editor share a single parser. If a block renders in osionos, it
+> renders here — and vice-versa. No drift between "the app" and "the docs".
+
+## What lives here
+
+- **Guides** — get the stack running and understand how the three planes fit together.
+- **Reference** — the markengine itself, and a full style showcase that exercises
+  every block and inline type the engine understands.
+
+## The shell
+
+Navigation is keyboard-first. The sidebar is a live listing of `vault/`, the
+breadcrumb is a shell `pwd`, and the whole thing is one self-contained page — so
+switching docs is instant, with zero network round-trips.
+
+- Press **`⌘K`** (or **`Ctrl K`**) to open the command palette.
+- Press **`/`** to focus search.
+- Use **`j`** / **`k`** (or the arrows) to move between docs.
+
+Everything below is real, running documentation — start with
+[Getting Started](guides/getting-started.xmd).

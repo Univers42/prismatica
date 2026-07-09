@@ -1,0 +1,50 @@
+---
+title: Compose Profiles
+icon: ▤
+order: 105
+summary: How profiles slice the service graph — and the one gotcha that silently starts the wrong subset.
+---
+
+# Compose Profiles
+
+**Compose profiles** carve the service graph into logical subsets. A profile lets
+you bring up a coherent slice of the stack instead of every container at once.
+
+## Listing what a profile contains
+
+```bash
+COMPOSE_PROFILES=dev docker compose config --services
+```
+
+The `dev` profile is the default (set in the make fragments), and it is the one
+that includes the frontend surfaces you develop against.
+
+> [!warning] The profile gotcha
+> `COMPOSE_PROFILES` defaults to `dev`. If you run a **manual** `docker compose up`
+> *without* it, most frontends are silently skipped — nothing errors, they just
+> never start. The Makefile avoids this by naming services explicitly, which is one
+> more reason to drive the stack through [make](root-makefile.xmd) rather than
+> compose directly.
+
+## Profiles you'll meet
+
+| Profile | Brings up |
+|:--------|:----------|
+| `dev` | The default frontend development set. |
+| `secrets` | The Vault container path (used by the real vault-up flow). |
+
+> [toggle] Profiles vs editions — what's the difference?
+> A **profile** is a raw compose-level tag on a set of services. An **edition** is
+> a named, known-good *shape* that combines profiles, storage engines, and
+> isolation models into something guaranteed to come up green. Editions are a
+> grobase concept — see [Grobase Editions](grobase-editions.xmd). Profiles are the
+> lower-level primitive editions are built from.
+
+## Rule of thumb
+
+- Use `make` targets for normal work — they set the profile for you.
+- Reach for `COMPOSE_PROFILES=… docker compose …` only when you deliberately want
+  a narrow slice, and always set the profile explicitly.
+
+> If a service you expected is missing, the first thing to check is whether the
+> active profile includes it: `docker compose config --services`.

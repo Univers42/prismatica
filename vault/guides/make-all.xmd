@@ -1,0 +1,65 @@
+---
+title: The make all Pipeline
+icon: ⚡
+order: 101
+summary: What the one self-provisioning command does, step by step, from a clean clone.
+---
+
+# The `make all` Pipeline
+
+`make all` is the headline command. From a clean clone it reconstitutes the whole
+stack — backend, data, and frontends — with no manual sequencing. `make all-local`
+is a kept alias that runs the identical recipe.
+
+```bash
+make all
+```
+
+## The stages, in order
+
+The recipe runs these steps front to back. Each one is a no-op when its work is
+already done, so re-running `make all` is safe and cheap.
+
+1. **sync-submodules-soft** — best-effort, fast-forward-only submodule sync. Never
+   blocks the pipeline; skip it with `SKIP_SYNC=1`.
+2. **secrets-ensure** — pulls the shared `*.env` tree from the vault when
+   `apps/grobase/.env` is absent and a vault key is present.
+3. **certs** — regenerates the local TLS certificates (delegated to grobase).
+4. **certs-trust-local** — trusts the local CA in the system and browser stores.
+5. **backend-up** — **starts** the grobase backend if it is down.
+6. **restore-if-empty** — loads the demo-data snapshot only if the databases are
+   confirmed empty.
+7. **frontends-up** — builds and starts the frontend services with health validation.
+8. **healthcheck → showcase** — verifies the front doors and prints the local URLs.
+
+> [!info] backend-up is no longer just a guard
+> Historically it only checked that grobase was running. Now it actually
+> **starts** grobase (default edition `migrate`) when the backend network is
+> absent, and short-circuits to nothing when the backend is already up. So a clean
+> clone plus `make all` brings up *everything*.
+
+## Two ways it can run
+
+| Situation | What happens |
+|:----------|:-------------|
+| Vault key present | Shared secrets + demo data restored — team parity. |
+| No vault key | Fully local: grobase self-generates secrets, env derived locally. |
+
+Both are covered in depth in [The two make all modes](make-all-two-modes.xmd).
+
+> [toggle] The no-vault fallback, in one line
+> When there is no root `.env.local`, an `env-local-ensure` step derives it from
+> grobase's just-generated `.env` — copying the BaaS keys (they must match
+> grobase's random secret) rather than inventing new ones. That is what lets a box
+> with only Docker + git + the clone come up with no vault access.
+
+## Related entry points
+
+- `make bootstrap` — a thin alias for this same self-provisioning flow.
+- `make -C apps/grobase up EDITION=full` — start the backend by hand for a
+  non-default [edition](grobase-editions.xmd).
+
+> [!tip] Re-run freely
+> Because every stage is idempotent and `restore-if-empty` never overwrites a
+> populated database, running `make all` again after a change is the normal way to
+> get back to a known-good stack.

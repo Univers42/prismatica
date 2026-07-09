@@ -1,0 +1,75 @@
+---
+title: CSP Architecture
+icon: ⚿
+order: 911
+summary: The marketing site ships a strict, hash-based Content-Security-Policy with no 'unsafe-inline' — enforced by a headless-browser guard that must stay at zero violations.
+---
+
+# CSP Architecture
+
+The opposite-osiris marketing site ships a **strict, hash-based Content-Security-Policy**.
+There is no `'unsafe-inline'` escape hatch: every inline script and style is
+allowed only by its SHA-256 hash, so an injected script simply doesn't run.
+
+## Production: hashed meta CSP
+
+Astro's `security.csp` (in `astro.config.mjs`) emits a **per-page `<meta>` CSP** at
+build time, computing a SHA-256 hash for every inline `<script>` and `<style>` the
+page actually contains:
+
+- `script-src` → `'self'` + the Turnstile origin + the page's script hashes.
+- `style-src` → `'self'` only.
+- **No `'unsafe-inline'`** anywhere.
+
+```
+Content-Security-Policy:
+  script-src 'self' https://…turnstile… 'sha256-…';
+  style-src  'self';
+```
+
+> [!warning] CSP3 makes `'unsafe-inline'` a trap
+> Once a hash is present, browsers **ignore** `'unsafe-inline'` — so any inline
+> `style=` attribute gets blocked. That's the whole point, but it means the rules
+> below are not style preferences; violating them **silently breaks production**.
+
+## The hard rules
+
+- [x] **No inline `style=` attributes** on rendered elements. Use CSS classes or
+      custom-property hooks (`--i`, `.arch-node--<category>`) that
+      [tokens](./website-token-layers.xmd) drive — never an inline literal.
+- [x] **No `is:inline` / `define:vars` executable scripts.** Pass server data as a
+      `<script type="application/json">` island and read it from a bundled script.
+- [x] **All colour through classes** — which is also what the design system's
+      no-raw-hex discipline already requires, so the two rules reinforce each other.
+
+## Dev vs prod vs headers
+
+| Context | CSP source | Shape |
+|:--------|:-----------|:------|
+| **Production** | Astro `security.csp` → `<meta>` | strict, hashed, per-page |
+| **Dev** (`astro dev`) | `Layout.astro`, gated on `import.meta.env.DEV` | permissive, HMR-friendly |
+| **Host headers** | `public/_headers` | `frame-ancestors` + hardening only |
+
+> [!note] Why the header CSP is minimal
+> `public/_headers` sets only `frame-ancestors` (a `<meta>` tag can't express it)
+> plus `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, and
+> HSTS. A header CSP with *fetch* directives would intersect with the hashed meta
+> CSP and re-block the very hashes it just allowed — so those directives live in
+> exactly one place.
+
+## The guard: zero violations
+
+The policy is enforced, not trusted:
+
+```sh
+npm run audit:csp   # scripts/audit/csp-check.mjs
+```
+
+It loads the **built** pages in headless Chromium and **fails on any CSP violation**.
+It must stay at **0**. A new inline style or an `is:inline` script that slips in is
+caught here before it can ship a page that renders blank in production.
+
+> [!success] Security and design pulling the same direction
+> "No inline styles, everything a class" is a CSP requirement *and* a design-system
+> requirement. The strict CSP is, in a sense, free — the token discipline was
+> already keeping styles out of the markup.

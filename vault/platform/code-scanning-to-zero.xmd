@@ -1,0 +1,69 @@
+---
+title: Code-Scanning to Zero
+icon: ◆
+order: 1205
+summary: The story of driving GitHub code-scanning from 406 open alerts to zero — real fixes, honest scope-outs, and what stayed deferred.
+---
+
+# Code-Scanning to Zero
+
+On 2026-06-27 the GitHub repository's open code-scanning alerts went from **406 to
+0**. This page is the honest ledger of how — because *how* an alert count reaches
+zero matters as much as the number.
+
+> [!info] Where the 406 came from
+> Every one was a **code-scanning** alert from **Trivy + Semgrep**, uploaded by
+> the `mini-baas-security` workflow (Trivy scanned the whole tree, `scan-ref: .`).
+> Dependabot was empty and secret-scanning was off — so this was purely SAST +
+> container surface.
+
+## How the 406 cleared
+
+| Bucket | Count | Method |
+|:-------|------:|:-------|
+| Dead code deleted | ~183 | removed the stale `apps/baas.bak` tree |
+| Scoped out | ~140 | Trivy `skip-dirs` + `.semgrepignore` |
+| **Real fixes** | ~49 | nginx `ssl_protocols`, Dockerfile `USER`, an md5 |
+| Dev-proxy false positives | 34 | ignored 2 localhost-only TLS configs |
+| Dismissed / ignored | 2 | one won't-fix CVE + one `.trivyignore` entry |
+
+## What "scoped out" honestly means
+
+Scope-outs are not fixes — they are **boundary decisions**. The excluded trees are
+covered by *their own* CI:
+
+- Nested `**/vendor`, `**/static_docs`, `.docusaurus` build output.
+- The submodule app trees and grobase — **their dependencies are gated by their
+  own repos' CI** plus grobase's dedicated SCA jobs.
+
+> [!warning] Zero-in-repo is not zero-across-components
+> Dependency **CVEs were not patched here** — they are deferred to the repos that
+> own the lockfiles (submodules, grobase). Docker-first forbids host `npm`/`cargo`,
+> so those fixes land where the lockfile lives. A green scan here does not claim a
+> green scan everywhere.
+
+## Two gotchas worth remembering
+
+> [toggle] GitHub ignores in-source suppressions
+> A `# nosemgrep` comment in the source is reported by GitHub as
+> `suppressions.kind = inSource` — which code-scanning **still shows as OPEN**. To
+> actually clear a Semgrep alert you must use **path exclusion** in
+> `.semgrepignore`, not an inline comment.
+
+> [toggle] Cancelled runs look red but aren't
+> `mini-baas-security` has slow `cargo-audit` jobs and
+> `concurrency: cancel-in-progress`. Rapid pushes supersede each other, so a run
+> can *look* red without a real failure. A full-green result needs one
+> uninterrupted run.
+
+## The residual follow-up
+
+> [!danger] Two unverified JWTs
+> Two hardcoded `const KONG = "<jwt>"` values in the osionos check scripts were
+> cleared by **scope-out, not verification**. The osionos repo owner must confirm
+> they are the public anon key, move them to an env var, and **rotate if
+> privileged**. Cleared ≠ safe until confirmed.
+
+For the scanner mechanics behind these alerts, see the
+[security scan gate](security-scan-gate.xmd); for the workflow that uploads them,
+see the [CI workflows overview](ci-workflows-overview.xmd).

@@ -1,0 +1,64 @@
+---
+title: The live-database demo
+icon: ⊕
+order: 1111
+summary: A deterministic ~164k-row commerce-and-ops dataset, seeded through a real provisioned app key, that lets osionos read and write a live grobase database end-to-end.
+---
+
+# The live-database demo
+
+The live-database demo turns grobase from an abstract backend into something you
+can *see*: a deterministic dataset, seeded through a real API key, that osionos
+reads and writes as a genuine live database.
+
+## One command
+
+```bash
+make seed-live-demo
+```
+
+From the root this is a thin delegator — it runs `make -C apps/grobase
+seed-live-demo`, then `make osionos-app-live` to rebuild osionos-app with the
+BaaS environment baked in.
+
+## What gets seeded
+
+> [!info] Deterministic by design
+> The generator produces a **~164k-row commerce + ops dataset** with a fixed PRNG
+> seed (**42**). Same seed, same rows, every run — so the demo is reproducible
+> across machines.
+
+- **Idempotent** — re-running converges; it doesn't duplicate.
+- **`RESEED=1`** wipes first for a clean regenerate.
+- Every row is **owner-stamped with the app key's principal**, so the demo data
+  respects the same per-request owner-scoping as real tenant data.
+
+The generator lives at `apps/grobase/scripts/seed/`, alongside the other tenant
+seeders (agency, gourmand, red-tetris).
+
+## The key that makes it live
+
+The demo runs against a **provisioned `mbk_` app key**, surfaced to osionos as
+`OSIONOS_BAAS_API_KEY`:
+
+| Environment mode | What the demo does |
+|:-----------------|:-------------------|
+| With the app key set | Full live-DB demo — osionos reads/writes real grobase tables |
+| Without it | Core login/editing still works; the live-DB demo stays **dormant** |
+
+> [!note] No vault key required for the basics
+> When `make all` comes up with no vault access, core login and editing work
+> immediately. The live-DB demo (and the agency permissions) stay dormant until
+> their own seed steps run — they need the provisioned app key, not just any
+> secret.
+
+## How osionos reaches it
+
+osionos consolidated on the single grobase/Kong backend — `VITE_BAAS_URL` points
+at Kong (`http://127.0.0.1:8000` for desktop, which must use `127.0.0.1` since
+Kong is IPv4-only). Reads and writes flow through the same
+[Kong](kong-api-gateway.xmd) routes as any other client.
+
+> [!tip] Want the data portable instead of regenerated?
+> If you'd rather restore a captured dataset than regenerate one, see the
+> [demo-data snapshots toolkit](data-snapshots.xmd).

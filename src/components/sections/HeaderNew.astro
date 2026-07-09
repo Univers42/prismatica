@@ -5,7 +5,7 @@ import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
 const navItems = [
 	{ href: '#product',   label: 'Product' },
 	{ href: '#pricing',   label: 'Pricing' },
-	{ href: '#docs',      label: 'Docs' },
+	{ href: '/docs/',     label: 'Docs' },
 ];
 ---
 
@@ -29,11 +29,11 @@ const navItems = [
 				id="theme-toggle"
 				class="header-new__theme"
 				type="button"
-				aria-label="Theme: Aurora. Switch to Solar palette"
+				aria-label="Theme: Solar. Switch to Solar palette"
 				title="Switch to Solar theme"
 			>
 				<span class="header-icon--theme" aria-hidden="true">✦</span>
-				<span class="visually-hidden" data-theme-label>Theme: Aurora</span>
+				<span class="visually-hidden" data-theme-label>Theme: Solar</span>
 			</button>
 			<Button variant="ghost" size="sm" data-open-connect>Sign in</Button>
 			<Button variant="primary" size="sm" data-open-portal>Start free</Button>
@@ -63,12 +63,12 @@ const navItems = [
 			<button
 				class="header-new__theme header-new__theme--drawer"
 				type="button"
-				aria-label="Theme: Aurora. Switch to Solar palette"
+				aria-label="Theme: Solar. Switch to Solar palette"
 				title="Switch to Solar theme"
 				data-theme-toggle
 			>
 				<span class="header-icon--theme" aria-hidden="true">✦</span>
-				<span data-theme-label>Theme: Aurora</span>
+				<span data-theme-label>Theme: Solar</span>
 			</button>
 			<Button variant="ghost" size="md" data-open-connect full>Sign in</Button>
 			<Button variant="primary" size="md" data-open-portal full>Start free</Button>

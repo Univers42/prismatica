@@ -1,0 +1,67 @@
+---
+title: Architecture
+icon: ◇
+order: 2
+summary: Three language planes — TypeScript, Go, Rust — and a shadow → parity → cutover discipline for every major change.
+---
+
+# Architecture
+
+Track Binocle follows a **three-language plane pattern**. Each plane owns a
+concern and speaks a language chosen for it.
+
+## The three planes
+
+> [!info] Application Plane — TypeScript
+> The React frontend (osionos), the Astro website (opposite-osiris, this site),
+> bridging services, and the Mail & Calendar apps. Everything a user touches.
+
+> [!example] Control Plane — Go
+> Provisioning, the auth gateway, tenancy & secrets, metering and billing. The
+> plane that decides *who* can do *what*.
+
+> [!tip] Data Plane — Rust
+> High-performance query execution, DB drivers, transaction handling, and
+> realtime event routing. The plane that moves bytes fast.
+
+## Shadow → parity → cutover
+
+Major changes never flip a switch. New code runs **in parallel** with the old,
+validation precedes any cutover, and **deletion is always last**.
+
+1. **Shadow** — the new path runs alongside the old, serving no real traffic yet.
+2. **Parity** — identical requests return identical results through both paths.
+3. **Cutover** — only once parity holds and CI is green does the new path take over.
+
+> [!warning] Deletion gates are safety-critical
+> Legacy data-plane code is never removed until live traffic, shadow parity, **and**
+> a green CI with forward routing all pass. If any gate is `UNKNOWN`, it counts as
+> `FAIL` — keep shadowing.
+
+## Topology at a glance
+
+The root compose stack is **frontends-only**. It joins a standalone backend —
+**grobase** — over an external Docker network, reaching it by container-name DNS.
+
+```text
+ Browser
+   │  HTTPS
+   ▼
+ local-https-proxy ──► opposite-osiris (Astro)     :4322
+                   ├─► osionos          (React)    :3001
+                   ├─► auth-gateway     (Go)        :8787
+                   └─► osionos-bridge   (TS)        :4000
+                            │
+                            ▼  container DNS
+                     grobase BaaS  (Kong :8000)
+                     ├─ postgrest · gotrue · redis
+                     └─ realtime  (Rust gateway)
+```
+
+## Why a bridge?
+
+osionos never talks to the BaaS directly. A Node **bridge** holds the
+service-role key and proxies data requests — the trust boundary lives in one
+place, not scattered across the client.
+
+Read the engine that renders this page next → [The markengine](../reference/markengine.xmd).

@@ -24,7 +24,9 @@
 	--brand-canvas-text: #1a1812;
 	--brand-canvas-text-dim: #5a5446;
 	--brand-canvas-text-muted: #6f6758;
-	--brand-palette-primary: #6b46c1;
+	// Warm-editorial unification: terracotta accent shared with the osionos app
+	// (--osio-accent #CC785C). Kept a muted teal secondary as a cool counterpoint.
+	--brand-palette-primary: #cc785c;
 	--brand-palette-secondary: #056f84;
 	--brand-palette-warm: #995300;
 	--brand-palette-rose: #a3154f;
@@ -42,10 +44,10 @@
 	--system-border: #827767;
 	--system-border-strong: #453d34;
 	--system-divider: #c8bfad;
-	--system-focus-ring: var(--brand-palette-secondary);
+	--system-focus-ring: #cc785c;
 	--system-focus-ring-offset: var(--system-surface);
-	--system-link: #055f72;
-	--system-link-hover: #043f4d;
+	--system-link: #b5532e; // AA-safe terracotta text on cream (#cc785c as text is only ~3.4:1)
+	--system-link-hover: #8f3f22;
 	--system-success-text: #06757c;
 	--system-success-bg: #e4f6f3;
 	--system-success-border: var(--brand-palette-secondary);
@@ -71,9 +73,9 @@
 	--system-input-placeholder: #665f55;
 	--system-input-border: #9d9486;
 	--system-input-border-hover: #665f55;
-	--system-input-border-focus: var(--brand-palette-secondary);
+	--system-input-border-focus: var(--brand-palette-primary);
 	--system-input-border-invalid: var(--brand-palette-rose);
-	--system-input-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--brand-palette-secondary) 22%, transparent);
+	--system-input-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--brand-palette-primary) 22%, transparent);
 	--system-input-shadow-invalid: 0 0 0 3px color-mix(in srgb, var(--brand-palette-rose) 18%, transparent);
 	--system-chip-bg: #f2eadb;
 	--system-chip-fg: var(--brand-canvas-text-dim);

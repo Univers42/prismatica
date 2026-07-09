@@ -1,0 +1,73 @@
+---
+title: Web Performance & Lighthouse
+icon: ⚡
+order: 910
+summary: How the two frontends are measured and tuned — the dev-server trap, per-category code-splitting, warm-chunk leaks, and where the mobile floor is.
+---
+
+# Web Performance & Lighthouse
+
+Both frontends are held to Lighthouse gates, but the two have very different
+performance shapes: the marketing site is a static Astro build that scores near
+perfect, and osionos is a React SPA whose mobile score is floored by framework
+parse cost. Knowing *which* you're measuring — and *how* — is half the battle.
+
+## The dev-server trap (measure prod, always)
+
+> [!warning] Lighthouse on `astro dev` is meaningless
+> The dev server ships unminified, unbundled ES modules plus the Vite HMR client.
+> Measured on the same pages, the dev server scores ~**mobile 59 / desktop 92**,
+> while the **production build** (`astro build` → `astro preview`) scores
+> **mobile 97–99 / desktop 100** across every page.
+
+The subtle version of the trap: running the site standalone can map a host port to
+the *dev* container. Always audit the built-and-previewed output, which the site's
+own `npm run audit:all` does inside the container before running Lighthouse.
+
+## The marketing site: near-perfect, static
+
+- Production build: perf **97–100**, a11y / best-practices / SEO **100**.
+- pa11y: **0** issues · lint: **0** errors.
+- Static output + [strict hashed CSP](./csp-architecture.xmd), no runtime framework.
+
+## osionos: a React SPA with a known floor
+
+osionos is desktop-class and tuned for that bar:
+
+| Preset | Result |
+|:-------|:-------|
+| **Desktop** | all four categories **≥90** (≈ 95 / 96 / 100 / 100) |
+| **Mobile** | floored by react-dom download + compile on 4× CPU throttle |
+
+The mobile ceiling is **LCP**, not CSS: the SPA paints its content only once the
+editor JS finishes, so the largest paint is network/parse-bound. A
+**preact/compat** swap moved mobile from ~59 to ~73 (TBT 440→130 ms) but LCP — the
+wall — needs SSR/prerender, which is out of scope for a style pass.
+
+> [!info] Why mobile ≥90 isn't reachable by tuning
+> Boot-skeleton tricks and non-render-blocking CSS were tried and reverted — a
+> static skeleton element can't become the LCP when the editor-rendered content is
+> larger and supersedes it. The fix is architectural (SSR / lighter first paint).
+
+## The warm-chunk discipline
+
+The biggest, recurring perf trap in osionos is the **warm-chunk leak**: importing a
+widget **barrel** (e.g. `@/widgets/page-renderer`) staples the whole ~1.1 MB editor
+tree onto the initial chunk.
+
+- [x] Split surfaces with `React.lazy` via **deep import paths**, never barrels.
+- [x] `manualChunks` splits `vendor-react` out of the entry (754 KB → 223 KB).
+- [x] The nginx layer serves pre-compressed assets (`gzip_static`) and strips `*.map`.
+- [ ] Never re-add a static import chain from `MainContent` into the block editor —
+      it re-welds the mega-chunk.
+
+> [!tip] Zero CLS by construction
+> The [metric-matched fallback font](./warm-editorial-default.xmd) means the web-font
+> swap shifts nothing — CLS stays 0, protecting the layout-stability score for free.
+
+## How to measure (the honest way)
+
+1. Build the **production** bundle (not the dev server).
+2. Preview it, then run Lighthouse against the preview.
+3. For SPA surfaces, pass `--preset=desktop` — the container defaults to mobile + 4× CPU.
+4. Treat a11y / best-practices / SEO as must-pass; treat perf against the surface's bar.

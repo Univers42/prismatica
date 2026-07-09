@@ -1,0 +1,75 @@
+---
+title: Performance Tuning Knobs
+icon: ⚙
+order: 411
+summary: The physics, visual, and render constants that shape the graph — live console sliders, sensible defaults, and the internal thresholds that gate the fast paths.
+---
+
+# Performance Tuning Knobs
+
+The graph exposes two kinds of dial: **live controls** you can move from the console,
+and **internal constants** that gate the render fast-paths. This page collects both.
+
+## Physics defaults
+
+`core/layout/params.ts` sets the force simulation's starting point — every value is a
+live slider in the console's **Physics** panel:
+
+| Parameter | Default | Effect |
+|:----------|--------:|:-------|
+| `chargeStrength` | `-90` | many-body repulsion (negative = repel) |
+| `chargeDistanceMax` | `520` | max distance charge acts over |
+| `linkDistance` | `60` | base edge length |
+| `linkStrengthScale` | `0.15` | per-link pull scale |
+| `collideRadius` | `16` | node spacing |
+| `centerStrength` | `1` | pull toward centre |
+| `velocityDecay` | `0.42` | damping (higher = settles faster) |
+| `clusterStrength` | `0.09` | pull toward each database cluster |
+
+## Visual defaults
+
+`core/state/controls.ts` holds the **Visual** panel state:
+
+- `nodeScale` `1` · `linkScale` `1` · `glow` `1`
+- `labelDensity` `0.5`
+- `semanticZoom` `true` — the [LOD tiers](semantic-zoom-lod.xmd)
+- `background` `"aurora-calm"` — one of `aurora` · `aurora-calm` · `flat`
+
+## Internal thresholds
+
+These are not user-facing; they are the constants that decide which fast path runs.
+
+| Constant | Value | Gate it controls |
+|:---------|:------|:-----------------|
+| `AGG_MAX_SCALE` | `0.34` | zoom below → [cluster-blob overview](cluster-blobs-overview.xmd) |
+| `AGG_MIN_NODES` | `15000` | graph above → overview + deferred edges eligible |
+| `MAX_LABELS` | `700` | [label-cache](spatial-grid-label-cache.xmd) LRU size |
+| `BAKES_PER_FRAME` | `6` | label bakes allowed per frame |
+| DPR cap | `2` / `1` | crisp graph frame / background |
+| `BG_FRAME_MS` | `80` | background redraw throttle (~12fps) |
+| `TIERS` | `4` | link-thickness buckets by relationship strength |
+
+## Data-shape knob
+
+The record graph is bounded by an env variable so a huge mount can't flood the model:
+
+```sh
+# per-table record cap in the bridge graph composer
+OSIONOS_GRAPH_RECORD_LIMIT=5000
+```
+
+> [!tip] A tuning order that works
+> Reach for the **visual** sliders first (they cost nothing to try), then **physics**
+> (reshapes layout, re-settles), and only touch the internal constants when a
+> benchmark says a fast-path gate is in the wrong place. Every internal value here
+> earned its number from a measured stall — change them against a bench run, not a
+> hunch.
+
+> [!note] Where to measure
+> `scripts/graph-bench.mjs` drives the synthetic model (up to 100k nodes via
+> `?graphBench=N`) and reports per-interaction FPS. It runs CPU-throttled and
+> GPU-less, so treat its numbers as a conservative floor.
+
+- [x] Physics + visual defaults, all live in the console
+- [x] Render fast-path thresholds documented
+- [x] Record-count cap for the multi-engine graph

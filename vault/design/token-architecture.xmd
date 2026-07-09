@@ -1,0 +1,63 @@
+---
+title: Token Architecture
+icon: ▤
+order: 901
+summary: The --osio-* custom-property system — one file, semantic names, 6-char hex, families for colour, type, space, and motion.
+---
+
+# Token Architecture
+
+Every visual value in osionos is a CSS custom property named `--osio-*`, and they
+all live in **exactly one file**: `src/app/styles/global.css`. That file is the
+single source of truth for colour, typography, spacing, radius, shadow, and motion.
+Everything else in the app references it with `var(--osio-…)`.
+
+> [!note] Why one file
+> Colour values in one place means a re-skin is an edit to that file, not a sweep
+> across the codebase. The file is deliberately the one large module the app's
+> ≤200-line convention exempts.
+
+## Token families
+
+The names read as **semantic roles**, not raw colours — you reach for
+`--osio-fg-default`, never "the dark grey".
+
+| Family | Examples | Role |
+|:-------|:---------|:-----|
+| Background | `--osio-bg-page` · `--osio-bg-surface` · `--osio-bg-panel` · `--osio-bg-hover` | canvas & panels |
+| Foreground | `--osio-fg-default` · `--osio-fg-strong` · `--osio-fg-muted` · `--osio-fg-inverse` | text ink |
+| Border | `--osio-border-default` · `--osio-border-soft` · `--osio-border-strong` | hairlines |
+| Accent | `--osio-accent` · `--osio-accent-hover` · `--osio-accent-text` · `--osio-accent-subtle` | brand terracotta |
+| Status | `--osio-update` · `--osio-danger` · `--osio-success` · `--osio-warning` | intent colours |
+| Block tints | `--osio-block-tint-blue-bg` … `-red` `-green` `-yellow` `-purple` `-brown` (bg + fg) | callout / highlight tints |
+| Graph | `--osio-graph-bg-0/1` · `--osio-graph-ink` · `--osio-graph-edge-*` · `--osio-graph-select` | force-graph materials |
+| Type | `--osio-font-family-sans/serif/mono` · `--osio-font-size-*` · `--osio-font-weight-*` | typography |
+| Shape | `--osio-radius-*` · `--osio-shadow-*` · `--osio-border-width` | geometry |
+| Motion | `--osio-motion-fast/standard/slow` · `--osio-ease-out` | animation |
+
+## Rules the tokens follow
+
+- [x] Colour tokens are **6-character hex** only — predictable, greppable, diffable.
+- [x] The **only** alpha token is `--osio-overlay`, by design (scrims are the one place transparency is a role).
+- [x] `color-mix(in srgb, var(--osio-…) …%, …)` is allowed — it *references* a token, so it isn't a raw literal.
+- [x] Spacing uses a **4px grid** (`--osio-space-*`) — row gap, section gap, and friends all snap to it.
+
+## SCSS aliases
+
+Some component styles are SCSS. There, colour `$`-variables **alias** the tokens
+rather than hold values:
+
+```scss
+$accent: var(--osio-accent);   // colour → always a token reference
+$sidebar-width: 260px;         // pure layout dimension → a literal is fine
+```
+
+Colour `$`-vars point at `var(--osio-*)`; only dimension constants (widths,
+breakpoints) are allowed to be literal pixels.
+
+> [!tip] Renaming a token is a breaking change
+> The framework-agnostic graph engine resolves `--osio-graph-*` at runtime, and
+> the docs markengine leans on `--osio-*` too. Rename a token and you silently
+> change graph colours — treat token names as a public contract.
+
+Next: how the tokens flip between modes → [Light & dark theming](./light-dark-theming.xmd).

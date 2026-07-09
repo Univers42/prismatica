@@ -1,0 +1,70 @@
+---
+title: The GraphModel Projection
+icon: ◆
+order: 408
+summary: A pure, backend-agnostic projection the host assembles in one O(N+E) pass — de-duped, dangling-edge-free, fully indexed — and hands to an engine that never fetches.
+---
+
+# The GraphModel Projection
+
+Everything the engine draws comes from one plain data structure: the **GraphModel**.
+The host builds it; the engine consumes it. That single seam is what keeps the engine
+framework-agnostic and backend-agnostic.
+
+> [!info] The contract in one line
+> The host projects its data (notes, records, edges) into a `GraphModel` and calls
+> `engine.setModel(...)`. The engine never fetches, never queries, never knows where
+> a node came from.
+
+## indexModel — one pass, every index
+
+`core/model/model.ts` turns raw nodes and edges into a ready-to-render model in a
+single **O(N + E)** pass:
+
+```ts
+// core/model/model.ts
+export function indexModel(rawNodes: GraphNode[], rawEdges: GraphEdge[]): GraphModel {
+  // de-dupe nodes by id
+  // drop dangling edges (both endpoints must exist)
+  // build adjacency (for focus) and byDatabase (for filters)
+}
+```
+
+That pass does three jobs at once:
+
+1. **De-dupe** nodes by id — the first wins.
+2. **Drop dangling edges** — an edge survives only if *both* endpoints resolved.
+3. **Build indexes** — adjacency for focus/neighbourhood, `byDatabase` for filters.
+
+## A node is portable data
+
+A `GraphNode` carries only what the engine needs to lay out and style it:
+
+| Field | Purpose |
+|:------|:--------|
+| `id` | identity — **equals the BaaS global id** |
+| `kind` | note / record / tag … drives shape |
+| `databaseId`, `source` | filtering and clustering |
+| `label`, `group`, `weight` | text, colour bucket, degree sizing |
+| `version`, `hasNote` | change detection |
+| `fields` | lazy detail — ignored by diffing |
+
+## Stable ids, cheap diffs
+
+Because `NodeId == the BaaS global id`, a node keeps the same identity across every
+model rebuild — so its **layout position survives** a refresh instead of jumping.
+And `nodesEqual` compares nodes by value (ignoring the lazy `fields`), so the engine
+can diff an incoming model against the current one and only touch what changed.
+
+> [!tip] Why a projection, not a query
+> Pushing a pure projection across the boundary means the engine has **no
+> infrastructure imports** — no fetch, no ORM, no React. It can be unit-tested with a
+> hand-built model, embedded anywhere, and swapped between the local and BaaS data
+> paths without a single change to the render or layout code.
+
+- [x] One O(N+E) assembly pass
+- [x] De-dupe + dangling-edge drop + adjacency/byDatabase indexes
+- [x] Stable global ids → stable layout across rebuilds
+
+The engine that receives this model is described in the
+[Graph Engine Overview](overview.xmd).

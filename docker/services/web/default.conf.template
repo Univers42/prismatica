@@ -29,6 +29,11 @@ server {
     add_header Content-Security-Policy "frame-ancestors 'none'" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=()" always;
+    # HTML documents inline their CSS, so a stale cached page freezes the whole
+    # look. `no-cache` = always revalidate the document (returns fast 304s when
+    # unchanged). The /_astro and /fonts blocks below override with `immutable`
+    # for fingerprinted assets, so only the HTML shell revalidates.
+    add_header Cache-Control "no-cache" always;
 
     gzip on;
     gzip_vary on;

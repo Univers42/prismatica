@@ -1,0 +1,78 @@
+---
+title: Per-Account Data Isolation
+icon: ⧉
+order: 1009
+summary: The server-side guarantee that a logged-in user can only reach their own workspaces and databases — the relation that enforces it and the hole that was closed.
+---
+
+# Per-Account Data Isolation
+
+Client-side switching hygiene is only half the story. The other half is a
+**server** guarantee: a valid session must never reach data it does not own. This
+page is the data-plane side of isolation.
+
+## The relation that scopes everything
+
+Access is derived, not asserted. Every user reaches data through a chain of
+memberships:
+
+```
+user
+  └─ osionos_workspace_members
+       └─ osionos_workspaces
+            └─ osionos_workspace_databases
+```
+
+> [!note] The relation already existed — it was enforced, not invented
+> A new user is a member of only their own owner-isolated private workspace, with
+> zero linked databases. The fix was to **enforce** this existing chain on the one
+> plane that skipped it, not to add a redundant user-to-database table.
+
+## The hole that was closed
+
+The records, pages, and graph planes already checked membership via a shared
+`resolveAccessibleMount` guard. The **database plane** (`/api/databases/*`) did
+not — it gated only on a valid session and took the database id straight from the
+URL or body.
+
+> [!danger] The consequence
+> Because the bridge uses a shared service-role key (which bypasses RLS), *any*
+> logged-in user could read, write, and even run DDL against *any* database the
+> tenant owned. A missing per-request ownership check, not a missing relation.
+
+**The fix:** every per-mount handler now calls the same `resolveAccessibleMount`
+guard — a `403` if the database id is not in the caller's own or member workspace
+ids — and the list endpoint intersects the registry with the caller's accessible
+mounts.
+
+## Defense in depth
+
+| Layer | Guarantee |
+|:------|:----------|
+| Bridge handler | `resolveAccessibleMount` → 403 on any non-member mount |
+| List endpoint | intersect registry with `accessibleMountIds()` |
+| Postgres RLS | a membership `SELECT` policy mirrors the workspace policy |
+
+## An empty navigator is correct
+
+> [!success] No access means empty, by design
+> A user invited to nothing sees a database navigator with **zero** databases —
+> the guard scopes the list to their accessible mounts. If you log in as a fresh
+> account and the demo databases are gone, isolation is *working*: those databases
+> belong to another owner. Log in as the owner to see them.
+
+## Verifying it
+
+A dedicated isolation suite mints owner-vs-other app-session tokens and asserts
+the owner gets `200` and the other gets `403` across schema, rows, DDL, and list:
+
+- [x] Owner reads their own databases
+- [x] A non-member gets `403` on schema / rows / DDL / txn / list
+- [x] The list endpoint returns `count 0` for a non-member
+
+> [!tip] A registered mount must be linked to a workspace
+> A database registered in the adapter registry but **not** linked to any workspace
+> will 403 as "not linked to an accessible workspace". Associate new mounts with a
+> workspace in the seed so a fresh database reproduces cleanly.
+
+The client-side counterpart: [Account Switching Without Bleed](account-switching.xmd).

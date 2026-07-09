@@ -1,0 +1,64 @@
+---
+title: Deletion & Migration Safety Gates
+icon: ⛁
+order: 210
+summary: Legacy data-plane code is never deleted until three gates pass — live traffic, shadow parity, and green CI with forward routing.
+---
+
+# Deletion & Migration Safety Gates
+
+The riskiest step in the whole [shadow → parity → cutover](shadow-parity-cutover.xmd)
+discipline is **deletion** — removing the legacy path for good. Track Binocle
+guards it with three explicit gates. All three must pass. If any is `UNKNOWN`, it
+counts as `FAIL`.
+
+> [!danger] The hard rule
+> **Never** delete legacy TypeScript data-plane code unless **all three** gates
+> PASS. If gates are `UNKNOWN` or `FAIL`, keep shadowing and instrumenting.
+
+## The three gates
+
+1. **m18 — Live Traffic.** Rust serves real traffic with
+   `DATA_PLANE_ROUTER_PRODUCT_MODE=enabled`. The new path is not a lab demo; it
+   is carrying production requests.
+2. **Shadow Parity.** Identical requests return identical results through the
+   TypeScript path *and* the Rust path. Divergence blocks deletion.
+3. **CI Green with Forward Routing.** No regressions; the gates explicitly PASS
+   with forward routing on.
+
+| Gate | Proves | If not met |
+|:-----|:-------|:-----------|
+| Live Traffic (m18) | Rust handles real requests | keep shadowing |
+| Shadow Parity | TS and Rust agree | keep instrumenting |
+| CI Green (forward) | no regressions | do not cut over |
+
+## Why deletion is last, not first
+
+Deleting the old path *before* proving the new one is how you lose the only
+working implementation. The gates exist so that by the time legacy code is
+removed, it has already been unused, in production, and proven redundant.
+
+```text
+   Live traffic ─┐
+   Shadow parity ─┼─ all PASS ──► safe to delete legacy TS path
+   CI green      ─┘
+        │
+        └─ any UNKNOWN / FAIL ──► keep shadowing, do not delete
+```
+
+## UNKNOWN = FAIL
+
+> [!warning] Absence of proof is not proof
+> A gate you did not run, or a comparison you cannot show, is `UNKNOWN` — and
+> `UNKNOWN` is treated as `FAIL`. "It probably matches" is not a passing gate.
+
+## The pre-deletion checklist
+
+- [ ] Rust serving live traffic in product mode (m18)
+- [ ] Shadow parity: identical results, both paths, on real requests
+- [ ] CI green with forward routing — gates explicitly PASS
+- [ ] Only when all three are green: remove the legacy TypeScript data-plane code
+
+> [!tip] These gates are the safety net under the data plane
+> They are what let the [Rust data plane](data-plane.xmd) replace the legacy
+> TypeScript path without ever risking a silent regression.

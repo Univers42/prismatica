@@ -1,0 +1,77 @@
+---
+title: The Three Language Planes
+icon: ◈
+order: 200
+summary: Why Track Binocle splits into a TypeScript application plane, a Go control plane, and a Rust data plane — one language per concern.
+---
+
+# The Three Language Planes
+
+Track Binocle is a Docker-first monorepo that deliberately spans **three
+languages**. Each language owns a *plane* — a horizontal slice of the system with
+one clear responsibility. The rule of thumb: pick the language that best fits the
+concern, not the concern that best fits one language.
+
+> [!info] One concern, one plane, one language
+> A plane is not a service — it is a *responsibility boundary*. Many services can
+> live in the same plane, but a service never straddles two.
+
+## The split at a glance
+
+| Plane | Language | Owns | Lives in |
+|:------|:--------:|:-----|:---------|
+| **Application** | TypeScript | Everything a user touches | root compose frontends |
+| **Control** | Go | *Who* can do *what* | `grobase/src/control-plane/` |
+| **Data** | Rust | Moving bytes, fast | `grobase/src/data-plane-router/` + realtime |
+
+Each plane has its own page:
+
+- [The Application Plane](application-plane.xmd) — React, Astro, the bridges.
+- [The Control Plane](control-plane.xmd) — provisioning, auth, tenancy, metering.
+- [The Data Plane](data-plane.xmd) — query execution, DB drivers, realtime routing.
+
+## Why three languages, not one
+
+> [!example] Right tool, right layer
+> **TypeScript** shares types across editor and website and moves fast on UI.
+> **Go** is boring, safe, and great at concurrent request handling for the plane
+> that gates access. **Rust** gives predictable, low-latency data movement with no
+> garbage-collection pauses on the hot path.
+
+- **TypeScript (application)** — the React block editor *osionos*, the Astro
+  marketing-and-auth site *opposite-osiris*, the bridging services, and the Mail
+  & Calendar apps.
+- **Go (control)** — provisioning, the auth gateway, tenancy & secrets, metering
+  and billing.
+- **Rust (data)** — high-performance query execution, database drivers,
+  transaction handling, and realtime event routing.
+
+## How the planes are wired
+
+The application plane runs as the **frontends-only root compose stack**. The
+control and data planes live together inside **grobase**, a standalone
+backend-as-a-service the frontends reach over an external Docker network.
+
+```text
+  ┌───────────────────────────────────────────┐
+  │  Application plane  (TypeScript)           │
+  │  osionos · opposite-osiris · bridges       │  root docker-compose.yml
+  └───────────────────┬───────────────────────┘
+                      │  container-name DNS
+  ┌───────────────────▼───────────────────────┐
+  │  grobase BaaS  (Kong front door)           │
+  │  ├─ Control plane  (Go)                    │
+  │  └─ Data plane     (Rust)                   │  separate docker project
+  └───────────────────────────────────────────┘
+```
+
+## The discipline that ties them together
+
+Every major change across the planes follows one rule: **shadow → parity →
+cutover**. New code runs in parallel with the old, validation proves they behave
+identically, and only then does the new path take over. Deletion is always the
+last step.
+
+> [!tip] Read next
+> The [shadow → parity → cutover](shadow-parity-cutover.xmd) discipline is what
+> makes cross-plane changes safe. Start there once you understand the planes.
