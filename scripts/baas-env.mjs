@@ -12,7 +12,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createClient } from '@mini-baas/js';
+import { createClient } from '@grobase/js';
 
 const envFiles = ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local'];
 

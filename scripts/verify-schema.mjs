@@ -11,7 +11,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-import { MiniBaasError } from '@mini-baas/js';
+import { MiniBaasError } from '@grobase/js';
 import { createBaasClient, fail, pass } from './baas-env.mjs';
 
 const expectedColumns = ['id', 'username', 'email'];

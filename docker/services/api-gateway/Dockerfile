@@ -11,24 +11,17 @@
 # osionos-bridge (mints the osionos session that connects an account to the
 # app), Cloudflare Turnstile, and SMTP.
 #
-# Build context = repository ROOT (needs the @mini-baas/js SDK source):
+# Build context = repository ROOT (needs the vendored @grobase/js SDK):
 #   docker build -f apps/opposite-osiris/docker/services/api-gateway/Dockerfile \
 #     -t dlesieur/prismatica-auth-gateway .
+#
+# The gateway's only npm dependency is @grobase/js. Since the baas -> grobase
+# extraction, the old `apps/baas/sdk` source tree (this stage used to build it
+# from scratch) no longer exists — the SDK is now vendored as a PRE-BUILT
+# compiled lib/ at apps/opposite-osiris/vendor/grobase-js (same artifact the web
+# image links via `file:./vendor/grobase-js`), so there is nothing to build here.
 # ============================================================================
 
-# ---------------------------------------------------------------------------
-# Stage 1 — build the @mini-baas/js SDK (the gateway's only npm dependency)
-# ---------------------------------------------------------------------------
-FROM public.ecr.aws/docker/library/node:22-alpine AS build
-RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
-WORKDIR /sdk
-COPY apps/baas/sdk/ ./
-RUN pnpm install --frozen-lockfile --ignore-scripts \
- && pnpm run build
-
-# ---------------------------------------------------------------------------
-# Stage 2 — lean runtime: node + the BFF script + email templates + SDK
-# ---------------------------------------------------------------------------
 FROM public.ecr.aws/docker/library/node:22-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
@@ -39,10 +32,10 @@ COPY apps/opposite-osiris/scripts/auth-gateway.mjs ./scripts/auth-gateway.mjs
 COPY apps/opposite-osiris/scripts/auth/ ./scripts/auth/
 COPY apps/opposite-osiris/src/email-templates/ ./src/email-templates/
 
-# The only runtime dependency: the built SDK (it has NO transitive npm deps),
-# placed where Node resolves a bare `@mini-baas/js` import from /app.
-COPY --from=build /sdk/package.json ./node_modules/@mini-baas/js/package.json
-COPY --from=build /sdk/dist/ ./node_modules/@mini-baas/js/dist/
+# The only runtime dependency: the pre-built @grobase/js SDK (it has NO
+# transitive npm deps), placed where Node resolves a bare `@grobase/js` import.
+COPY apps/opposite-osiris/vendor/grobase-js/package.json ./node_modules/@grobase/js/package.json
+COPY apps/opposite-osiris/vendor/grobase-js/lib/ ./node_modules/@grobase/js/lib/
 
 # node:22-alpine ships a non-root `node` user (UID 1000) — run as it.
 USER node

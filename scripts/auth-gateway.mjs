@@ -18,7 +18,7 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
 import net from 'node:net';
 import tls from 'node:tls';
-import { createClient, MiniBaasError } from '@mini-baas/js';
+import { createClient, MiniBaasError } from '@grobase/js';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
 import { createStore } from './auth/store.mjs';
