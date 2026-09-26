@@ -2,7 +2,7 @@ services:
   opposite-osiris:
     build:
       context: .
-      dockerfile: docker/services/node/Dockerfile
+      dockerfile: Dockerfile.standalone
     container_name: opposite-osiris
     volumes:
       - .:/workspace
