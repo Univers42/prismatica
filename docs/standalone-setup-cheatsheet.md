@@ -4,13 +4,13 @@ This cheatsheet covers how to spin up the `opposite-osiris` website in a standal
 
 ## 1. Start the Container
 
-A standalone `docker-compose.yml` has been provided to run just this frontend. From the repository root, start it in the background:
+A standalone `docker-compose.yml`, `Dockerfile.standalone`, and `entrypoint.standalone.sh` have been provided to run just this frontend without modifying the original monorepo files. From the repository root, start it in the background:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-> **Note:** The first time you run this, Docker will build the image. The custom `entrypoint.sh` will automatically run `pnpm install` to ensure all your `node_modules` are up to date.
+> **Note:** The first time you run this, Docker will build the image. The custom `entrypoint.standalone.sh` will automatically run `pnpm install` to ensure all your `node_modules` are up to date.
 
 ## 2. Enter the Docker Shell
 
