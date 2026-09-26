@@ -1,0 +1,14 @@
+services:
+  opposite-osiris:
+    build:
+      context: .
+      dockerfile: docker/services/node/Dockerfile
+    container_name: opposite-osiris
+    volumes:
+      - .:/workspace
+    ports:
+      - "4322:4322"
+      - "4399:4399"
+    environment:
+      - TRACK_BINOCLE_IN_DOCKER=1
+    command: pnpm dev

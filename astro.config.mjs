@@ -112,6 +112,9 @@ export default defineConfig({
 	},
 	vite: {
 		server: {
+			watch: {
+				ignored: ['**/node_modules/**', '**/.pnpm-store/**'],
+			},
 			host: env.ASTRO_DEV_HOST ?? 'localhost',
 			port: Number(env.ASTRO_DEV_PORT ?? 4322),
 			https: localHttpsConfig(),
