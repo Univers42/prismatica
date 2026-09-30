@@ -44,7 +44,9 @@
     "baas:verify:schema": "node scripts/container-only.mjs node scripts/verify-schema.mjs",
     "baas:verify:seeds": "node scripts/container-only.mjs node scripts/verify-seeds.mjs",
     "baas:verify:auth": "node scripts/container-only.mjs node scripts/verify-auth.mjs",
-    "baas:verify:register": "node scripts/container-only.mjs node scripts/verify-registration-flow.mjs"
+    "baas:verify:register": "node scripts/container-only.mjs node scripts/verify-registration-flow.mjs",
+    "test": "node scripts/container-only.mjs vitest run",
+    "test:watch": "node scripts/container-only.mjs vitest"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -68,7 +70,9 @@
     "vite": "^7.3.3",
     "stylelint-config-standard-scss": "^17.0.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.60.1"
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^2.1.2",
+    "happy-dom": "^15.7.4"
   },
   "overrides": {
     "devalue": "^5.8.1"
