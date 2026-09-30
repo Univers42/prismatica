@@ -18,7 +18,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1 — build the static site
 # ---------------------------------------------------------------------------
-FROM public.ecr.aws/docker/library/node:22-alpine AS build
+FROM node:22-alpine AS build
 
 RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 WORKDIR /workspace

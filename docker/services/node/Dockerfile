@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM public.ecr.aws/docker/library/node:22-alpine
+FROM node:22-alpine
 
 # python3/make/g++ — native addon builds for some npm deps.
 # chromium + font/render libs — headless browser used by the audit toolchain
