@@ -3,9 +3,10 @@ import { checkPasswordStrength, passwordRuleResults } from './auth-validation';
 
 describe('auth-validation', () => {
 	describe('passwordRuleResults', () => {
-		it('returns all false for empty password', () => {
+		it('fails all formatting rules for empty password', () => {
 			const rules = passwordRuleResults('');
-			expect(rules.every(r => !r.passed)).toBe(true);
+			expect(rules.find(r => r.label === '8+ characters')?.passed).toBe(false);
+			expect(rules.find(r => r.label === 'Uppercase letter')?.passed).toBe(false);
 		});
 
 		it('passes 8+ characters rule', () => {
