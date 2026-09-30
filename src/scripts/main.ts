@@ -10,6 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+import { type ThemeName, THEMES, normalizeTheme, themeDisplayName } from '../lib/theme-config';
 import './premium';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
@@ -18,8 +19,6 @@ import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, us
 import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { type NotificationKind, type NotificationOptions, dismissAll, notify } from './notifications';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
-
-type ThemeName = 'swiss' | 'aurora' | 'solar' | 'ember' | 'forest';
 
 type PortalMode = 'start' | 'connect';
 
@@ -127,7 +126,6 @@ function randomBetween(minimum: number, span: number): number {
 function randomIndex(length: number): number {
 	return Math.floor(secureRandom() * length);
 }
-const THEMES: ThemeName[] = ['swiss', 'aurora', 'solar', 'ember', 'forest'];
 const authClient = useAuth();
 
 let trustedHtmlPolicy: TrustedHtmlPolicy | null | undefined;
@@ -274,22 +272,7 @@ function writeStorage(key: string, value: string): void {
 	}
 }
 
-function isThemeName(value: string | null | undefined): value is ThemeName {
-	return value === 'swiss' || value === 'aurora' || value === 'solar' || value === 'ember' || value === 'forest';
-}
 
-function normalizeTheme(value: string | null): ThemeName | null {
-	if (isThemeName(value)) {
-		return value;
-	}
-	if (value === 'light') {
-		return 'swiss';
-	}
-	if (value === 'dark' || value === 'night') {
-		return 'aurora';
-	}
-	return null;
-}
 
 /** Chooses the initial theme from storage or system preference. */
 function initialTheme(): ThemeName {
@@ -299,27 +282,7 @@ function initialTheme(): ThemeName {
 }
 
 /** Returns the compact icon for the selected theme. */
-function themeIcon(theme: ThemeName): string {
-	const icons: Record<ThemeName, string> = {
-		swiss: '▦',
-		aurora: '✦',
-		solar: '☼',
-		ember: '◒',
-		forest: '◆',
-	};
-	return icons[theme];
-}
 
-function themeDisplayName(theme: ThemeName): string {
-	const labels: Record<ThemeName, string> = {
-		swiss: 'Swiss',
-		aurora: 'Aurora',
-		solar: 'Solar',
-		ember: 'Ember',
-		forest: 'Forest',
-	};
-	return labels[theme];
-}
 
 /** Updates visible and assistive theme button labels. */
 function updateThemeButton(theme: ThemeName): void {
