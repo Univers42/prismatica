@@ -1,6 +1,7 @@
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
+import { bindDataRightsForm } from "../lib/gdpr-form";
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -2163,46 +2164,6 @@ function bindNewsletterSignup(): void {
 	});
 }
 
-/** Reads a string value from FormData without accepting File object stringification. */
-function formDataString(formData: FormData, key: string): string {
-	const value = formData.get(key);
-	return typeof value === 'string' ? value : '';
-}
-
-/** Installs the public data-rights request form. */
-function bindDataRightsForm(): void {
-	const form = queryElement('[data-gdpr-request-form]', isHtmlElement);
-	if (!(form instanceof HTMLFormElement)) {
-		return;
-	}
-	let csrf = readStorage(CSRF_STORAGE_KEY);
-	if (!csrf) {
-		csrf = crypto.randomUUID();
-		writeStorage(CSRF_STORAGE_KEY, csrf);
-	}
-	const csrfInput = form.querySelector('[data-csrf-token]');
-	if (csrfInput instanceof HTMLInputElement) {
-		csrfInput.value = csrf;
-	}
-	form.addEventListener('submit', async (event) => {
-		event.preventDefault();
-		const status = form.querySelector('[data-gdpr-request-status]');
-		const formData = new FormData(form);
-		if (!(status instanceof HTMLOutputElement)) {
-			return;
-		}
-		if (formData.get('csrf') !== csrf) {
-			status.textContent = 'Security token mismatch. Refresh and try again.';
-			return;
-		}
-		const response = await callGdprRpc('gdpr_submit_request', {
-			request_type: formDataString(formData, 'request_type'),
-			email: formDataString(formData, 'email'),
-			details: { message: formDataString(formData, 'message'), csrf, policyVersion: POLICY_VERSION },
-		}).catch(() => null);
-		status.textContent = response?.ok ? 'Your request has been recorded. We may contact you to verify identity.' : 'Could not record the request right now.';
-	});
-}
 
 /** Moves keyboard focus to meaningful content when the skip link is used. */
 
@@ -2215,7 +2176,7 @@ function bindInteractions(): void {
 	bindEmailFieldValidation(document);
 	bindConsentBanner();
 	bindNewsletterSignup();
-	bindDataRightsForm();
+	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {
