@@ -1,3 +1,4 @@
+import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -2292,39 +2293,6 @@ async function mountBaasStatus(): Promise<void> {
 	}
 }
 
-/** Reflects auth state onto any elements that opt in via data attributes. */
-function reflectAuthState(loggedIn: boolean): void {
-	document.documentElement.dataset.authState = loggedIn ? 'authenticated' : 'anonymous';
-	queryElements('[data-auth-only]', isHtmlElement).forEach((node) => {
-		node.hidden = !loggedIn;
-	});
-	queryElements('[data-anon-only]', isHtmlElement).forEach((node) => {
-		node.hidden = loggedIn;
-	});
-}
-
-/**
- * Restores the session from the HttpOnly refresh cookie (if any) and reflects
- * the resulting auth state into the UI. Any view that depends on "am I logged
- * in?" should await this (or read [data-auth-state] after it resolves).
- */
-async function rehydrateAndReflectAuth(): Promise<void> {
-	const loggedIn = await rehydrateSession();
-	reflectAuthState(loggedIn);
-}
-
-/** Wires any logout controls to clear the in-memory token and the cookie. */
-function bindLogoutControls(): void {
-	queryElements('[data-logout]', isHtmlElement).forEach((control) => {
-		control.addEventListener('click', (event) => {
-			event.preventDefault();
-			void logoutSession().then(() => {
-				reflectAuthState(false);
-				announce('You have been signed out.');
-			});
-		});
-	});
-}
 
 /** Runs a callback once the main thread is idle (keeps decorative work off the
  * critical path so it doesn't inflate Total Blocking Time). Falls back to a
@@ -2343,10 +2311,10 @@ function init(): void {
 	ensureButtonLabels();
 	bindPasswordToggles();
 	bindInteractions();
-	bindLogoutControls();
+	bindLogoutControls(logoutSession, announce);
 	bindScrollReveal();
 	void mountBaasStatus();
-	void rehydrateAndReflectAuth();
+	void rehydrateAndReflectAuth(rehydrateSession);
 	// Purely decorative — mount after first paint so they never block interaction.
 	whenIdle(() => {
 		renderPaperGrain();
