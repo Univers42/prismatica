@@ -1,3 +1,7 @@
+import { bindSkipLinkFocus } from "../lib/a11y";
+import { bindScrollReveal } from "../lib/scroll-reveal";
+import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
+import { bindDataRightsForm } from "../lib/gdpr-form";
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -2160,84 +2164,8 @@ function bindNewsletterSignup(): void {
 	});
 }
 
-/** Reads a string value from FormData without accepting File object stringification. */
-function formDataString(formData: FormData, key: string): string {
-	const value = formData.get(key);
-	return typeof value === 'string' ? value : '';
-}
-
-/** Installs the public data-rights request form. */
-function bindDataRightsForm(): void {
-	const form = queryElement('[data-gdpr-request-form]', isHtmlElement);
-	if (!(form instanceof HTMLFormElement)) {
-		return;
-	}
-	let csrf = readStorage(CSRF_STORAGE_KEY);
-	if (!csrf) {
-		csrf = crypto.randomUUID();
-		writeStorage(CSRF_STORAGE_KEY, csrf);
-	}
-	const csrfInput = form.querySelector('[data-csrf-token]');
-	if (csrfInput instanceof HTMLInputElement) {
-		csrfInput.value = csrf;
-	}
-	form.addEventListener('submit', async (event) => {
-		event.preventDefault();
-		const status = form.querySelector('[data-gdpr-request-status]');
-		const formData = new FormData(form);
-		if (!(status instanceof HTMLOutputElement)) {
-			return;
-		}
-		if (formData.get('csrf') !== csrf) {
-			status.textContent = 'Security token mismatch. Refresh and try again.';
-			return;
-		}
-		const response = await callGdprRpc('gdpr_submit_request', {
-			request_type: formDataString(formData, 'request_type'),
-			email: formDataString(formData, 'email'),
-			details: { message: formDataString(formData, 'message'), csrf, policyVersion: POLICY_VERSION },
-		}).catch(() => null);
-		status.textContent = response?.ok ? 'Your request has been recorded. We may contact you to verify identity.' : 'Could not record the request right now.';
-	});
-}
 
 /** Moves keyboard focus to meaningful content when the skip link is used. */
-function removeTemporaryTabindex(element: HTMLElement, shouldRemove: boolean): void {
-	if (shouldRemove) {
-		element.removeAttribute('tabindex');
-	}
-}
-
-function focusSkipTarget(focusTarget: HTMLElement, removeTabindexOnBlur: boolean): void {
-	focusTarget.focus({ preventScroll: true });
-	focusTarget.addEventListener('blur', () => removeTemporaryTabindex(focusTarget, removeTabindexOnBlur), { once: true });
-}
-
-function handleSkipLinkClick(event: Event): void {
-	const link = event.currentTarget;
-	if (!(link instanceof HTMLAnchorElement)) {
-		return;
-	}
-	const target = document.getElementById(link.hash.slice(1));
-	if (!(target instanceof HTMLElement)) {
-		return;
-	}
-	const focusTarget = target.querySelector('h1, h2, [tabindex], a[href], button, input, select, textarea') ?? target;
-	if (!(focusTarget instanceof HTMLElement)) {
-		return;
-	}
-	const hadTabindex = focusTarget.hasAttribute('tabindex');
-	if (!hadTabindex) {
-		focusTarget.setAttribute('tabindex', '-1');
-	}
-	requestAnimationFrame(() => focusSkipTarget(focusTarget, !hadTabindex));
-}
-
-function bindSkipLinkFocus(): void {
-	queryElements('.skip-link[href^="#"]', (element): element is HTMLAnchorElement => element instanceof HTMLAnchorElement).forEach((link) => {
-		link.addEventListener('click', handleSkipLinkClick);
-	});
-}
 
 /** Installs document-level interaction handlers. */
 function bindInteractions(): void {
@@ -2248,7 +2176,7 @@ function bindInteractions(): void {
 	bindEmailFieldValidation(document);
 	bindConsentBanner();
 	bindNewsletterSignup();
-	bindDataRightsForm();
+	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {
@@ -2292,39 +2220,6 @@ async function mountBaasStatus(): Promise<void> {
 	}
 }
 
-/** Reflects auth state onto any elements that opt in via data attributes. */
-function reflectAuthState(loggedIn: boolean): void {
-	document.documentElement.dataset.authState = loggedIn ? 'authenticated' : 'anonymous';
-	queryElements('[data-auth-only]', isHtmlElement).forEach((node) => {
-		node.hidden = !loggedIn;
-	});
-	queryElements('[data-anon-only]', isHtmlElement).forEach((node) => {
-		node.hidden = loggedIn;
-	});
-}
-
-/**
- * Restores the session from the HttpOnly refresh cookie (if any) and reflects
- * the resulting auth state into the UI. Any view that depends on "am I logged
- * in?" should await this (or read [data-auth-state] after it resolves).
- */
-async function rehydrateAndReflectAuth(): Promise<void> {
-	const loggedIn = await rehydrateSession();
-	reflectAuthState(loggedIn);
-}
-
-/** Wires any logout controls to clear the in-memory token and the cookie. */
-function bindLogoutControls(): void {
-	queryElements('[data-logout]', isHtmlElement).forEach((control) => {
-		control.addEventListener('click', (event) => {
-			event.preventDefault();
-			void logoutSession().then(() => {
-				reflectAuthState(false);
-				announce('You have been signed out.');
-			});
-		});
-	});
-}
 
 /** Runs a callback once the main thread is idle (keeps decorative work off the
  * critical path so it doesn't inflate Total Blocking Time). Falls back to a
@@ -2343,10 +2238,10 @@ function init(): void {
 	ensureButtonLabels();
 	bindPasswordToggles();
 	bindInteractions();
-	bindLogoutControls();
+	bindLogoutControls(logoutSession, announce);
 	bindScrollReveal();
 	void mountBaasStatus();
-	void rehydrateAndReflectAuth();
+	void rehydrateAndReflectAuth(rehydrateSession);
 	// Purely decorative — mount after first paint so they never block interaction.
 	whenIdle(() => {
 		renderPaperGrain();
@@ -2356,24 +2251,5 @@ function init(): void {
 
 // ---------- Scroll reveal ----------
 
-function bindScrollReveal(): void {
-        if (typeof IntersectionObserver === 'undefined') return;
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        const candidates = document.querySelectorAll<HTMLElement>('[data-scroll-rise], [data-scroll-grow], [data-reveal], .section__head');
-        if (candidates.length === 0) return;
-        const io = new IntersectionObserver((entries) => {
-                for (const entry of entries) {
-                        if (entry.isIntersecting) {
-                                entry.target.classList.add('is-revealed');
-                                io.unobserve(entry.target);
-                        }
-                }
-        }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
-        candidates.forEach((node) => {
-                node.classList.add('reveal-prep');
-                io.observe(node);
-        });
-
-}
 
 init();
