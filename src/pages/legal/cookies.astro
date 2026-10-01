@@ -8,18 +8,21 @@ import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_LA
 		<a href="/" class="legal-page__back">← Back to Prismatica</a>
 		<h1>Cookie Policy</h1>
 		<p><strong>Version:</strong> {POLICY_VERSION} · <strong>Last updated:</strong> {POLICY_LAST_UPDATED}</p>
-		<p>Prismatica currently uses local storage rather than browser cookies. Optional analytics, marketing or newsletter tracking must not be loaded unless consent is granted.</p>
+		<p>Prismatica uses two cookies, both for sign-in and features you use, and stores preferences in your browser's local storage. It has no analytics or marketing scripts: the consent banner only records your choice.</p>
 
 		<table class="legal-table">
 			<thead>
 				<tr><th>Name</th><th>Type</th><th>Purpose</th><th>Lifetime</th><th>Consent required?</th></tr>
 			</thead>
 			<tbody>
+				<tr><td>prismatica_refresh</td><td>Cookie (HttpOnly, sent only to the sign-in service)</td><td>Keeps you signed in by renewing your session.</td><td>30 days, or until you sign out.</td><td>No, strictly necessary for sign-in.</td></tr>
+				<tr><td>osio_ide_preview</td><td>Cookie (HttpOnly, workspace code preview only)</td><td>Authorises the preview of your workspace code sandbox.</td><td>1 hour.</td><td>No, strictly necessary for that feature.</td></tr>
 				<tr><td>prismatica-theme</td><td>localStorage</td><td>Stores light, dark or night interface preference.</td><td>Until cleared or changed.</td><td>No, strictly necessary preference.</td></tr>
 				<tr><td>prismatica-motion-paused</td><td>localStorage</td><td>Stores reduced motion preference for accessibility.</td><td>Until cleared or changed.</td><td>No, accessibility preference.</td></tr>
-				<tr><td>{CONSENT_STORAGE_KEY}</td><td>localStorage</td><td>Stores consent choices, timestamp and policy version.</td><td>13 months or until changed.</td><td>No for storing proof of choice; optional categories require consent.</td></tr>
+				<tr><td>{CONSENT_STORAGE_KEY}</td><td>localStorage</td><td>Stores consent choices, timestamp and policy version.</td><td>Until cleared or changed.</td><td>No for storing proof of choice; optional categories require consent.</td></tr>
 				<tr><td>{NEWSLETTER_INTENT_KEY}</td><td>localStorage</td><td>Stores unauthenticated newsletter opt-in intent until login sync.</td><td>Until sync or manual clearing.</td><td>Yes, newsletter consent.</td></tr>
-				<tr><td>{CSRF_STORAGE_KEY}</td><td>localStorage</td><td>Stores a CSRF nonce for the public data-rights form.</td><td>Session-length operational use.</td><td>No, security necessity.</td></tr>
+				<tr><td>{CSRF_STORAGE_KEY}</td><td>localStorage</td><td>Stores a CSRF nonce for the public data-rights form.</td><td>Until cleared.</td><td>No, security necessity.</td></tr>
+				<tr><td>osio:* and osionos* keys</td><td>localStorage (workspace)</td><td>Your signed-in workspace session, a cache of your pages, favourites, contacts, unread counts and pending edits, and workspace settings.</td><td>Until cleared.</td><td>No, strictly necessary for the workspace.</td></tr>
 			</tbody>
 		</table>
 

@@ -11,46 +11,54 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 
 		<section>
 			<h2>Data controller</h2>
-			<p>{DATA_CONTROLLER.name}, {DATA_CONTROLLER.address}, is the data controller for Prismatica.</p>
-			<p>Privacy contact: <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>. DPO contact: <a href={`mailto:${DATA_CONTROLLER.dpoEmail}`}>{DATA_CONTROLLER.dpoEmail}</a>.</p>
+			<p>{DATA_CONTROLLER.name} is the data controller for Prismatica.</p>
+			<p>Privacy contact: <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
 		</section>
 
 		<section>
 			<h2>Data we collect and why</h2>
 			<ul>
-				<li><strong>Account data:</strong> email, username, password hash and account timestamps. Legal basis: contract and legitimate interest in account security.</li>
-				<li><strong>Optional profile data:</strong> first name, last name, avatar URL and biography. Legal basis: consent or contract when the user chooses to provide it.</li>
-				<li><strong>Preferences:</strong> theme, notification settings and newsletter consent. Legal basis: contract for service preferences and consent for optional communications.</li>
-				<li><strong>Security logs:</strong> activity type, IP address, browser or device strings, and timestamps. IP addresses are personal data. Legal basis: legitimate interest in security, fraud prevention and troubleshooting.</li>
-				<li><strong>Tokens and sessions:</strong> reset tokens, verification tokens and session identifiers. Legal basis: contract and legitimate interest in secure authentication.</li>
+				<li><strong>Account data:</strong> email address, username, password (stored only as a hash) and account timestamps. Used to create your account and sign you in. Legal basis: contract and legitimate interest in account security.</li>
+				<li><strong>Preferences:</strong> theme and notification settings, and newsletter consent if you give it. Used to apply your settings. Legal basis: contract for service preferences and consent for optional communications.</li>
+				<li><strong>Sessions and security logs:</strong> the IP address and browser user agent of each signed-in session, the IP address in the sign-in audit log, and timestamps. IP addresses are personal data. Used to keep you signed in and to secure your account. Legal basis: legitimate interest in security, fraud prevention and troubleshooting.</li>
+				<li><strong>Tokens:</strong> password-reset, email-verification and session tokens. Used for secure authentication. Legal basis: contract and legitimate interest in secure authentication.</li>
+				<li><strong>Workspace profile:</strong> display name, username and, if you add them, a bio, a headline and an avatar. A hash of your email address links the profile to your account. Your profile appears in the workspace people directory unless you opt out. Used to show who you are to the people you work with.</li>
+				<li><strong>Content you create:</strong> pages, comments, chat messages and their attachments, tasks, favourites, notifications, connection requests, blocks and reports, and whiteboard drawings. Used to provide the workspace.</li>
+				<li><strong>Push notifications:</strong> if you turn them on, your browser's push endpoint and its keys.</li>
+				<li><strong>Mail and Calendar:</strong> if you connect a mail or calendar account, its address and display name, a copy of message details (sender, recipients, subject, a short snippet, labels) and of calendar events (title, description, location, attendees). Used to show your mail and calendar inside the workspace.</li>
 			</ul>
 		</section>
 
 		<section>
 			<h2>Retention</h2>
-			<p>Account data is kept for the account lifetime and anonymised or deleted after a verified erasure request, unless a legal hold applies. Security activity logs are retained for a maximum of 13 months in line with CNIL guidance. Expired session and reset tokens are purged as soon as operationally possible.</p>
+			<p>There is no automatic deletion. No scheduled job deletes or anonymises accounts, content, sessions, tokens or logs, so data is kept until it is deleted from the database. Some items you delete, such as whiteboards and chat messages, are marked as deleted rather than erased.</p>
 		</section>
 
 		<section>
-			<h2>Recipients and processors</h2>
-			<p>Data is processed by the application infrastructure and hosting processors needed to operate the service. We do not sell personal data. Production processors must be documented in the processing register before launch.</p>
+			<h2>Where your data is stored and who receives it</h2>
+			<p>Prismatica is self-hosted. All data is stored on the machine that runs the service, in its PostgreSQL, MongoDB and MinIO (file storage) databases. Emails the service sends are delivered to Mailpit, a mail catcher running on the same machine, and do not leave it. We do not sell personal data.</p>
+			<p>Personal data leaves that machine only in these cases:</p>
+			<ul>
+				<li>When Cloudflare Turnstile is enabled, the sign-up and sign-in pages load Cloudflare's script, and the sign-in service sends the Turnstile token and your IP address to Cloudflare to check that you are not a bot.</li>
+				<li>When you connect a Gmail, Outlook or Google Calendar account, the service fetches your mail and events from that provider.</li>
+			</ul>
 		</section>
 
 		<section>
 			<h2>International transfers</h2>
-			<p>The local development stack does not intentionally transfer personal data outside the EU. Production deployments must use EU/EEA hosting or document appropriate transfer safeguards before processing EU residents' data.</p>
+			<p>The service is hosted on a single machine. Personal data reaches other countries only through the third parties listed above.</p>
 		</section>
 
 		<section>
 			<h2>Your rights</h2>
 			<p>You can exercise your rights of access, rectification, erasure, restriction, portability and objection under GDPR Articles 15 to 21. You can also withdraw consent at any time where processing is based on consent.</p>
-			<p>Use the <a href="/legal/data-rights/">Data Rights form</a> or contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
+			<p>Use the <a href="/legal/data-rights/">Data Rights form</a> or contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>. There is no self-service data export or account deletion yet: requests are handled through this contact.</p>
 			<p>You also have the right to lodge a complaint with the CNIL: <a href="https://www.cnil.fr/fr/plaintes" rel="noreferrer">https://www.cnil.fr/fr/plaintes</a>.</p>
 		</section>
 
 		<section>
 			<h2>Cookies and local storage</h2>
-			<p>Strictly necessary local preferences are used for theme, motion and consent records. Optional analytics, marketing or newsletter tracking must not load unless consent is granted. See the <a href="/legal/cookies/">Cookie Policy</a>.</p>
+			<p>The service uses a sign-in cookie and stores your preferences, consent choices and a workspace cache in your browser's local storage. It has no analytics or marketing scripts: the consent banner records your choice, and nothing else loads. See the <a href="/legal/cookies/">Cookie Policy</a> for the full list.</p>
 		</section>
 	</main>
 </Layout>
