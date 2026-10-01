@@ -10,14 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-export const POLICY_VERSION = '1.0.0';
-export const POLICY_LAST_UPDATED = '2026-05-03';
+export const POLICY_VERSION = '1.1.0';
+export const POLICY_LAST_UPDATED = '2026-10-01';
 
 export const DATA_CONTROLLER = {
-	name: 'Prismatica SAS (placeholder)',
-	address: '10 Rue de la Paix, 75002 Paris, France (placeholder)',
-	email: 'privacy@prismatica.example',
-	dpoEmail: 'dpo@prismatica.example',
+	name: 'dlesieur',
+	email: 'dev.pro.photo@gmail.com',
 } as const;
 
 export const LEGAL_LINKS = [
