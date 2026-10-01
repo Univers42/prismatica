@@ -9,8 +9,9 @@ layer, exactly mirroring the Vite dev-proxy routing.
 > **Cutover (2026-06-05):** this image IS the pipeline website. `local-https-proxy`
 > serves it at `https://localhost:4322`; the old in-repo `astro dev` service is
 > retired (compose profile `legacy-website`). Published to Docker Hub as
-> **`dlesieur/opposite-osiris-web`** (`:latest`), so the stack can `docker compose
-> pull` it without the in-repo source. Verified end-to-end with the Playwright
+> **`dlesieur/opposite-osiris-web`** (`:latest`). The groot monorepo builds it from
+> this submodule as `track-binocle/opposite-osiris-web:local`; `make all
+> PULL_PREBUILT=1` pulls the published tag instead. Verified end-to-end with the Playwright
 > playground: throwaway account signup → osionos bridge handoff → persistence.
 
 | File | Purpose |
