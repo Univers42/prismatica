@@ -3,6 +3,9 @@
 A self-contained image of [`scripts/auth-gateway.mjs`](../../../scripts/auth-gateway.mjs):
 the secure **server-side broker** between the website's account/business model and
 the app (osionos). Published to Docker Hub as **`dlesieur/prismatica-auth-gateway`**.
+In the groot monorepo `make all` builds it from this submodule as
+`track-binocle/prismatica-auth-gateway:local`; `make all PULL_PREBUILT=1` pulls the
+published tag instead.
 
 It is the component that **connects an account to the app securely** — it issues
 the single-use osionos bridge session (`osionos_v1.` token) the editor consumes.
@@ -42,7 +45,7 @@ docker run -d --name auth-gateway -p 8787:8787 \
   -e OSIONOS_BRIDGE_SHARED_SECRET=... \
   -e TURNSTILE_SECRET_KEY=... \
   -e SMTP_HOST=... -e SMTP_PORT=... -e SMTP_USERNAME=... -e SMTP_PASSWORD=... \
-  dlesieur/prismatica-auth-gateway:latest
+  track-binocle/prismatica-auth-gateway:local
 ```
 
 Talks to: BaaS/Kong (auth + service-role DB ops), the osionos-bridge (session

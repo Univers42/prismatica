@@ -13,7 +13,7 @@
 #
 # Build context = repository ROOT (needs the vendored @grobase/js SDK):
 #   docker build -f apps/opposite-osiris/docker/services/api-gateway/Dockerfile \
-#     -t dlesieur/prismatica-auth-gateway .
+#     -t track-binocle/prismatica-auth-gateway:local .
 #
 # The gateway's only npm dependency is @grobase/js. Since the baas -> grobase
 # extraction, the old `apps/baas/sdk` source tree (this stage used to build it
