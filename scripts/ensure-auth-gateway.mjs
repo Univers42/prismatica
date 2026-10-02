@@ -67,6 +67,8 @@ export async function ensureAuthGateway(options) {
 			...process.env,
 			AUTH_GATEWAY_PORT: String(authGatewayPort),
 			PUBLIC_SITE_URL: siteUrl,
+			// Match .env.example local defaults when unset so Turnstile does not 403 without a hand-written .env.
+			TURNSTILE_BYPASS_LOCAL: process.env.TURNSTILE_BYPASS_LOCAL ?? 'true',
 		},
 		stdio: 'inherit',
 	});

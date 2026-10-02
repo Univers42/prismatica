@@ -20,7 +20,7 @@ import net from 'node:net';
 import tls from 'node:tls';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { deriveClientIp } from './auth/net-ip.mjs';
-import { enforceStartupGuards } from './auth/guards.mjs';
+import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
 import { createStore } from './auth/store.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
@@ -232,8 +232,19 @@ async function hasDeliverableEmailDomain(email) {
 	return valid;
 }
 
+/**
+ * Caveat: local bypass is origin+config based, not a cryptographic proof of
+ * "developer machine". It only opens when the site URL is non-production AND
+ * either TURNSTILE_BYPASS_LOCAL=true or no TURNSTILE_SECRET_KEY is configured.
+ * A public https origin still fails closed via enforceStartupGuards.
+ */
+function allowLocalTurnstileBypass() {
+	if (config.turnstileBypassLocal) return true;
+	return !config.turnstileSecret && !isProductionOrigin(config.siteUrl);
+}
+
 async function verifyTurnstile(token, ip) {
-	if (config.turnstileBypassLocal && (!token || token === 'localhost-turnstile-token')) return true;
+	if (allowLocalTurnstileBypass() && (!token || token === 'localhost-turnstile-token')) return true;
 	if (!config.turnstileSecret || !token) return false;
 	const form = new URLSearchParams({ secret: config.turnstileSecret, response: token, remoteip: ip });
 	const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
@@ -841,7 +852,17 @@ async function handleRegister(request, response) {
 			json(response, 422, { message: 'Use an email domain that can receive mail.' });
 			return;
 		}
-		if (!config.serviceKey || (config.requireEmailVerification && !hasSmtpConfig())) {
+		if (!config.serviceKey) {
+			json(response, 503, {
+				message: 'Registration is not configured. Set SERVICE_ROLE_KEY in .env.local and start the BaaS stack (Kong/GoTrue on PUBLIC_BAAS_URL).',
+			});
+			return;
+		}
+		// Caveat: without SMTP, local/non-production origins mint a confirmed account
+		// instead of sending verification mail. Public https still requires SMTP when
+		// email verification is enabled (startup guards refuse insecure prod).
+		const canVerifyByEmail = config.requireEmailVerification && hasSmtpConfig();
+		if (config.requireEmailVerification && !hasSmtpConfig() && isProductionOrigin(config.siteUrl)) {
 			json(response, 503, { message: 'Email verification is not configured.' });
 			return;
 		}
@@ -854,7 +875,7 @@ async function handleRegister(request, response) {
 			});
 			return;
 		}
-		if (!config.requireEmailVerification || !context.profile.email_verification_consent) {
+		if (!canVerifyByEmail || !context.profile.email_verification_consent) {
 			await handleDevConfirmedRegistration(request, response, context);
 			return;
 		}
@@ -1147,6 +1168,13 @@ const routes = new Map([
 ]);
 
 enforceStartupGuards(config, { logger: console });
+
+if (!config.serviceKey) {
+	console.warn('[auth-gateway] SERVICE_ROLE_KEY is missing — POST /api/auth/register will return 503 until .env.local is seeded and the BaaS stack is up.');
+}
+if (!config.anonKey) {
+	console.warn('[auth-gateway] PUBLIC_BAAS_ANON_KEY is missing — BaaS SDK calls will fail.');
+}
 
 createServer(async (request, response) => {
 	try {

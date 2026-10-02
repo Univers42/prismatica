@@ -1607,6 +1607,16 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		});
 		return;
 	}
+	if (result.status === 503) {
+		notifyWithMascot({
+			kind: 'error',
+			title: 'Auth backend unavailable',
+			message: message || 'Start the BaaS stack and set SERVICE_ROLE_KEY in .env.local, then restart the auth gateway.',
+			duration: 10000,
+		});
+		announce('Registration backend is not configured.');
+		return;
+	}
 	if (result.status === 422 && messageMentions(message, 'user already registered', 'already registered', 'already exists')) {
 		notifyWithMascot({
 			kind: 'info',
