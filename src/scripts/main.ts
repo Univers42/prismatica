@@ -14,7 +14,7 @@ import { bindDataRightsForm } from "../lib/gdpr-form";
 /*                                                                            */
 /* ************************************************************************** */
 
-import { type ThemeName, THEMES, normalizeTheme, themeDisplayName, themeIcon } from '../lib/theme-config';
+import { type ThemeName, THEMES, normalizeTheme, themeDisplayName } from '../lib/theme-config';
 import './premium';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
@@ -285,6 +285,9 @@ function initialTheme(): ThemeName {
 	return normalizeTheme(readStorage(THEME_KEY)) ?? 'swiss';
 }
 
+/** Returns the compact icon for the selected theme. */
+
+
 /** Updates visible and assistive theme button labels. */
 function updateThemeButton(theme: ThemeName): void {
 	const buttons = queryElements('#theme-toggle, [data-theme-toggle]', isButton);
@@ -455,7 +458,7 @@ async function registerPortalAccount(email: string, password: string, turnstileT
 /**
  * Rehydrates the in-memory access token on a fresh page load by exchanging the
  * HttpOnly refresh cookie for a new access token. Returns true when a session
- * was restored, false when there is no/expired session. The refresh
+ * was restored, false when there is no/expired session (HTTP 401). The refresh
  * cookie is sent automatically because useAuth posts with credentials:'include'.
  */
 async function rehydrateSession(): Promise<boolean> {

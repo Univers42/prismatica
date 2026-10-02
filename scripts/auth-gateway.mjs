@@ -156,15 +156,6 @@ function cookieValue(request, name) {
 	return cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1) ?? '';
 }
 
-function decodeCookieValue(raw) {
-	if (!raw) return '';
-	try {
-		return decodeURIComponent(raw);
-	} catch {
-		return '';
-	}
-}
-
 function refreshCookie(token, maxAge = 60 * 60 * 24 * 30) {
 	return `prismatica_refresh=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=${maxAge}`;
 }
@@ -1047,9 +1038,9 @@ async function handleNewsletterUnsubscribe(request, response) {
 }
 
 async function handleRefresh(request, response) {
-	const refreshToken = decodeCookieValue(cookieValue(request, 'prismatica_refresh'));
+	const refreshToken = decodeURIComponent(cookieValue(request, 'prismatica_refresh'));
 	if (!refreshToken) {
-		json(response, 200, { message: 'No refresh session.' });
+		json(response, 401, { message: 'No refresh session.' });
 		return;
 	}
 	const result = await refreshAuthSession(refreshToken);
