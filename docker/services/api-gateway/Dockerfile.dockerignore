@@ -1,25 +1,13 @@
-# BuildKit per-Dockerfile ignore — applies ONLY to the api-gateway build.
-# Patterns are relative to the build context root (the repository root).
+# BuildKit per-Dockerfile ignore — applies ONLY to the api-gateway build and
+# replaces the root .dockerignore for it. The context is the monorepo ROOT, so
+# this is an allowlist: everything is excluded except the files the Dockerfile
+# COPYs (the gateway script, its email templates, the pre-built @grobase/js).
+*
+!apps/opposite-osiris/scripts/auth-gateway.mjs
+!apps/opposite-osiris/scripts/auth
+!apps/opposite-osiris/src/email-templates
+!apps/opposite-osiris/vendor/grobase-js/package.json
+!apps/opposite-osiris/vendor/grobase-js/lib
 **/node_modules
-**/.git
-**/dist
-**/.astro
-**/*.log
 **/.env.local
 **/.env.*.local
-
-# Trees this image does not need (it only needs the SDK source + the gateway
-# script + email templates).
-apps/osionos
-apps/mail
-apps/calendar
-apps/prismatica
-apps/baas/mini-baas-infra
-apps/baas/wiki
-apps/baas/certs
-apps/baas/scripts
-go
-models
-wiki
-infrastructure
-docs
