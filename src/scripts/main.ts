@@ -1284,7 +1284,7 @@ function messageMentions(message: string, ...needles: string[]): boolean {
 
 
 
-import { validateEmailFormat, type EmailValidationResult } from '../lib/email-validation';
+import { validateEmailFormat, type EmailValidationResult, type FieldValidationState } from '../lib/email-validation';
 
 function emailValidationResult(field: HTMLInputElement): EmailValidationResult {
 	return validateEmailFormat(field.value.trim(), field.required, field.validity.valid);
