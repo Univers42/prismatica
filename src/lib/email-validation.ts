@@ -1,8 +1,10 @@
 import { validateEmail } from '../hooks/useAuth';
 
+export type FieldValidationState = 'idle' | 'warning' | 'error' | 'success';
+
 export type EmailValidationResult = {
 	valid: boolean;
-	state: 'idle' | 'warning' | 'error' | 'success';
+	state: FieldValidationState;
 	message: string;
 };
 
