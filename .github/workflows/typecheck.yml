@@ -1,0 +1,34 @@
+# ================================================================
+# Prismatica (opposite-osiris) — astro check on every pull request
+# ================================================================
+# The web image runs `astro build`, which strips types and never typechecks, so a
+# missing import ships as a runtime ReferenceError (5333085: themeIcon). The check
+# lives here, not in the Dockerfile: a type-only error blocks the merge, never a build.
+# Runs in the Dockerfile's own base image so Node and pnpm match it exactly.
+# ================================================================
+
+name: Typecheck
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  astro-check:
+    name: 🔎 astro check
+    runs-on: ubuntu-latest
+    container: node:22-alpine
+    env:
+      TRACK_BINOCLE_IN_DOCKER: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install
+        run: |
+          corepack enable && corepack prepare pnpm@11.5.1 --activate
+          pnpm install --frozen-lockfile --ignore-scripts --config.node-linker=hoisted
+
+      - name: astro check
+        run: node_modules/.bin/astro check
