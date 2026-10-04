@@ -1,3 +1,4 @@
+import { trustedHTML, setTrustedInnerHTML, insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
@@ -132,7 +133,6 @@ function randomIndex(length: number): number {
 }
 const authClient = useAuth();
 
-let trustedHtmlPolicy: TrustedHtmlPolicy | null | undefined;
 const mascotState: MascotState = {
 	targetX: 0,
 	targetY: 0,
@@ -160,123 +160,15 @@ const mascotState: MascotState = {
 };
 
 /** Returns an internal TrustedHTML value when the browser enforces Trusted Types. */
-function trustedHTML(markup: string): unknown {
-	if (trustedHtmlPolicy === undefined) {
-		const trustedTypes = (globalThis as typeof globalThis & { trustedTypes?: TrustedTypesFactory }).trustedTypes;
-		try {
-			trustedHtmlPolicy = trustedTypes?.createPolicy('prismatica-static-markup', { createHTML: (value) => value }) ?? null;
-		} catch {
-			trustedHtmlPolicy = null;
-		}
-	}
-	return trustedHtmlPolicy ? trustedHtmlPolicy.createHTML(markup) : markup;
-}
-
 /** Assigns static internal markup through Trusted Types-aware DOM sinks. */
-function setTrustedInnerHTML(element: HTMLElement, markup: string): void {
-	(element as unknown as { innerHTML: unknown }).innerHTML = trustedHTML(markup);
-}
-
 /** Inserts static internal markup through Trusted Types-aware DOM sinks. */
-function insertTrustedHTML(element: HTMLElement, position: InsertPosition, markup: string): void {
-	element.insertAdjacentHTML(position, trustedHTML(markup) as string);
-}
-
 /** Restricts a number to the expected animation range. */
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
 }
 
 /** Returns an element when it matches the expected runtime type. */
-function queryElement<T extends Element>(selector: string, guard: (element: Element) => element is T): T | null {
-	const element = document.querySelector(selector);
-	return element && guard(element) ? element : null;
-}
-
-
 /** Returns all elements matching the expected runtime type. */
-function queryElements<T extends Element>(selector: string, guard: (element: Element) => element is T): T[] {
-	return Array.from(document.querySelectorAll(selector)).filter(guard);
-}
-
-/** Narrows an element to an HTML button. */
-function isButton(element: Element): element is HTMLButtonElement {
-	return element instanceof HTMLButtonElement;
-}
-
-/** Narrows an element to a generic HTML element. */
-function isHtmlElement(element: Element): element is HTMLElement {
-	return element instanceof HTMLElement;
-}
-
-/** Narrows an element to an input field. */
-function isInput(element: Element): element is HTMLInputElement {
-	return element instanceof HTMLInputElement;
-}
-
-/** Returns the current Turnstile token or a localhost bypass token when configured. */
-function readTurnstileToken(portal: HTMLElement): string {
-	const token = portal.querySelector('[data-turnstile-token]');
-	if (token instanceof HTMLInputElement && token.value) {
-		return token.value;
-	}
-	return authConfig.turnstileSiteKey ? '' : 'localhost-turnstile-token';
-}
-
-/** Renders the Cloudflare Turnstile widget into the active auth portal. */
-function mountTurnstile(portal: HTMLElement): void {
-	const container = portal.querySelector('[data-turnstile-widget]');
-	const token = portal.querySelector('[data-turnstile-token]');
-	if (!(container instanceof HTMLElement) || !(token instanceof HTMLInputElement)) {
-		return;
-	}
-	if (!authConfig.turnstileSiteKey) {
-		token.value = 'localhost-turnstile-token';
-		container.hidden = true;
-		return;
-	}
-	const render = (): void => {
-		if (!globalThis.turnstile || container.dataset.widgetId) {
-			return;
-		}
-		container.dataset.widgetId = globalThis.turnstile.render(container, {
-			sitekey: authConfig.turnstileSiteKey,
-			callback: (value: string) => {
-				token.value = value;
-			},
-			'error-callback': () => {
-				token.value = '';
-			},
-			'expired-callback': () => {
-				token.value = '';
-			},
-		});
-	};
-	render();
-	if (!container.dataset.widgetId) {
-		globalThis.setTimeout(render, 600);
-	}
-}
-
-/** Safely reads a persisted value. */
-function readStorage(key: string): string | null {
-	try {
-		return globalThis.localStorage.getItem(key);
-	} catch {
-		return null;
-	}
-}
-
-/** Safely writes a persisted value. */
-function writeStorage(key: string, value: string): void {
-	try {
-		globalThis.localStorage.setItem(key, value);
-	} catch {
-		return;
-	}
-}
-
-
 
 /** Chooses the initial theme from storage or system preference. */
 function initialTheme(): ThemeName {
