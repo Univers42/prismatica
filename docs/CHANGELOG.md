@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Test suite for DOM query wrappers and Trusted Types utilities (`src/lib/dom-utils.ts`)
 - Test suite for Theme normalization and configuration logic
 - Test suite for email typo correction (`editDistance` and `suggestedEmailDomain`)
 - Vitest and happy-dom test framework configuration
 - Baseline test suite for auth validation logic (`checkPasswordStrength` and `passwordRuleResults`)
 
 ### Changed
+- Extracted generic DOM utilities from `main.ts` into a pure library (`src/lib/dom-utils.ts`).
 - Extracted pure Theme configuration logic from `main.ts` into `src/lib/theme-config.ts`.
 - Extracted email format validation from `main.ts` to `src/lib/email-validation.ts` decoupled from the DOM.
 - Extracted pure authentication validation logic from `src/scripts/main.ts` and `src/scripts/password-strength.ts` into `src/lib/auth-validation.ts` to enable testing in isolation.
