@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 describe('Footer CSS alignment', () => {
-	it('uses robust grid and calc for checkbox alignment to support responsive scaling', () => {
+	it('uses proven portal margin for checkbox alignment', () => {
 		const filePath = path.join(process.cwd(), 'src/components/sections/FooterNew.astro');
 		const content = fs.readFileSync(filePath, 'utf-8');
 		
@@ -15,6 +15,6 @@ describe('Footer CSS alignment', () => {
 		expect(content).not.toMatch(/margin:\s*0\.1rem\s*0\s*0/);
 		
 		// 3. The vertical alignment should be mathematically derived from line-height
-		expect(content).toMatch(/margin-top:\s*calc\(/);
+		expect(content).toMatch(/margin-top:\s*0\.18rem/);
 	});
 });
