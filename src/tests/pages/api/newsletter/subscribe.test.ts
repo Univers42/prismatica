@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { POST } from './subscribe';
+import { POST } from '../../../../pages/api/newsletter/subscribe';
 import type { APIContext } from 'astro';
 
 describe('Newsletter Subscribe API', () => {
