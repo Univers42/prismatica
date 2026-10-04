@@ -17,4 +17,13 @@ describe('Footer CSS alignment', () => {
 		// 3. The vertical alignment should be mathematically derived from line-height
 		expect(content).toMatch(/margin-top:\s*0\.18rem/);
 	});
+
+	it('maintains a local stacking context to prevent background bleed', () => {
+		const filePath = path.join(process.cwd(), 'src/components/sections/FooterNew.astro');
+		const content = fs.readFileSync(filePath, 'utf-8');
+		
+		// .footer-new needs its own relative stacking context
+		expect(content).toMatch(/\.footer-new\s*\{[^}]*position:\s*relative/);
+		expect(content).toMatch(/\.footer-new\s*\{[^}]*z-index:\s*10/);
+	});
 });
