@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import HeaderNew from '../components/sections/HeaderNew.astro';
+import FooterNew from '../components/sections/FooterNew.astro';
+import Button from '../components/ui/Button.astro';
+---
+
+<Layout title="404: Not Found — Prismatica">
+	<HeaderNew />
+	<main id="main-content" class="section-shell" style="min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1.5rem;">
+		<h1 style="font-size: 5rem; margin: 0; line-height: 1; color: var(--system-text-strong);">404</h1>
+		<p style="font-size: 1.25rem; color: var(--system-text-muted); max-width: 40ch;">The page you're looking for doesn't exist, has been moved, or is temporarily unavailable.</p>
+		<div style="margin-top: 1rem;">
+			<Button variant="primary" as="a" href="/">Return to Home</Button>
+		</div>
+	</main>
+	<FooterNew />
+</Layout>
