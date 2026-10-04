@@ -4,14 +4,37 @@ import HeaderNew from '../components/sections/HeaderNew.astro';
 import FooterNew from '../components/sections/FooterNew.astro';
 ---
 
-<Layout>
+<Layout title="Documentation — Prismatica">
 	<HeaderNew />
-	<main id="main-content" class="swipe-stack" style="min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem;">
-		<div>
-			<h1>Documentation</h1>
-			<p>Our documentation is currently being written. Please check back soon!</p>
-			<a href="/" style="display: inline-block; margin-top: 1rem; text-decoration: underline;">Return to Home</a>
-		</div>
+	<main id="main-content" class="section-shell" style="max-width: 800px; margin: 0 auto; padding: 4rem 2rem;">
+		<h1 style="font-size: 3rem; margin-bottom: 2rem;">Documentation</h1>
+		
+		<section style="margin-bottom: 3rem;">
+			<h2>Tech Stack</h2>
+			<ul style="line-height: 1.8; color: var(--system-text-muted);">
+				<li><strong>Frontend:</strong> Astro, TypeScript, native CSS variables (no Tailwind).</li>
+				<li><strong>Backend:</strong> Auth Gateway via Node.js, isolated Docker services.</li>
+				<li><strong>Testing:</strong> Vitest (unit), strict Playwright E2E planned.</li>
+				<li><strong>CI/CD:</strong> GitHub Actions (Typecheck, Build).</li>
+			</ul>
+		</section>
+
+		<section style="margin-bottom: 3rem;">
+			<h2>Architecture</h2>
+			<p style="color: var(--system-text-muted); line-height: 1.6;">
+				Prismatica uses a hexagonal architecture approach where domain logic is isolated from infrastructure. 
+				The UI components rely on lightweight Vanilla JS scripts (`src/scripts/main.ts`) dynamically injected, 
+				avoiding heavy framework bundles. Authentication is handled by a dedicated backend service (`scripts/auth-gateway.mjs`).
+			</p>
+		</section>
+
+		<section style="margin-bottom: 3rem;">
+			<h2>Deployment</h2>
+			<p style="color: var(--system-text-muted); line-height: 1.6;">
+				Services are built into standard OCI containers (Docker) via standalone Dockerfiles.
+				Production environments route traffic through an API Gateway to separate the static assets from stateful endpoints.
+			</p>
+		</section>
 	</main>
 	<FooterNew />
 </Layout>
