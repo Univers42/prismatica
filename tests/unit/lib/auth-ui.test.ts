@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { reflectAuthState, rehydrateAndReflectAuth, bindLogoutControls } from './auth-ui';
+import { reflectAuthState, rehydrateAndReflectAuth, bindLogoutControls } from '../../../src/lib/auth-ui';
 
 describe('Auth UI', () => {
 	beforeEach(() => {

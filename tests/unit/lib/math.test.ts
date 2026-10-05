@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { secureRandom, randomBetween, randomIndex, clamp } from './math';
+import { secureRandom, randomBetween, randomIndex, clamp } from '../../../src/lib/math';
 
 describe('math utilities', () => {
 	describe('secureRandom', () => {

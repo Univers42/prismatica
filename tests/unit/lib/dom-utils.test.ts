@@ -8,7 +8,7 @@ import {
 	trustedHTML, 
 	setTrustedInnerHTML, 
 	insertTrustedHTML 
-} from './dom-utils';
+} from '../../../src/lib/dom-utils';
 
 describe('dom-utils', () => {
 	beforeEach(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkPasswordStrength, passwordRuleResults } from './auth-validation';
+import { checkPasswordStrength, passwordRuleResults } from '../../../src/lib/auth-validation';
 
 describe('auth-validation', () => {
 	describe('passwordRuleResults', () => {
