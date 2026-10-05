@@ -4,6 +4,7 @@ import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
 import { bindDataRightsForm } from "../lib/gdpr-form";
+import { readStorage, writeStorage } from '../lib/storage';
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -167,23 +168,7 @@ function mountTurnstile(portal: HTMLElement): void {
 	}
 }
 
-/** Safely reads a persisted value. */
-function readStorage(key: string): string | null {
-	try {
-		return globalThis.localStorage.getItem(key);
-	} catch {
-		return null;
-	}
-}
 
-/** Safely writes a persisted value. */
-function writeStorage(key: string, value: string): void {
-	try {
-		globalThis.localStorage.setItem(key, value);
-	} catch {
-		return;
-	}
-}
 
 /** Chooses the initial theme from storage or system preference. */
 function initialTheme(): ThemeName {
