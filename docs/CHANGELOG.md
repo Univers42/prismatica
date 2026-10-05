@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Test suite for Math and Random utilities (`src/lib/math.ts`)
 - Test suite for DOM query wrappers and Trusted Types utilities (`src/lib/dom-utils.ts`)
 - Test suite for Theme normalization and configuration logic
 - Test suite for email typo correction (`editDistance` and `suggestedEmailDomain`)
@@ -14,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Baseline test suite for auth validation logic (`checkPasswordStrength` and `passwordRuleResults`)
 
 ### Changed
+- Extracted pure mathematical logic (`secureRandom`, `clamp`, etc.) from `main.ts` into a pure library (`src/lib/math.ts`).
 - Extracted generic DOM utilities from `main.ts` into a pure library (`src/lib/dom-utils.ts`).
 - Extracted pure Theme configuration logic from `main.ts` into `src/lib/theme-config.ts`.
 - Extracted email format validation from `main.ts` to `src/lib/email-validation.ts` decoupled from the DOM.
