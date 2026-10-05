@@ -1,3 +1,4 @@
+import { secureRandom, randomBetween, randomIndex, clamp } from '../lib/math';
 import { trustedHTML, setTrustedInnerHTML, insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
@@ -116,55 +117,6 @@ function setAccessToken(token: string | null): void {
 /** Clears the in-memory access token (used on logout). */
 function clearAccessToken(): void {
 	accessToken = null;
-}
-
-function secureRandom(): number {
-	const values = new Uint32Array(1);
-	globalThis.crypto.getRandomValues(values);
-	return values[0] / 0x100000000;
-}
-
-function randomBetween(minimum: number, span: number): number {
-	return minimum + secureRandom() * span;
-}
-
-function randomIndex(length: number): number {
-	return Math.floor(secureRandom() * length);
-}
-const authClient = useAuth();
-
-const mascotState: MascotState = {
-	targetX: 0,
-	targetY: 0,
-	targetHeadX: 0,
-	targetHeadY: 0,
-	depthX: 5,
-	depthY: 4,
-	eyeX: 0,
-	eyeY: 0,
-	headX: 0,
-	headY: 0,
-	lastPointerAngle: undefined,
-	orbitTravel: 0,
-	lastBrowLift: 0,
-	lastMove: Date.now(),
-	lockedUntil: 0,
-	idleMoodShown: false,
-	moodTimer: undefined,
-	heartTimer: undefined,
-	zTimer: undefined,
-	laughTimer: undefined,
-	frame: undefined,
-	previousFocus: null,
-	releaseFocusTrap: null,
-};
-
-/** Returns an internal TrustedHTML value when the browser enforces Trusted Types. */
-/** Assigns static internal markup through Trusted Types-aware DOM sinks. */
-/** Inserts static internal markup through Trusted Types-aware DOM sinks. */
-/** Restricts a number to the expected animation range. */
-function clamp(value: number, min: number, max: number): number {
-	return Math.min(Math.max(value, min), max);
 }
 
 /** Returns an element when it matches the expected runtime type. */
