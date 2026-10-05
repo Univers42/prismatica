@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Test suite for localstorage wrappers
 - Test suite for Math and Random utilities (`src/lib/math.ts`)
 - Test suite for DOM query wrappers and Trusted Types utilities (`src/lib/dom-utils.ts`)
 - Test suite for Theme normalization and configuration logic
@@ -15,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Baseline test suite for auth validation logic (`checkPasswordStrength` and `passwordRuleResults`)
 
 ### Changed
+- Extracted LocalStorage wrappers from main.ts into a separate library (`src/lib/storage.ts`).
 - Centralized all unit tests from \`src/\` into a single top-level \`tests/\` directory to separate test code from application source code.
 - Extracted pure mathematical logic (`secureRandom`, `clamp`, etc.) from `main.ts` into a pure library (`src/lib/math.ts`).
 - Extracted generic DOM utilities from `main.ts` into a pure library (`src/lib/dom-utils.ts`).
