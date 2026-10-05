@@ -122,6 +122,69 @@ function clearAccessToken(): void {
 /** Returns an element when it matches the expected runtime type. */
 /** Returns all elements matching the expected runtime type. */
 
+
+/** Returns the current Turnstile token or a localhost bypass token when configured. */
+function readTurnstileToken(portal: HTMLElement): string {
+	const token = portal.querySelector('[data-turnstile-token]');
+	if (token instanceof HTMLInputElement && token.value) {
+		return token.value;
+	}
+	return authConfig.turnstileSiteKey ? '' : 'localhost-turnstile-token';
+}
+
+/** Renders the Cloudflare Turnstile widget into the active auth portal. */
+function mountTurnstile(portal: HTMLElement): void {
+	const container = portal.querySelector('[data-turnstile-widget]');
+	const token = portal.querySelector('[data-turnstile-token]');
+	if (!(container instanceof HTMLElement) || !(token instanceof HTMLInputElement)) {
+		return;
+	}
+	if (!authConfig.turnstileSiteKey) {
+		token.value = 'localhost-turnstile-token';
+		container.hidden = true;
+		return;
+	}
+	const render = (): void => {
+		if (!globalThis.turnstile || container.dataset.widgetId) {
+			return;
+		}
+		container.dataset.widgetId = globalThis.turnstile.render(container, {
+			sitekey: authConfig.turnstileSiteKey,
+			callback: (value: string) => {
+				token.value = value;
+			},
+			'error-callback': () => {
+				token.value = '';
+			},
+			'expired-callback': () => {
+				token.value = '';
+			},
+		});
+	};
+	render();
+	if (!container.dataset.widgetId) {
+		globalThis.setTimeout(render, 600);
+	}
+}
+
+/** Safely reads a persisted value. */
+function readStorage(key: string): string | null {
+	try {
+		return globalThis.localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+}
+
+/** Safely writes a persisted value. */
+function writeStorage(key: string, value: string): void {
+	try {
+		globalThis.localStorage.setItem(key, value);
+	} catch {
+		return;
+	}
+}
+
 /** Chooses the initial theme from storage or system preference. */
 function initialTheme(): ThemeName {
 	// Swiss (light, Vignelli/Müller-Brockmann) is the premium default; a stored
