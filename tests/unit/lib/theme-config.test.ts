@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isThemeName, normalizeTheme, themeIcon, themeDisplayName } from './theme-config';
+import { isThemeName, normalizeTheme, themeIcon, themeDisplayName } from '../../../src/lib/theme-config';
 
 describe('theme-config', () => {
 	describe('isThemeName', () => {

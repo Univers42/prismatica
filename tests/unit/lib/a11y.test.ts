@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { bindSkipLinkFocus } from './a11y';
+import { bindSkipLinkFocus } from '../../../src/lib/a11y';
 
 describe('bindSkipLinkFocus', () => {
 	beforeEach(() => {

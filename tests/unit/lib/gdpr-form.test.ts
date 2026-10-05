@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { bindDataRightsForm } from './gdpr-form';
+import { bindDataRightsForm } from '../../../src/lib/gdpr-form';
 
 describe('GDPR Form', () => {
 	let mockReadStorage: ReturnType<typeof vi.fn>;

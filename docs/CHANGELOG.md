@@ -15,8 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Baseline test suite for auth validation logic (`checkPasswordStrength` and `passwordRuleResults`)
 
 ### Changed
+- Centralized all unit tests from \`src/\` into a single top-level \`tests/\` directory to separate test code from application source code.
 - Extracted pure mathematical logic (`secureRandom`, `clamp`, etc.) from `main.ts` into a pure library (`src/lib/math.ts`).
 - Extracted generic DOM utilities from `main.ts` into a pure library (`src/lib/dom-utils.ts`).
 - Extracted pure Theme configuration logic from `main.ts` into `src/lib/theme-config.ts`.
 - Extracted email format validation from `main.ts` to `src/lib/email-validation.ts` decoupled from the DOM.
 - Extracted pure authentication validation logic from `src/scripts/main.ts` and `src/scripts/password-strength.ts` into `src/lib/auth-validation.ts` to enable testing in isolation.
+

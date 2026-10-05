@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { editDistance, suggestedEmailDomain, validateEmailFormat } from './email-validation';
+import { editDistance, suggestedEmailDomain, validateEmailFormat } from '../../../src/lib/email-validation';
 
 describe('email-validation', () => {
 	describe('editDistance', () => {

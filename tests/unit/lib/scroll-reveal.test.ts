@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { bindScrollReveal } from './scroll-reveal';
+import { bindScrollReveal } from '../../../src/lib/scroll-reveal';
 
 describe('bindScrollReveal', () => {
 	let observeMock: ReturnType<typeof vi.fn>;
