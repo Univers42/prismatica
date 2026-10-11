@@ -19,7 +19,7 @@ import './premium';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
 import { authConfig } from '../lib/auth-config';
-import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validateEmail, validatePassword } from '../hooks/useAuth';
+import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
 import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { type NotificationKind, type NotificationOptions, dismissAll, notify } from './notifications';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
