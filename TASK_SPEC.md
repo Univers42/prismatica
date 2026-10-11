@@ -1,26 +1,27 @@
-# Specification: Decompose BackendArchitecture.astro (Option A - Low Risk)
+# TASK SPEC: Extract CanvasWindowsIllustration.astro (Lowest-Risk Refactor)
 
 ## Objective
-Refactor `src/components/sections/BackendArchitecture.astro` (527 lines) down below the 300-line engineering limit by extracting declarative static dataset configurations and topology graphics into modular components.
+Decompose `src/components/sections/CanvasWindowsSection.astro` (273 lines) by extracting its embedded SVG graphic (lines 17–146) into a dedicated SVG component `src/components/svg/CanvasWindowsIllustration.astro`, aligning with the existing SVG architecture (`WorkspaceIllustration.astro`, `CharacterIllustration.astro`, `HeroPortalPreview.astro`).
 
-## Target Structure
-1. `src/data/backend-architecture.ts`:
-   - Interfaces: `ServiceCategory`, `ServiceDef`, `Preset`, `NodePosition`.
-   - Datasets: `SERVICES`, `PRESETS`, `EDGES`, `NODE_POSITIONS`, helper `getNodeCenter(id)`.
-   - Unit tests verifying data integrity in `tests/unit/data/backend-architecture.test.ts`.
+## Architecture & Requirements
+1. Create `src/components/svg/CanvasWindowsIllustration.astro`:
+   - Must contain the entire `<svg class="canvas-windows__svg" viewBox="0 0 1100 640" ...>...</svg>` markup with its `<title>`, `<desc>`, `<defs>` (filters `canvas-wobble`, `canvas-wobble-tight`, pattern `canvas-dots`), and drawing paths.
+   - Preserves all accessibility attributes, roles, and IDs.
+   - Accepts optional class prop if needed.
 
-2. `src/components/sections/backend-architecture/BackendTopologySvg.astro`:
-   - Modular SVG rendering for the interactive graph (markers, lines, node groups).
-   - Props: `services: ServiceDef[]`, `edges: Array<[string, string]>`, `positions: Record<string, NodePosition>`.
+2. Refactor `src/components/sections/CanvasWindowsSection.astro`:
+   - Import `CanvasWindowsIllustration` from `../svg/CanvasWindowsIllustration.astro`.
+   - Replace the embedded `<svg>` element inside `<figure class="canvas-windows__figure" data-scroll-grow>` with `<CanvasWindowsIllustration />`.
+   - Preserve all surrounding copy, styling, and data attributes (`data-scroll-rise`, `data-scroll-grow`).
+   - Must drop the file size below 160 lines.
 
-3. `src/components/sections/BackendArchitecture.astro`:
-   - Lean orchestrator importing data from `@/data/backend-architecture` and topology component.
-   - Preserves all data attributes (`data-arch-canvas`, `data-preset`, `data-node`, `data-edge`, `data-metric`, `data-arch-tradeoff`) and interactive client script untouched.
-   - Resulting file size: < 220 lines.
+3. Testing & Verification Gate:
+   - Create unit/render test in `tests/unit/components/CanvasWindowsIllustration.test.ts` verifying the SVG contains expected titles, descriptions, and filters.
+   - Run `pnpm check` and `pnpm test` inside container.
+   - All tests must pass with 0 errors.
 
-## Acceptance Criteria
-- Vitest unit tests for `src/data/backend-architecture.ts` pass 100%.
-- `docker exec opposite-osiris pnpm check` passes with 0 errors.
-- `docker exec opposite-osiris pnpm test` passes with all suites green.
-- `http://localhost:4322/` interactive node toggles and metrics update work without regression.
-- Conventional atomic commits on branch `refactor/decompose-backend-architecture`.
+## Git Workflow
+- All work on branch `refactor/extract-canvas-windows-illustration`.
+- Atomic conventional commits:
+  - `feat(svg): extract CanvasWindowsIllustration component and add tests`
+  - `refactor(canvas-windows): delegate SVG rendering to CanvasWindowsIllustration`
