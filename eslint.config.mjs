@@ -14,6 +14,8 @@ import astro from 'eslint-plugin-astro';
 export default tseslint.config(
 	{
 		ignores: [
+			'vendor/',
+			'.agents/',
 			'dist/',
 			'.astro/',
 			'node_modules/',
