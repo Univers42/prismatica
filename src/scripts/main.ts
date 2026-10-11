@@ -120,6 +120,34 @@ function clearAccessToken(): void {
 	accessToken = null;
 }
 
+const authClient = useAuth();
+
+const mascotState: MascotState = {
+	targetX: 0,
+	targetY: 0,
+	targetHeadX: 0,
+	targetHeadY: 0,
+	depthX: 5,
+	depthY: 4,
+	eyeX: 0,
+	eyeY: 0,
+	headX: 0,
+	headY: 0,
+	lastPointerAngle: undefined,
+	orbitTravel: 0,
+	lastBrowLift: 0,
+	lastMove: Date.now(),
+	lockedUntil: 0,
+	idleMoodShown: false,
+	moodTimer: undefined,
+	heartTimer: undefined,
+	zTimer: undefined,
+	laughTimer: undefined,
+	frame: undefined,
+	previousFocus: null,
+	releaseFocusTrap: null,
+};
+
 /** Returns an element when it matches the expected runtime type. */
 /** Returns all elements matching the expected runtime type. */
 
