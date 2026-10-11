@@ -86,15 +86,15 @@ describe('dom-utils', () => {
 		});
 
 		it('trustedHTML uses trustedTypes policy when available', () => {
-			let policyCreated = false;
-			let htmlCreated = false;
+let _policyCreated = false;
+	let _htmlCreated = false;
 			
 			(globalThis as any).trustedTypes = {
-				createPolicy: (name: string, rules: any) => {
-					policyCreated = true;
+				createPolicy: (_name: string, _rules: any) => {
+					_policyCreated = true;
 					return {
 						createHTML: (input: string) => {
-							htmlCreated = true;
+							_htmlCreated = true;
 							return 'TRUSTED:' + input;
 						}
 					};

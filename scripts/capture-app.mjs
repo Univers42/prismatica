@@ -47,7 +47,7 @@ await shot("web-03-hero-full", { fullPage: true });
 
 /* ── Sign in ────────────────────────────────────────────────────────────── */
 log("sign-in:");
-let authed = false;
+let _authed = false;
 try {
   await page.evaluate(() => window.scrollTo(0, 0));
   await clickText("Sign in");
@@ -65,7 +65,7 @@ try {
     await page.locator(passSel).last().press("Enter").catch(() => {});
     await page.waitForTimeout(3500);
     await shot("web-06-after-signin");
-    authed = true;
+    _authed = true;
   }
 } catch (e) { log("    sign-in error: " + e.message); }
 

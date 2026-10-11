@@ -16,7 +16,7 @@ import { constants, accessSync, existsSync } from 'node:fs';
 import { connect } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ensureAuthGateway, isListening, stopAuthGateway } from './ensure-auth-gateway.mjs';
+import { ensureAuthGateway, stopAuthGateway } from './ensure-auth-gateway.mjs';
 
 const projectDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(projectDir, '../..');

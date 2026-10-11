@@ -1,27 +1,34 @@
-# TASK SPEC: Extract CanvasWindowsIllustration.astro (Lowest-Risk Refactor)
+# TASK SPEC: Quality Gates Remediation (Phases 1-3)
 
 ## Objective
-Decompose `src/components/sections/CanvasWindowsSection.astro` (273 lines) by extracting its embedded SVG graphic (lines 17–146) into a dedicated SVG component `src/components/svg/CanvasWindowsIllustration.astro`, aligning with the existing SVG architecture (`WorkspaceIllustration.astro`, `CharacterIllustration.astro`, `HeroPortalPreview.astro`).
+Fix the failing quality gates identified by `.agents/tools/quality.sh`:
+1. ESLint parsing and ignore configuration.
+2. Shell formatter (`shfmt`) and linter (`shellcheck`) in `.agents/tools/`.
+3. Quality script test gate alignment with containerized environment.
 
-## Architecture & Requirements
-1. Create `src/components/svg/CanvasWindowsIllustration.astro`:
-   - Must contain the entire `<svg class="canvas-windows__svg" viewBox="0 0 1100 640" ...>...</svg>` markup with its `<title>`, `<desc>`, `<defs>` (filters `canvas-wobble`, `canvas-wobble-tight`, pattern `canvas-dots`), and drawing paths.
-   - Preserves all accessibility attributes, roles, and IDs.
-   - Accepts optional class prop if needed.
+## Phase 1 — ESLint AST & Ignores
+1. `eslint.config.mjs`:
+   - Add `'vendor/'` and `'.agents/'` to `ignores` array.
+2. `src/components/svg/CanvasWindowsIllustration.astro`:
+   - Replace literal `widget = () =>` with `widget = () =&gt;` in line 137 to resolve JSX/Astro parse error.
+3. Fix unused variable warnings in scripts / tests:
+   - `scripts/capture-app.mjs`: prefix unused variable with `_` or remove.
+   - `scripts/dev-https.mjs`: remove unused import `isListening`.
+   - `src/pages/api/newsletter/subscribe.ts`: remove or prefix unused `error`.
+   - `tests/unit/data/backend-architecture.test.ts`: remove unused type imports `ServiceDef`, `Preset`.
+   - `tests/unit/lib/dom-utils.test.ts`: prefix or remove unused mock callback variables.
 
-2. Refactor `src/components/sections/CanvasWindowsSection.astro`:
-   - Import `CanvasWindowsIllustration` from `../svg/CanvasWindowsIllustration.astro`.
-   - Replace the embedded `<svg>` element inside `<figure class="canvas-windows__figure" data-scroll-grow>` with `<CanvasWindowsIllustration />`.
-   - Preserve all surrounding copy, styling, and data attributes (`data-scroll-rise`, `data-scroll-grow`).
-   - Must drop the file size below 160 lines.
+## Phase 2 — Quality Script Container Alignment
+1. `.agents/tools/quality.sh`:
+   - Update `g_npm_test` to run inside the dev container if container is running or use `pnpm test` rather than host `npm test`.
+   - Update `g_eslint` to invoke containerized linter or check `.astro` files with proper parser options.
 
-3. Testing & Verification Gate:
-   - Create unit/render test in `tests/unit/components/CanvasWindowsIllustration.test.ts` verifying the SVG contains expected titles, descriptions, and filters.
-   - Run `pnpm check` and `pnpm test` inside container.
-   - All tests must pass with 0 errors.
+## Phase 3 — Shell Script Formatting & Linting
+1. Format `.agents/tools/*.sh` and `.agents/tools/lib/*.sh` using `shfmt -w`.
+2. Fix any `shellcheck` warnings (quote expansions, command checks).
 
-## Git Workflow
-- All work on branch `refactor/extract-canvas-windows-illustration`.
-- Atomic conventional commits:
-  - `feat(svg): extract CanvasWindowsIllustration component and add tests`
-  - `refactor(canvas-windows): delegate SVG rendering to CanvasWindowsIllustration`
+## Acceptance Criteria
+- `pnpm lint` in container (`docker exec opposite-osiris pnpm lint`) exits 0 with 0 errors.
+- `docker exec opposite-osiris pnpm test` exits 0 with all 17 test suites (80 tests) green.
+- `.agents/tools/quality.sh --no-audit --with-tests` exits 0 with PASS across lint, format, types, and tests.
+- Conventional atomic commits on branch `fix/quality-gates`.

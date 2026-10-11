@@ -5,8 +5,6 @@ import {
 	EDGES,
 	NODE_POSITIONS,
 	getNodeCenter,
-	type ServiceDef,
-	type Preset,
 } from '../../../src/data/backend-architecture';
 
 describe('Backend Architecture Data', () => {
