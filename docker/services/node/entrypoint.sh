@@ -27,33 +27,36 @@ SDK_STAMP="$SDK_STAMP_DIR/pnpm-deps.sha256"
 # Once pnpm-lock.yaml is committed these blocks become a no-op.
 # ---------------------------------------------------------------------------
 if [ ! -f "$SDK_DIR/pnpm-lock.yaml" ] && [ -f "$SDK_DIR/package-lock.json" ]; then
-  echo "[entrypoint] Migrating SDK lock file: package-lock.json → pnpm-lock.yaml ..."
-  (cd "$SDK_DIR" && pnpm import)
+	echo "[entrypoint] Migrating SDK lock file: package-lock.json → pnpm-lock.yaml ..."
+	(cd "$SDK_DIR" && pnpm import)
 fi
 
 if [ ! -f "$APP_DIR/pnpm-lock.yaml" ] && [ -f "$APP_DIR/package-lock.json" ]; then
-  echo "[entrypoint] Migrating app lock file: package-lock.json → pnpm-lock.yaml ..."
-  (cd "$APP_DIR" && pnpm import)
+	echo "[entrypoint] Migrating app lock file: package-lock.json → pnpm-lock.yaml ..."
+	(cd "$APP_DIR" && pnpm import)
 fi
 
 # ---------------------------------------------------------------------------
 # SDK: install + build when sources or lock file change
 # ---------------------------------------------------------------------------
-sdk_hash="$({ find "$SDK_DIR/src" -type f | sort | while IFS= read -r file; do sha256sum "$file"; done; cat "$SDK_DIR/package.json" "$SDK_DIR/pnpm-lock.yaml" "$SDK_DIR/tsconfig.json"; } | sha256sum | awk '{print $1}')"
+sdk_hash="$({
+	find "$SDK_DIR/src" -type f | sort | while IFS= read -r file; do sha256sum "$file"; done
+	cat "$SDK_DIR/package.json" "$SDK_DIR/pnpm-lock.yaml" "$SDK_DIR/tsconfig.json"
+} | sha256sum | awk '{print $1}')"
 sdk_cached_hash=""
 
 if [ -f "$SDK_STAMP" ]; then
-  sdk_cached_hash="$(cat "$SDK_STAMP")"
+	sdk_cached_hash="$(cat "$SDK_STAMP")"
 fi
 
 if [ ! -d "$SDK_DIR/node_modules" ] || [ "$sdk_cached_hash" != "$sdk_hash" ]; then
-  echo "[entrypoint] Installing mini-baas SDK dependencies in Docker volume..."
-  (cd "$SDK_DIR" && pnpm install --frozen-lockfile --ignore-scripts && pnpm run build)
-  mkdir -p "$SDK_STAMP_DIR"
-  printf '%s' "$sdk_hash" > "$SDK_STAMP"
-  echo "[entrypoint] SDK dependencies ready."
+	echo "[entrypoint] Installing mini-baas SDK dependencies in Docker volume..."
+	(cd "$SDK_DIR" && pnpm install --frozen-lockfile --ignore-scripts && pnpm run build)
+	mkdir -p "$SDK_STAMP_DIR"
+	printf '%s' "$sdk_hash" >"$SDK_STAMP"
+	echo "[entrypoint] SDK dependencies ready."
 else
-  echo "[entrypoint] SDK dependencies up to date."
+	echo "[entrypoint] SDK dependencies up to date."
 fi
 
 # ---------------------------------------------------------------------------
@@ -61,21 +64,24 @@ fi
 # ---------------------------------------------------------------------------
 cd "$APP_DIR"
 
-current_hash="$({ cat package.json pnpm-lock.yaml ../../apps/baas/sdk/package.json ../../apps/baas/sdk/pnpm-lock.yaml; printf '%s' "$sdk_hash"; } | sha256sum | awk '{print $1}')"
+current_hash="$({
+	cat package.json pnpm-lock.yaml ../../apps/baas/sdk/package.json ../../apps/baas/sdk/pnpm-lock.yaml
+	printf '%s' "$sdk_hash"
+} | sha256sum | awk '{print $1}')"
 cached_hash=""
 
 if [ -f "$STAMP" ]; then
-  cached_hash="$(cat "$STAMP")"
+	cached_hash="$(cat "$STAMP")"
 fi
 
 if [ ! -d node_modules ] || [ "$cached_hash" != "$current_hash" ]; then
-  echo "[entrypoint] Installing opposite-osiris dependencies in Docker volume..."
-  pnpm install --frozen-lockfile --ignore-scripts
-  mkdir -p "$STAMP_DIR"
-  printf '%s' "$current_hash" > "$STAMP"
-  echo "[entrypoint] Dependencies ready."
+	echo "[entrypoint] Installing opposite-osiris dependencies in Docker volume..."
+	pnpm install --frozen-lockfile --ignore-scripts
+	mkdir -p "$STAMP_DIR"
+	printf '%s' "$current_hash" >"$STAMP"
+	echo "[entrypoint] Dependencies ready."
 else
-  echo "[entrypoint] Dependencies up to date."
+	echo "[entrypoint] Dependencies up to date."
 fi
 
 exec "$@"
