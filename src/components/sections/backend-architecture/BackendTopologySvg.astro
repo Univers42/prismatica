@@ -1,0 +1,64 @@
+---
+import {
+	type ServiceDef,
+	type NodePosition,
+	getNodeCenter,
+} from '../../../data/backend-architecture';
+
+interface Props {
+	services: ServiceDef[];
+	edges: Array<[string, string]>;
+	positions: Record<string, NodePosition>;
+}
+
+const { services, edges, positions } = Astro.props;
+---
+
+<svg viewBox="0 0 1020 600" role="img" aria-label="Interactive backend architecture diagram" class="backend-arch__svg" data-arch-svg>
+	<defs>
+		<marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+			<path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+		</marker>
+	</defs>
+
+	<g data-arch-edges>
+		{edges.map(([from, to]) => {
+			const a = getNodeCenter(from);
+			const b = getNodeCenter(to);
+			return (
+				<line
+					class="arch-edge"
+					data-edge={`${from}->${to}`}
+					data-from={from}
+					data-to={to}
+					x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy}
+					marker-end="url(#arch-arrow)"
+				/>
+			);
+		})}
+	</g>
+
+	<g data-arch-nodes>
+		{services.map((svc) => {
+			const p = positions[svc.id] ?? { x: 0, y: 0, w: 100, h: 50 };
+			return (
+				<g
+					class={`arch-node arch-node--${svc.category}`}
+					data-node={svc.id}
+					data-category={svc.category}
+					data-required={svc.required ? 'true' : undefined}
+					transform={`translate(${p.x} ${p.y})`}
+					role="button"
+					tabindex="0"
+					aria-label={`${svc.name}${svc.required ? ' (required)' : ''} — ${svc.desc}`}
+				>
+					<title>{`${svc.name}${svc.required ? ' (required)' : ''} — ${svc.desc}`}</title>
+					<rect class="arch-node__bg" width={p.w} height={p.h} rx="14" />
+					<circle class="arch-node__dot" cx={p.w - 18} cy={18} r="6" />
+					<text class="arch-node__title" x={p.w / 2} y={p.h / 2 - 4} text-anchor="middle">{svc.name}</text>
+					<text class="arch-node__category" x={p.w / 2} y={p.h / 2 + 16} text-anchor="middle">{svc.category}{svc.required ? ' · required' : ''}</text>
+				</g>
+			);
+		})}
+	</g>
+</svg>
