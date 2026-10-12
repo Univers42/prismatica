@@ -20,6 +20,12 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # nginx builds an absolute Location from its own listen port: `return 301 /docs/` and
+    # the directory slash redirect sent browsers to http://localhost:8080/docs/, a port only
+    # this container listens on (groot, 2026-10-12). A relative Location keeps the
+    # scheme, host and port the browser used, whatever proxy or port mapping sits in front.
+    absolute_redirect off;
+
     # Transport / clickjacking / sniffing defenses. The app emits its own strict
     # CSP via <meta>; frame-ancestors only works as an HTTP header, so we add it
     # here (matches infrastructure/tls/nginx.conf). `always` covers error bodies.
