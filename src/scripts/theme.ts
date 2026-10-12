@@ -109,4 +109,4 @@ function announce(message: string): void {
 }
 
 /* exports */
-export { initialTheme, applyTheme, cycleTheme, applyMotionPreference, bindThemeControls, MOTION_KEY, THEME_KEY, announce };
+export { initialTheme, applyTheme, cycleTheme, applyMotionPreference, bindThemeControls, MOTION_KEY, THEME_KEY, announce, ensureButtonLabels };
