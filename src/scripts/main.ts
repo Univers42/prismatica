@@ -1564,6 +1564,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 	const message = humanAuthMessage(authenticated.message);
 	if (!authenticated.ok) {
 		if (authenticated.status === 429) {
+			console.warn(`[portal] sign-in refused: HTTP 429 — ${message}`);
 			notifyWithMascot({
 				kind: 'warning',
 				title: 'Too many attempts',
@@ -1582,6 +1583,9 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			return;
 		}
 		if (authenticated.status === 422 || authenticated.status === 400 || authenticated.status === 401) {
+			console.warn(authenticated.status === 401
+				? `[portal] sign-in refused: the auth service checked the password for ${elements.email.value.trim()} and rejected it (HTTP 401)`
+				: `[portal] sign-in refused before the password was checked: HTTP ${authenticated.status} — ${message}`);
 			notifyWithMascot({
 				kind: 'error',
 				title: 'Incorrect email or password',
