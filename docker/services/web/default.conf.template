@@ -82,6 +82,23 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         try_files $uri =404;
     }
+    # ---- Docs redirects and routing ----------------------------------------
+    location = /docs {
+        return 301 /docs/;
+    }
+    location = /docs/quickstart {
+        return 302 /docs/#guides/getting-started;
+    }
+    location = /docs/auth {
+        return 302 /docs/#desktop/authentication-and-sessions;
+    }
+    location = /docs/postgrest {
+        return 302 /docs/#backend/kong-api-gateway;
+    }
+    location = /docs/gdpr {
+        return 302 /docs/#platform/gdpr-auth-security-migrations;
+    }
+
     location / {
         try_files $uri $uri/index.html $uri/ =404;
     }
