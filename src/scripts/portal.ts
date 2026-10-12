@@ -639,21 +639,142 @@ function setPortalSubmitBusy(button: HTMLButtonElement | null, busy: boolean, is
 
 async function processPortalRegistration(elements: PortalFormElements, turnstileToken: string): Promise<void> {
 	const result = await authClient.register({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken, profile: portalRegistrationProfile(elements) });
-	if (result.ok && result.accessToken) {
-		setAccessToken(result.accessToken);
-		notifyWithMascot({ kind: 'success', title: 'Welcome to Prismatica!', message: 'Your workspace account has been created.' });
-		globalThis.setTimeout(() => closePortal(), 1200);
+	const message = humanAuthMessage(result.message);
+	if (result.ok) {
+		if (result.accessToken) {
+			setAccessToken(result.accessToken);
+			await syncStoredConsents(result.accessToken, elements.email.value.trim());
+		}
+		notifyWithMascot({
+			kind: 'success',
+			title: 'Welcome to Prismatica!',
+			message: authConfig.requireEmailVerification
+				? 'Your workspace account has been created. Check your inbox for the verification link.'
+				: 'Your local workspace account is ready.',
+			duration: 6000,
+		});
+		setMountedMascotMood('excited', 2000);
+		announce(authConfig.requireEmailVerification ? 'Account created. Check your email before signing in.' : 'Development account created. You can sign in now.');
+		globalThis.setTimeout(() => closePortal(), 1500);
+		return;
 	}
+	if (result.status === 429) {
+		notifyWithMascot({
+			kind: 'warning',
+			title: 'Too many attempts',
+			message: 'You have been temporarily blocked. Please wait a few minutes.',
+			duration: 9000,
+		});
+		return;
+	}
+	if (result.status === 422 && messageMentions(message, 'user already registered', 'already registered', 'already exists')) {
+		notifyWithMascot({
+			kind: 'info',
+			title: 'Account already exists',
+			message: 'An account with this email already exists. Try signing in instead.',
+			duration: 6000,
+		});
+		return;
+	}
+	if (result.status === 409 || messageMentions(message, 'already registered', 'already taken', 'unique')) {
+		notifyWithMascot({
+			kind: 'warning',
+			title: 'Choose another identity',
+			message,
+			duration: 7000,
+		});
+		return;
+	}
+	notifyWithMascot({
+		kind: 'error',
+		title: 'Registration failed',
+		message,
+		duration: 8000,
+	});
+	announce('Registration failed. Check the form and try again.');
 }
 
 async function processPortalLogin(elements: PortalFormElements, turnstileToken: string): Promise<void> {
 	const authenticated = await authClient.signIn({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken });
+	const message = humanAuthMessage(authenticated.message);
+	if (!authenticated.ok) {
+		if (authenticated.status === 429) {
+			console.warn(`[portal] sign-in refused: HTTP 429 — ${message}`);
+			notifyWithMascot({
+				kind: 'warning',
+				title: 'Too many attempts',
+				message: 'You have been temporarily blocked. Please wait a few minutes.',
+				duration: 9000,
+			});
+			return;
+		}
+		if (messageMentions(message, 'email not confirmed', 'not confirmed', 'confirm your email')) {
+			notifyWithMascot({
+				kind: 'warning',
+				title: 'Email not confirmed',
+				message: 'Please check your inbox and click the confirmation link first.',
+				duration: 9000,
+			});
+			return;
+		}
+		if (authenticated.status === 422 || authenticated.status === 400 || authenticated.status === 401) {
+			console.warn(authenticated.status === 401
+				? `[portal] sign-in refused: the auth service checked the password for ${elements.email.value.trim()} and rejected it (HTTP 401)`
+				: `[portal] sign-in refused before the password was checked: HTTP ${authenticated.status} — ${message}`);
+			notifyWithMascot({
+				kind: 'error',
+				title: 'Incorrect email or password',
+				message: 'Double-check your credentials and try again.',
+				duration: 8000,
+			});
+			setMountedMascotMood('scared', 1200);
+			announce('Incorrect email or password.');
+			return;
+		}
+		console.error(`[portal] sign-in failed before the password was checked: HTTP ${authenticated.status} — ${message}`);
+		notifyWithMascot({
+			kind: 'error',
+			title: 'Connection failed',
+			message,
+			duration: 8000,
+		});
+		return;
+	}
 	if (authenticated.accessToken) {
 		setAccessToken(authenticated.accessToken);
 		await syncStoredConsents(authenticated.accessToken, elements.email.value.trim());
-		notifyWithMascot({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
-		globalThis.setTimeout(() => closePortal(), 1200);
 	}
+	const osionosBridge = authenticated.accessToken
+		? await authClient.osionosSession(authenticated.accessToken).catch(() => null)
+		: null;
+	if (osionosBridge?.ok && osionosBridge.redirectUrl) {
+		const redirectUrl = osionosBridge.redirectUrl;
+		if (!isTrustedOsionosRedirect(redirectUrl)) {
+			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
+			notifyWithMascot({
+				kind: 'error',
+				title: 'Workspace redirect blocked',
+				message: 'The osionos workspace link did not match the expected app origin.',
+				duration: 8000,
+			});
+			announce('Workspace redirect blocked for safety.');
+			return;
+		}
+		notifyWithMascot({
+			kind: 'success',
+			title: 'Opening osionos',
+			message: 'Your private osionos workspace is ready.',
+			duration: 2500,
+		});
+		setMountedMascotMood('happy', 1800);
+		announce('Opening your osionos workspace.');
+		globalThis.setTimeout(() => {
+			globalThis.location.assign(redirectUrl);
+		}, 700);
+		return;
+	}
+	notifyWithMascot({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
+	globalThis.setTimeout(() => closePortal(), 1200);
 }
 
 async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElements): Promise<void> {

@@ -73,13 +73,17 @@ function applyMotionPreference(paused: boolean): void {
 	announce(paused ? 'Animations paused' : 'Animations resumed');
 }
 
-/** Ensures every button has an accessible name, even if a future edit forgets one. */
+/**
+ * Ensures every button has an accessible name, even if a future edit forgets one. A button
+ * with text is already named by it; copying that text into aria-label would freeze the name
+ * while the text changes (the portal submit kept announcing "Sign in securely" in create mode).
+ */
 function ensureButtonLabels(): void {
 	queryElements('button', (element): element is HTMLButtonElement => element instanceof HTMLButtonElement).forEach((button) => {
-		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby')) {
+		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby') || (button.textContent ?? '').trim()) {
 			return;
 		}
-		const label = (button.textContent ?? '').replaceAll(/\s+/g, ' ').trim() || button.title.trim();
+		const label = button.title.trim();
 		if (label) {
 			button.setAttribute('aria-label', label);
 		}

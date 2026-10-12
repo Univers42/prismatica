@@ -63,6 +63,13 @@ export default defineConfig({
 	site: env.PUBLIC_SITE_URL ?? 'https://localhost:4322',
 	integrations: [sitemap()],
 	devToolbar: { enabled: false },
+	redirects: {
+		'/docs': '/docs/',
+		'/docs/quickstart': '/docs/#guides/getting-started',
+		'/docs/auth': '/docs/#desktop/authentication-and-sessions',
+		'/docs/postgrest': '/docs/#backend/kong-api-gateway',
+		'/docs/gdpr': '/docs/#platform/gdpr-auth-security-migrations',
+	},
 	// Inline all page CSS into <style> tags instead of render-blocking <link>s.
 	// On the landing page this removes two critical-path round-trips (~1.2s of
 	// blocked FCP under mobile throttling). Astro's security.csp auto-hashes the
