@@ -18,13 +18,14 @@ import { readStorage, writeStorage } from '../lib/storage';
 /* ************************************************************************** */
 
 import { type ThemeName, THEMES, normalizeTheme, themeDisplayName, themeIcon } from '../lib/theme-config';
+import { type ConsentPreferences, storeConsentPreferences, readConsentPreferences, bindConsentBanner } from './consent';
 import './premium';
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls } from './theme';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
 import { authConfig } from '../lib/auth-config';
 import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validateEmail, validatePassword } from '../hooks/useAuth';
-import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
+import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { type NotificationKind, type NotificationOptions, dismissAll, notify } from './notifications';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
 
@@ -56,14 +57,6 @@ type MascotState = {
 	frame: number | undefined;
 	previousFocus: HTMLElement | null;
 	releaseFocusTrap: (() => void) | null;
-};
-
-type ConsentPreferences = {
-	analytics: boolean;
-	newsletter: boolean;
-	marketing: boolean;
-	policyVersion: string;
-	savedAt: string;
 };
 
 type TurnstileApi = {
@@ -367,30 +360,6 @@ async function requestNewsletterSubscription(email: string): Promise<AuthResult>
 		status: response.status,
 		message: payload.message ?? payload.error ?? (response.ok ? 'Check your inbox to confirm your subscription.' : 'Could not send the newsletter confirmation email.'),
 	};
-}
-
-/** Persists consent preferences locally when no user token exists yet. */
-function storeConsentPreferences(preferences: Omit<ConsentPreferences, 'policyVersion' | 'savedAt'>): ConsentPreferences {
-	const record: ConsentPreferences = {
-		...preferences,
-		policyVersion: POLICY_VERSION,
-		savedAt: new Date().toISOString(),
-	};
-	writeStorage(CONSENT_STORAGE_KEY, JSON.stringify(record));
-	return record;
-}
-
-/** Reads locally stored consent preferences. */
-function readConsentPreferences(): ConsentPreferences | null {
-	const raw = readStorage(CONSENT_STORAGE_KEY);
-	if (!raw) {
-		return null;
-	}
-	try {
-		return JSON.parse(raw) as ConsentPreferences;
-	} catch {
-		return null;
-	}
 }
 
 /** Synchronises locally stored newsletter consent after login when possible. */
@@ -1891,56 +1860,6 @@ function openPortal(mode: PortalMode): void {
 	queryElement('#portal-email', isInput)?.focus();
 }
 
-/** Installs the consent banner controls. */
-function bindConsentBanner(): void {
-	const banner = queryElement('[data-consent-banner]', isHtmlElement);
-	if (!banner) {
-		return;
-	}
-	const form = banner.querySelector('[data-consent-form]');
-	const manageButton = banner.querySelector('[data-consent-manage]');
-	const acceptAll = banner.querySelector('[data-consent-accept-all]');
-	const rejectAll = banner.querySelector('[data-consent-reject-all]');
-	const showBanner = (): void => banner.removeAttribute('hidden');
-	const hideBanner = (): void => banner.setAttribute('hidden', '');
-	const save = (analytics: boolean, newsletter: boolean, marketing: boolean): void => {
-		storeConsentPreferences({ analytics, newsletter, marketing });
-		hideBanner();
-		announce('Consent preferences saved.');
-	};
-
-	if (!readConsentPreferences()) {
-		showBanner();
-	}
-
-	queryElements('[data-manage-cookies]', isButton).forEach((button) => button.addEventListener('click', () => {
-		showBanner();
-		banner.focus({ preventScroll: false });
-	}));
-
-	if (manageButton instanceof HTMLButtonElement && form instanceof HTMLFormElement) {
-		manageButton.addEventListener('click', () => {
-			const isExpanded = manageButton.getAttribute('aria-expanded') === 'true';
-			manageButton.setAttribute('aria-expanded', String(!isExpanded));
-			form.hidden = isExpanded;
-		});
-
-		form.addEventListener('submit', (event) => {
-			event.preventDefault();
-			const analytics = form.elements.namedItem('analytics');
-			const newsletter = form.elements.namedItem('newsletter');
-			const marketing = form.elements.namedItem('marketing');
-			save(
-				analytics instanceof HTMLInputElement && analytics.checked,
-				newsletter instanceof HTMLInputElement && newsletter.checked,
-				marketing instanceof HTMLInputElement && marketing.checked,
-			);
-		});
-	}
-
-	acceptAll?.addEventListener('click', () => save(true, true, true));
-	rejectAll?.addEventListener('click', () => save(false, false, false));
-}
 
 /** Installs newsletter opt-in form handlers. */
 function bindNewsletterSignup(): void {
