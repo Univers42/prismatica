@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: 🧪 Quality Gate
+    runs-on: ubuntu-latest
+    container: node:22-alpine
+    env:
+      TRACK_BINOCLE_IN_DOCKER: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install
+        run: |
+          corepack enable && corepack prepare pnpm@11.5.1 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        run: node_modules/.bin/astro check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Lint
+        run: pnpm lint
