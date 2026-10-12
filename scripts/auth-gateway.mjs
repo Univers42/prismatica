@@ -21,6 +21,7 @@ import tls from 'node:tls';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
+import { classifyLoginFailure } from './auth/login-failure.mjs';
 import { createStore } from './auth/store.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
@@ -894,11 +895,24 @@ async function handleLogin(request, response) {
 		const lockRemainingMs = await store.pttl(lockKey);
 		if (lockRemainingMs > 0) {
 			await audit('login_locked', request, { email, ip });
+			console.warn(`[auth-gateway] login: ${email} is locked out for ${Math.ceil(lockRemainingMs / 1000)}s more; the password was not checked`);
 			json(response, 429, { message: 'Too many failed attempts for this account. Try again later or reset your password.' }, { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) });
 			return;
 		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
+		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status);
+		if (failure === 'rate-limited') {
+			json(response, 429, { message: 'Too many sign-in attempts reached the auth service. Wait a minute and try again.' });
+			return;
+		}
+		if (failure === 'upstream') {
+			// The password was never checked: no lockout count, no failed-login alert, and an
+			// answer that does not depend on the email, so nothing about the account leaks.
+			console.error(`[auth-gateway] login: the auth service at ${config.baasUrl} answered HTTP ${result.response.status} ${result.response.statusText}; the password was not checked`);
+			json(response, 502, { message: `The sign-in service is unreachable or misconfigured (HTTP ${result.response.status}). Your password was not checked.` });
+			return;
+		}
 		if (!result.response.ok) {
 			const failures = await store.incrWithTtl(failKey, config.loginLockoutWindowSec);
 			if (failures >= config.loginLockoutThreshold) {
@@ -913,7 +927,9 @@ async function handleLogin(request, response) {
 				});
 			}
 			// Generic message and fixed 401 — never leak whether the email exists,
-			// the lockout counter, or GoTrue internals to an unauthenticated caller.
+			// the lockout counter, or GoTrue internals to an unauthenticated caller. The operator's
+			// log says what the caller may not: the password WAS checked, for which account.
+			console.warn(`[auth-gateway] login: the auth service rejected the password for ${email} (HTTP ${result.response.status}; ${failures}/${config.loginLockoutThreshold} before a ${config.loginLockoutSec}s lockout)`);
 			json(response, 401, { message: 'Invalid credentials.' });
 			return;
 		}
