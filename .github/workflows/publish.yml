@@ -35,9 +35,27 @@ env:
   IMAGE_PREFIX: ghcr.io/univers42
 
 jobs:
+  test-gate:
+    name: 🧪 Run Test Gate
+    runs-on: ubuntu-latest
+    container: node:22-alpine
+    env:
+      TRACK_BINOCLE_IN_DOCKER: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: |
+          corepack enable && corepack prepare pnpm@11.5.1 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck
+        run: node_modules/.bin/astro check
+      - name: Test
+        run: pnpm test
+
   build-web:
     name: 🐳 Build web (opposite-osiris)
     runs-on: ubuntu-latest
+    needs: [test-gate]
     steps:
       - name: Checkout into apps/opposite-osiris
         uses: actions/checkout@v4
@@ -76,6 +94,7 @@ jobs:
   build-auth-gateway:
     name: 🐳 Build auth-gateway
     runs-on: ubuntu-latest
+    needs: [test-gate]
     steps:
       - name: Checkout into apps/opposite-osiris
         uses: actions/checkout@v4
