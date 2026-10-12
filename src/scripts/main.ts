@@ -22,7 +22,7 @@ import './premium';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient, fetchSeededUsers } from '../lib/baas-client';
 import { authConfig } from '../lib/auth-config';
-import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validateEmail, validatePassword } from '../hooks/useAuth';
+import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
 import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { type NotificationKind, type NotificationOptions, dismissAll, notify } from './notifications';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
@@ -268,13 +268,17 @@ function applyMotionPreference(paused: boolean): void {
 	announce(paused ? 'Animations paused' : 'Animations resumed');
 }
 
-/** Ensures every button has an accessible name, even if a future edit forgets one. */
+/**
+ * Ensures every button has an accessible name, even if a future edit forgets one. A button
+ * with text is already named by it; copying that text into aria-label would freeze the name
+ * while the text changes (the portal submit kept announcing "Sign in securely" in create mode).
+ */
 function ensureButtonLabels(): void {
 	queryElements('button', (element): element is HTMLButtonElement => element instanceof HTMLButtonElement).forEach((button) => {
-		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby')) {
+		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby') || (button.textContent ?? '').trim()) {
 			return;
 		}
-		const label = (button.textContent ?? '').replaceAll(/\s+/g, ' ').trim() || button.title.trim();
+		const label = button.title.trim();
 		if (label) {
 			button.setAttribute('aria-label', label);
 		}

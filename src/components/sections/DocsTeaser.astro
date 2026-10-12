@@ -4,10 +4,10 @@ import Card from '../ui/Card.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
 
 const links = [
-	{ href: '/docs/quickstart', kind: 'quickstart' },
-	{ href: '/docs/auth',       kind: 'auth' },
-	{ href: '/docs/postgrest',  kind: 'postgrest' },
-	{ href: '/docs/gdpr',       kind: 'gdpr' },
+	{ href: '/docs/#guides/getting-started',                kind: 'quickstart' },
+	{ href: '/docs/#desktop/authentication-and-sessions',   kind: 'auth' },
+	{ href: '/docs/#backend/kong-api-gateway',              kind: 'postgrest' },
+	{ href: '/docs/#platform/gdpr-auth-security-migrations', kind: 'gdpr' },
 ];
 ---
 
@@ -19,7 +19,7 @@ const links = [
 			<p class="section__lede docs-teaser__lede">
 				Every endpoint typed. Every recipe runnable. Every page versioned.
 			</p>
-			<Button variant="primary" size="lg" href="/docs">Open the docs</Button>
+			<Button variant="primary" size="lg" href="/docs/">Open the docs</Button>
 		</div>
 
 		<div class="docs-teaser__panel" data-scroll-grow>
