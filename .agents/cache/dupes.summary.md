@@ -1,8 +1,8 @@
 ## Duplication (window=6)
-- 66 repeated block(s) — extraction candidates for the project library
-- ×2 `/home/serjimen/prismatica/vendor/grobase-js/lib/types.d.ts:430` — event_types?: string[];
-- ×2 `/home/serjimen/prismatica/vendor/grobase-js/lib/index.d.ts:8` — import { WebhooksClient } from './domains/webhoo
-- ×2 `/home/serjimen/prismatica/vendor/grobase-js/lib/index.d.ts:7` — import { TxnClient } from './domains/txn.js';
-- ×2 `/home/serjimen/prismatica/vendor/grobase-js/lib/index.d.ts:6` — import { StorageClient } from './domains/storage
-- ×2 `/home/serjimen/prismatica/vendor/grobase-js/lib/index.d.ts:5` — import { SchemaClient } from './domains/schema.j
+- 82 repeated block(s) — extraction candidates for the project library
+- ×3 `/home/sergio/vscode/ft_trascendence/prismatica/.agents/tools/codemap.sh:9` — DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pw
+- ×3 `/home/sergio/vscode/ft_trascendence/prismatica/.agents/tools/codemap.sh:8` — set -euo pipefail
+- ×3 `/home/sergio/vscode/ft_trascendence/prismatica/.agents/tools/codemap.sh:11` — . "$DIR/lib/common.sh"
+- ×3 `/home/sergio/vscode/ft_trascendence/prismatica/.agents/tools/codemap.sh:10` — # shellcheck source=lib/common.sh
+- ×2 `/home/sergio/vscode/ft_trascendence/prismatica/vendor/grobase-js/lib/types.d.ts:430` — event_types?: string[];
 - full list: `.agents/tools/dupes.sh`
