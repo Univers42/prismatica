@@ -1,69 +1,94 @@
-# TASK SPEC: CI/CD Test Gate Enforcement & Deployment Protection
+# TASK SPEC: Prismatica Client Runtime Decomposition & Dead Scaffolding Removal
 
-## Objective
-Update GitHub Actions CI/CD workflows so that:
-1. Every Pull Request and push to `main` and `develop` must run and pass the full unit/integration test suite (`pnpm test`), typechecks (`pnpm check`), and linting (`pnpm lint`).
-2. The publication workflow (`.github/workflows/publish.yml`) MUST NOT publish Docker images to `ghcr.io` if tests or checks fail (`needs: [test-gate]`).
-3. If any test or check fails, the CI/CD pipeline immediately fails (exit code 1) and blocks the deploy.
-Current branch: `ci/test-enforcement-gate` (branched from `develop`).
+## Context & Objectives
+Prismatica is an Astro-based platform with client-side interactive widgets.
+The client scripts currently have two critical architectural flaws:
+1. `src/features/` contains empty, speculative placeholder directories (`baas-status`, `consent`, `mascot`, `portal`, `theme`) that are completely unused (0 imports across the codebase). They constitute over-engineering and must be removed.
+2. `src/scripts/main.ts` is a 2,172 LOC monolith containing mascot physics, auth modal form validation, theme toggling, GDPR consent banner, and duplicate runtime HTML template strings (`createPortalMarkup`).
+3. `<dialog id="portal">` is already authored in `src/components/ui/Portal.astro`, but `main.ts` still generates duplicate HTML strings via `createPortalMarkup(mode)` and injects them via `insertTrustedHTML`.
 
-## Constraints & Requirements
-1. **Never commit directly to `main`**. All work stays on branch `ci/test-enforcement-gate`.
-2. **Atomic Conventional Commits**: Create atomic commits for each phase.
-3. **Container Environment Contract**: In all GitHub Actions jobs, set `env: TRACK_BINOCLE_IN_DOCKER: "1"` so `scripts/container-only.mjs` executes cleanly in CI.
-4. **All Tests Green**: All 114 tests, typecheck (0 errors, 0 warnings), and quality gates must remain 100% green.
-5. **Node & pnpm Alignment**: Node 22 (`node:22-alpine` or `actions/setup-node` with node 22), pnpm 11.5.1 via Corepack.
+Current branch: `refactor/scripts-cleanup` (branched from `develop`).
+
+---
+
+## Non-Negotiable Constraints
+1. **Branch Discipline**: Work ONLY on branch `refactor/scripts-cleanup`. NEVER switch branches or commit to `main`/`develop`.
+2. **Git Commits**: Author every commit as:
+   - Name: `DJSurgeon`
+   - Email: `djsurgeon83@gmail.com`
+   Run:
+   ```bash
+   git config user.name "DJSurgeon"
+   git config user.email "djsurgeon83@gmail.com"
+   ```
+   Use atomic Conventional Commits (`refactor(...)`, `test(...)`, `chore(...)`).
+3. **No Breaking Changes**: All public user-facing behavior, keyboard navigation, a11y attributes, ARIA live regions, and event listeners MUST continue working identically.
+4. **Zero Errors & Zero Warnings**:
+   - `node_modules/.bin/astro check` MUST exit 0 with 0 errors and 0 warnings.
+   - `pnpm test` MUST pass 100% of tests (current: 114 tests passing).
+5. **No File Exceeds 300 LOC**: Split modules so that logic is cohesive and files stay maintainable (or as lean as practically possible without artificial splits).
 
 ---
 
 ## Phased Execution Plan
 
-### Phase 1: Comprehensive CI Workflow
-Update or replace `.github/workflows/typecheck.yml` with `.github/workflows/ci.yml`:
-1. Triggers:
-   ```yaml
-   on:
-     pull_request:
-     push:
-       branches: [main, develop]
-   ```
-2. Jobs:
-   - `quality-gate`:
-     - Container or runner with Node 22 and `TRACK_BINOCLE_IN_DOCKER: "1"`.
-     - Install dependencies with pnpm 11.5.1 (`pnpm install --frozen-lockfile --ignore-scripts`).
-     - Step 1: Typecheck (`node_modules/.bin/astro check`).
-     - Step 2: Unit & Integration Tests (`pnpm test`).
-     - Step 3: Lint (`pnpm lint`).
+### Phase 1: Prune Unused Scaffolding
+1. Remove the dead `src/features/` directory (`rm -rf src/features`).
+2. Verify with `git status` that only empty/unused dummy files are removed.
 3. Commit:
-   `ci: add comprehensive test, typecheck, and lint gate workflow`
+   `chore(cleanup): remove unused speculative features scaffolding`
 
-### Phase 2: Deployment Gate in Publish Workflow
-Update `.github/workflows/publish.yml`:
-1. Add a preliminary `test-gate` job that executes tests and typechecks before any image build.
-   ```yaml
-   jobs:
-     test-gate:
-       name: 🧪 Run Test Gate
-       runs-on: ubuntu-latest
-       container: node:22-alpine
-       env:
-         TRACK_BINOCLE_IN_DOCKER: "1"
-       steps:
-         - uses: actions/checkout@v4
-         - name: Install
-           run: |
-             corepack enable && corepack prepare pnpm@11.5.1 --activate
-             pnpm install --frozen-lockfile --ignore-scripts
-         - name: Typecheck
-           run: node_modules/.bin/astro check
-         - name: Test
-           run: pnpm test
-   ```
-2. Add `needs: [test-gate]` to both `build-web` and `build-auth-gateway` jobs.
+### Phase 2: Extract Theme & Motion Preference Module (`src/scripts/theme.ts`)
+1. Create `src/scripts/theme.ts`:
+   - Exports: `initialTheme`, `updateThemeButton`, `applyTheme`, `cycleTheme`, `updateMotionButton`, `applyMotionPreference`, `bindThemeControls`.
+   - Use existing `src/lib/theme-config.ts` and `src/lib/dom-utils.ts`.
+2. Ensure types (`ThemeName`, etc.) are cleanly imported.
+3. Add unit tests for `src/scripts/theme.ts` in `tests/unit/scripts/theme.test.ts` (testing initial preference detection, cycleTheme, storage sync).
+4. Update `src/scripts/main.ts` to import and call `bindThemeControls` / theme functions.
+5. Verify `astro check` and `pnpm test`.
+6. Commit:
+   `refactor(scripts): extract theme and motion preferences to theme.ts`
+
+### Phase 3: Extract GDPR & Consent Module (`src/scripts/consent.ts`)
+1. Create `src/scripts/consent.ts`:
+   - Exports: `ConsentPreferences`, `readConsentPreferences`, `storeConsentPreferences`, `bindConsentBanner`.
+   - Uses `src/data/legal.ts`, `src/lib/storage.ts`, `src/lib/dom-utils.ts`.
+2. Add unit tests in `tests/unit/scripts/consent.test.ts`.
+3. Update `src/scripts/main.ts` to import and call `bindConsentBanner`.
+4. Verify `astro check` and `pnpm test`.
+5. Commit:
+   `refactor(scripts): extract gdpr consent management to consent.ts`
+
+### Phase 4: Extract Mascot Subsystem (`src/scripts/mascot.ts`)
+1. Create `src/scripts/mascot.ts`:
+   - All mascot-related types: `MascotMood`, `MascotState`.
+   - SVG markup generator: `mascotSvgMarkup`, `characterMarkup`.
+   - Physics, gaze tracking, mood transitions, particle effects: `prepareMascotSvg`, `mascotMotionPaused`, `stopMascotEffects`, `createHeart`, `createSleepZ`, `createLaughParticle`, `createPing`, `startMascotStars`, `liftMascotBrows`, `startMascotMoodEffect`, `wakeMascotPose`, `sleepMascotPose`, `setMascotMood`, `updateMascotOrbit`, `updateMascotPoseFromPointer`, `updateMascotTarget`, `animateMascot`, `startMascotBlink`, `bindMascotInteractions`, `mountMascot`, `setMountedMascotMood`, `notifyWithMascot`.
+   - Export `mountMascot`, `setMountedMascotMood`, `notifyWithMascot`.
+   - Note on coupling: `mountMascot(onOpenPortal?: (mode: 'start' | 'connect') => void)` takes a callback when clicked, preventing circular dependency on `portal.ts`.
+2. Update `src/scripts/main.ts` to use `src/scripts/mascot.ts`.
+3. Verify `astro check` and `pnpm test`.
+4. Commit:
+   `refactor(scripts): extract mascot svg and mood physics to mascot.ts`
+
+### Phase 5: Deconstruct Portal & Form Auth (`src/scripts/portal.ts`)
+1. Create `src/scripts/portal.ts`:
+   - Portal dialog open/close lifecycle (`openPortal`, `closePortal`).
+   - Use the pre-rendered `<dialog id="portal">` if present in DOM, or gracefully support dynamic portal. Eliminate duplicate `createPortalMarkup()` string template in favor of clean DOM querying and configuration of `#portal`.
+   - Form fields, validation, and auth submission orchestration (`validatePortalAuth`, `syncPortalPasswordFeedback`, `validateRegistrationAvailability`, `bindEmailFieldValidation`, `bindPasswordToggles`).
+   - Lazy Turnstile script loading on portal open.
+   - Exports: `openPortal`, `closePortal`, `initPortal`.
+2. Update `src/scripts/main.ts` to import and initialize portal controls.
+3. Verify `astro check` and `pnpm test`.
+4. Commit:
+   `refactor(scripts): extract portal and auth validation to portal.ts`
+
+### Phase 6: Streamline Entry Orchestrator (`src/scripts/main.ts`)
+1. Refactor `src/scripts/main.ts`:
+   - It becomes a lean entry point (~50-80 LOC) that imports modules and binds DOM lifecycle (`DOMContentLoaded`, `whenIdle`).
+2. Run full quality gate:
+   - `node_modules/.bin/astro check` -> 0 errors, 0 warnings.
+   - `pnpm test` -> all tests passing.
+   - `pnpm lint` -> 0 errors.
 3. Commit:
-   `ci: enforce test gate dependency before publishing docker images`
-
-### Phase 3: Verification
-1. Verify YAML syntax of all files in `.github/workflows/`.
-2. Run local tests: `pnpm check` and `pnpm test`.
-3. Verify git status and commits.
+   `refactor(scripts): streamline main.ts as lean entry point orchestrator`
