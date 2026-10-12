@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const svgPath = path.resolve('/workspace/src/components/svg/CanvasWindowsIllustration.astro');
+const svgPath = path.resolve(process.cwd(), 'src/components/svg/CanvasWindowsIllustration.astro');
 const svgMarkup = fs.readFileSync(svgPath, 'utf-8');
 
 describe('CanvasWindowsIllustration SVG', () => {
