@@ -21,6 +21,7 @@ import tls from 'node:tls';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
+import { classifyLoginFailure } from './auth/login-failure.mjs';
 import { createStore } from './auth/store.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
@@ -899,6 +900,18 @@ async function handleLogin(request, response) {
 		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
+		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status);
+		if (failure === 'rate-limited') {
+			json(response, 429, { message: 'Too many sign-in attempts reached the auth service. Wait a minute and try again.' });
+			return;
+		}
+		if (failure === 'upstream') {
+			// The password was never checked: no lockout count, no failed-login alert, and an
+			// answer that does not depend on the email, so nothing about the account leaks.
+			console.error(`[auth-gateway] login: the auth service at ${config.baasUrl} answered HTTP ${result.response.status} ${result.response.statusText}; the password was not checked`);
+			json(response, 502, { message: `The sign-in service is unreachable or misconfigured (HTTP ${result.response.status}). Your password was not checked.` });
+			return;
+		}
 		if (!result.response.ok) {
 			const failures = await store.incrWithTtl(failKey, config.loginLockoutWindowSec);
 			if (failures >= config.loginLockoutThreshold) {

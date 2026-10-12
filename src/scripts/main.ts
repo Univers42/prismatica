@@ -1592,6 +1592,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			announce('Incorrect email or password.');
 			return;
 		}
+		console.error(`[portal] sign-in failed before the password was checked: HTTP ${authenticated.status} — ${message}`);
 		notifyWithMascot({
 			kind: 'error',
 			title: 'Connection failed',
