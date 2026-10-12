@@ -36,3 +36,8 @@ docker-compose.override.yml
 .pnpm-store/
 .pnpm_store
 *.pnpm_sto*
+
+# agent artifacts
+.antigravity/
+opencode.json
+
