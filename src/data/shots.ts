@@ -17,16 +17,16 @@ export type Shot = {
 const desktop = { width: 1440, height: 900 } as const;
 
 export const SHOTS: Record<ShotId, Shot> = {
-	S1: { id: 'S1', ...desktop, ready: false, title: 'Home dashboard', alt: "Inès's Monday in Prismatica: this week's meetings, open deals, items below their reorder point, unpaid invoices and this week's coursework on one page." },
+	S1: { id: 'S1', ...desktop, ready: true, title: 'Operations home', alt: "The Arlet operations home page in Prismatica: four pinned hubs (the supplier switch, the stock-reorder rule, the Hôtel Varenne framework contract and Inès's executive certificate) and every page that links back to it." },
 	S2: { id: 'S2', ...desktop, ready: false, title: 'Contact page', alt: 'The contact page of Marc Delorme, buyer at Hôtel Varenne, with his company, three deals, seven invoices, call notes and a linked lecture note.' },
 	S3: { id: 'S3', ...desktop, ready: false, title: 'Company page', alt: 'The company page of Hôtel Varenne, listing four contacts with their roles and a rollup of its deals.' },
 	S4: { id: 'S4', ...desktop, ready: false, title: 'Deals board', alt: 'The deals database as a board, one column per pipeline stage from lead to won and lost.' },
 	S5: { id: 'S5', ...desktop, ready: false, title: 'Deals table', alt: 'The same deals as a table, in a saved view filtered to open deals over €5,000 and sorted by owner.' },
 	S6: { id: 'S6', ...desktop, ready: false, title: 'Interactions calendar', alt: 'Calls and meetings with clients on a month calendar.' },
 	S7: { id: 'S7', ...desktop, ready: false, title: 'Revenue chart', alt: 'Monthly revenue over eighteen months as a chart, with two weak months visible.' },
-	S8: { id: 'S8', ...desktop, ready: false, title: 'Academy note', alt: 'A course note on dual sourcing, with backlinks to a book, a guest lecturer and the supplier decision it informed.' },
-	S9: { id: 'S9', ...desktop, ready: false, title: 'Graph view', alt: 'A graph of notes, decisions and records, centred on the supplier-switch decision.' },
+	S8: { id: 'S8', ...desktop, ready: true, title: 'Academy note', alt: 'A course note, "The cost of a second source": its subject and course, the supplier-switch decision it informs, the books it cites, the two supplier contacts it names, and the notes that link to it.' },
+	S9: { id: 'S9', ...desktop, ready: true, title: 'Graph view', alt: 'A graph of 146 pages and 38 tags, centred on the supplier-switch decision and the notes and decisions linked to it.' },
 	S10: { id: 'S10', ...desktop, ready: false, title: 'Library', alt: 'Books and papers as cards in a gallery, each with its tags.' },
-	S11: { id: 'S11', ...desktop, ready: false, title: "Jules's view", alt: 'Signed in as Jules from finance: the one page Inès shared with him, and none of her other pages or databases.' },
-	S12: { id: 'S12', ...desktop, ready: false, title: 'Tour poster', alt: 'The home dashboard, with a play button for the 75-second tour.' },
+	S11: { id: 'S11', ...desktop, ready: true, title: "Jules's view", alt: 'Signed in as Jules from finance: the one page Inès shared with him, Q4 supplier review, and none of her operations pages or databases.' },
+	S12: { id: 'S12', ...desktop, ready: true, title: 'Tour poster', alt: 'The Arlet operations home page, the first screen of the tour.' },
 };
