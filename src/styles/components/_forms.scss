@@ -102,3 +102,10 @@
 	max-width: 100%;
 	overflow-x: auto;
 }
+
+.auth-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-3) var(--space-5);
+}
