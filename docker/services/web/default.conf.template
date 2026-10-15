@@ -9,6 +9,14 @@
 #   /api/auth/*       -> auth-gateway        (NO path rewrite)
 #   /api/newsletter/* -> auth-gateway        (NO path rewrite)
 #   /api/*            -> BaaS gateway (Kong)  (strips the leading /api)
+# The confirm and reset pages carry a token in their URL fragment: no-referrer keeps every
+# URL of theirs out of any Referer header (verdict B, C2). $oo_referrer_policy is lowercase,
+# so the ^OO_ envsubst filter leaves it to nginx.
+map $uri $oo_referrer_policy {
+    ~^/auth/(confirm|reset-password)(/|$)  "no-referrer";
+    default                                "strict-origin-when-cross-origin";
+}
+
 server {
     listen 8080;
     server_name _;
@@ -33,7 +41,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Content-Security-Policy "frame-ancestors 'none'" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Referrer-Policy $oo_referrer_policy always;
     add_header Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=()" always;
     # HTML documents inline their CSS, so a stale cached page freezes the whole
     # look. `no-cache` = always revalidate the document (returns fast 304s when
