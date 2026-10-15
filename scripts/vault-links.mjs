@@ -1,6 +1,6 @@
-// Cross-doc links in the vault (`[text](other.xmd)`, `../platform/x.xmd#anchor`) become the docs
-// shell's hash routes (`#platform/x`), whatever form the markdown engine emitted them in: bare
-// (`href="x.xmd"`, which resolved to a missing /docs/x.xmd) or as an external link
+// Cross-doc links in the vault (`[text](other.xmd)`, `../platform/x.xmd#anchor`) become links to
+// that doc's page (`hrefOf(path)`, e.g. /docs/platform/x/), whatever form the markdown engine
+// emitted them in: bare (`href="x.xmd"`, which resolved to a missing /docs/x.xmd) or as an external link
 // (`href="https://x.xmd" target="_blank"`, the engine since it moved to packages/markdown-engine).
 // A link to a doc that does not exist is returned in `broken`, so the build can refuse it.
 
@@ -19,7 +19,7 @@ function withoutNewTab(attributes) {
 	return attributes.replace(/\s+target="_blank"/g, '').replace(/\s+rel="noopener noreferrer"/g, '');
 }
 
-export function rewriteDocLinks(html, fromDoc, knownDocs) {
+export function rewriteDocLinks(html, fromDoc, knownDocs, hrefOf) {
 	const broken = [];
 	const rewritten = html.replace(DOC_LINK, (match, before, target, after) => {
 		const path = resolvePath(fromDoc, target);
@@ -27,7 +27,7 @@ export function rewriteDocLinks(html, fromDoc, knownDocs) {
 			broken.push(`${fromDoc} → ${target}.xmd`);
 			return match;
 		}
-		return `<a${withoutNewTab(before).trimEnd()} href="#${path}"${withoutNewTab(after)}>`;
+		return `<a${withoutNewTab(before).trimEnd()} href="${hrefOf(path)}"${withoutNewTab(after)}>`;
 	});
 	return { html: rewritten, broken };
 }

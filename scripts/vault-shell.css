@@ -234,7 +234,7 @@ body {
 .palette__results { max-height: 52vh; overflow-y: auto; padding: 0.4rem; }
 .palette__item {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem;
-  border-radius: 9px; cursor: pointer; color: var(--ink-soft);
+  border-radius: 9px; cursor: pointer; color: var(--ink-soft); text-decoration: none;
 }
 .palette__item .g { color: var(--accent); width: 1.1em; text-align: center; }
 .palette__item .sub { margin-left: auto; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }

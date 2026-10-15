@@ -1,120 +1,57 @@
 /* ==========================================================================
  * Prismatica Vault — shell UI client
- * Instant client-side navigation over pre-rendered .xmd docs. No framework.
- * Reads window.__VAULT = { order:[paths], docs:{ path:{title,icon,crumbs,toc} } }
+ * Each doc is its own static page (scripts/vault-page.mjs), so links are real links and work
+ * without this script. It adds the search palette (window.__VAULT, from vault-index.js), the
+ * table-of-contents highlight, the folder toggles, the theme, j/k for the next and previous doc,
+ * and sends an old /docs/#<path> link to that doc's page.
  * ========================================================================== */
 (function () {
   "use strict";
-  var V = window.__VAULT || { order: [], docs: {} };
+  var V = window.__VAULT || { home: "", order: [], docs: {} };
   var shell = document.querySelector(".shell");
-  var crumbEl = document.querySelector(".crumbs");
-  var tocEl = document.querySelector(".shell__toc");
-  var current = null;
-  var spy = null;
+  var art = document.querySelector("article[data-doc]");
+  var current = art ? art.getAttribute("data-doc") : V.home;
 
-  function byNav(path) { return document.querySelector('[data-nav="' + cssEscape(path) + '"]'); }
-  function article(path) { return document.querySelector('[data-doc="' + cssEscape(path) + '"]'); }
-  function cssEscape(s) { return String(s).replace(/["\\]/g, "\\$&"); }
+  function href(path) { return path === V.home ? "/docs/" : "/docs/" + path + "/"; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
-  /* ── Navigation ────────────────────────────────────────────────────────── */
-  function openDoc(path, opts) {
-    var meta = V.docs[path];
-    var art = article(path);
-    if (!meta || !art) { path = V.order[0]; meta = V.docs[path]; art = article(path); }
-    if (!art) return;
-    if (current) { var prev = article(current); if (prev) prev.hidden = true; }
-    var wasActive = document.querySelector(".tree__row.is-active");
-    if (wasActive) wasActive.classList.remove("is-active");
-    art.hidden = false;
-    current = path;
-    var nav = byNav(path);
-    if (nav) { nav.classList.add("is-active"); expandAncestors(nav); }
-    renderCrumbs(meta.crumbs);
-    renderToc(path, meta.toc, art);
-    document.title = meta.title + " · Prismatica Docs";
-    shell.classList.remove("nav-open");
-    if (!opts || opts.scroll !== false) window.scrollTo({ top: 0, behavior: "auto" });
-    if (!opts || opts.push !== false) {
-      if (location.hash !== "#" + path) history.pushState({ path: path }, "", "#" + path);
-    }
-  }
+  /* ── Links from the single-page vault: /docs/#platform/x ───────────────── */
+  var legacy = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+  if (legacy && V.docs[legacy]) { location.replace(href(legacy)); return; }
 
-  function renderCrumbs(crumbs) {
-    var html = '<span class="sep">~/</span>vault';
-    for (var i = 0; i < crumbs.length; i++) {
-      var last = i === crumbs.length - 1;
-      html += '<span class="sep">/</span>' + (last ? "<b>" + esc(crumbs[i]) + "</b>" : esc(crumbs[i]));
-    }
-    crumbEl.innerHTML = html;
-  }
-
-  function renderToc(path, toc, art) {
-    if (spy) { spy.disconnect(); spy = null; }
-    if (!toc || !toc.length) { tocEl.innerHTML = ""; return; }
-    var html = '<div class="toc__title">On this page</div><ul class="toc__list">';
-    for (var i = 0; i < toc.length; i++) {
-      html += '<li><a class="toc__link toc__link--' + toc[i].level + '" href="#' + esc(path) +
-        '" data-toc="' + esc(toc[i].id) + '">' + esc(toc[i].text) + "</a></li>";
-    }
-    tocEl.innerHTML = html + "</ul>";
-    Array.prototype.forEach.call(tocEl.querySelectorAll("[data-toc]"), function (a) {
-      a.addEventListener("click", function (e) {
-        e.preventDefault();
-        var el = art.querySelector("#" + cssEscape(a.getAttribute("data-toc")));
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
-    setupSpy(art, toc);
-  }
-
-  function setupSpy(art, toc) {
-    var links = {};
-    Array.prototype.forEach.call(tocEl.querySelectorAll("[data-toc]"), function (a) { links[a.getAttribute("data-toc")] = a; });
-    spy = new IntersectionObserver(function (entries) {
+  /* ── Table of contents: highlight the heading in view ──────────────────── */
+  var links = {};
+  Array.prototype.forEach.call(document.querySelectorAll(".shell__toc [data-toc]"), function (a) { links[a.getAttribute("data-toc")] = a; });
+  if (art && Object.keys(links).length && "IntersectionObserver" in window) {
+    var spy = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
-        var id = en.target.id;
-        Object.keys(links).forEach(function (k) { links[k].classList.toggle("is-active", k === id); });
+        Object.keys(links).forEach(function (k) { links[k].classList.toggle("is-active", k === en.target.id); });
       });
     }, { rootMargin: "-72px 0px -70% 0px" });
-    toc.forEach(function (h) { var el = art.querySelector("#" + cssEscape(h.id)); if (el) spy.observe(el); });
+    Object.keys(links).forEach(function (id) { var el = document.getElementById(id); if (el) spy.observe(el); });
   }
 
-  /* ── Tree expand/collapse ──────────────────────────────────────────────── */
-  function expandAncestors(nav) {
-    var li = nav.closest(".tree__item");
-    while (li) {
-      var parentList = li.parentElement;
-      if (parentList && parentList.classList.contains("tree__list")) {
-        var dir = parentList.previousElementSibling;
-        if (dir && dir.classList.contains("tree__dir")) dir.setAttribute("aria-expanded", "true");
-      }
-      li = parentList ? parentList.closest(".tree__item") : null;
-    }
-  }
+  /* ── Folders ───────────────────────────────────────────────────────────── */
   document.addEventListener("click", function (e) {
     var dir = e.target.closest(".tree__dir");
-    if (dir) { dir.setAttribute("aria-expanded", dir.getAttribute("aria-expanded") === "false" ? "true" : "false"); return; }
-    var nav = e.target.closest("[data-nav]");
-    if (nav) { e.preventDefault(); openDoc(nav.getAttribute("data-nav")); }
+    if (dir) dir.setAttribute("aria-expanded", dir.getAttribute("aria-expanded") === "false" ? "true" : "false");
   });
+  var active = document.querySelector(".tree__row.is-active");
+  if (active) active.scrollIntoView({ block: "nearest" });
 
   /* ── Command palette ───────────────────────────────────────────────────── */
   var pal = document.querySelector(".palette");
   var palInput = pal.querySelector(".palette__input");
   var palResults = pal.querySelector(".palette__results");
-  var palIndex = buildIndex();
+  var palIndex = [];
+  V.order.forEach(function (path) {
+    var d = V.docs[path];
+    palIndex.push({ path: path, id: null, title: d.title, sub: path, icon: d.icon || "◆" });
+    (d.toc || []).forEach(function (h) { palIndex.push({ path: path, id: h.id, title: h.text, sub: d.title, icon: "§" }); });
+  });
   var palActive = 0, palMatches = [];
 
-  function buildIndex() {
-    var idx = [];
-    V.order.forEach(function (path) {
-      var d = V.docs[path];
-      idx.push({ path: path, id: null, title: d.title, sub: path, icon: d.icon || "◆" });
-      (d.toc || []).forEach(function (h) { idx.push({ path: path, id: h.id, title: h.text, sub: d.title, icon: "§" }); });
-    });
-    return idx;
-  }
   function openPalette() { pal.hidden = false; palInput.value = ""; runSearch(""); palInput.focus(); }
   function closePalette() { pal.hidden = true; }
   function runSearch(q) {
@@ -124,18 +61,16 @@
     palActive = 0;
     if (!palMatches.length) { palResults.innerHTML = '<div class="palette__empty">No matches</div>'; return; }
     palResults.innerHTML = palMatches.map(function (it, i) {
-      return '<div class="palette__item' + (i === 0 ? " is-active" : "") + '" data-i="' + i + '">' +
+      return '<a class="palette__item' + (i === 0 ? " is-active" : "") + '" data-i="' + i + '" href="' + esc(href(it.path) + (it.id ? "#" + it.id : "")) + '">' +
         '<span class="g">' + esc(it.icon) + '</span><span>' + esc(it.title) + '</span>' +
-        '<span class="sub">' + esc(it.sub) + "</span></div>";
+        '<span class="sub">' + esc(it.sub) + "</span></a>";
     }).join("");
   }
   function pickPalette(i) {
-    var it = palMatches[i]; if (!it) return;
-    closePalette(); openDoc(it.path);
-    if (it.id) { setTimeout(function () { var el = article(it.path).querySelector("#" + cssEscape(it.id)); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 40); }
+    var it = palMatches[i];
+    if (it) location.href = href(it.path) + (it.id ? "#" + it.id : "");
   }
   palInput.addEventListener("input", function () { runSearch(palInput.value); });
-  palResults.addEventListener("click", function (e) { var it = e.target.closest("[data-i]"); if (it) pickPalette(+it.getAttribute("data-i")); });
   function moveActive(delta) {
     var items = palResults.querySelectorAll(".palette__item"); if (!items.length) return;
     items[palActive].classList.remove("is-active");
@@ -144,8 +79,13 @@
     items[palActive].scrollIntoView({ block: "nearest" });
   }
 
-  /* ── Global keyboard ───────────────────────────────────────────────────── */
+  /* ── Keyboard: ⌘K or / searches, j and k step through the docs ─────────── */
   function inField(el) { return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); }
+  function step(delta) {
+    var i = V.order.indexOf(current);
+    var next = V.order[(i + delta + V.order.length) % V.order.length];
+    if (next) location.href = href(next);
+  }
   document.addEventListener("keydown", function (e) {
     if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) { e.preventDefault(); openPalette(); return; }
     if (!pal.hidden) {
@@ -155,34 +95,20 @@
       else if (e.key === "Enter") { e.preventDefault(); pickPalette(palActive); }
       return;
     }
-    if (inField(e.target)) return;
+    if (inField(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "/") { e.preventDefault(); openPalette(); }
-    else if (e.key === "j" || e.key === "ArrowDown") { step(1); }
-    else if (e.key === "k" || e.key === "ArrowUp") { step(-1); }
+    else if (e.key === "j") { step(1); }
+    else if (e.key === "k") { step(-1); }
   });
-  function step(delta) {
-    var i = V.order.indexOf(current);
-    var next = V.order[(i + delta + V.order.length) % V.order.length];
-    if (next) openDoc(next);
-  }
 
-  /* ── Theme ─────────────────────────────────────────────────────────────── */
+  /* ── Theme, menu, palette triggers ─────────────────────────────────────── */
   var THEME_KEY = "prismatica:docs:theme";
   function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); try { localStorage.setItem(THEME_KEY, t); } catch { /* storage blocked: the theme still applies */ } }
   document.addEventListener("click", function (e) {
-    if (e.target.closest('[data-action="theme"]')) {
-      applyTheme(document.documentElement.getAttribute("data-theme") === "noir" ? "solar" : "noir");
-    }
+    if (e.target.closest('[data-action="theme"]')) applyTheme(document.documentElement.getAttribute("data-theme") === "noir" ? "solar" : "noir");
     if (e.target.closest('[data-action="palette"]')) openPalette();
     if (e.target.closest(".palette__backdrop")) closePalette();
     if (e.target.closest('[data-action="menu"]')) shell.classList.toggle("nav-open");
   });
   try { var saved = localStorage.getItem(THEME_KEY); if (saved) applyTheme(saved); } catch { /* storage blocked: keep the default theme */ }
-
-  /* ── Routing ───────────────────────────────────────────────────────────── */
-  function fromHash() { return decodeURIComponent((location.hash || "").replace(/^#/, "")); }
-  window.addEventListener("popstate", function () { openDoc(fromHash() || V.order[0], { push: false }); });
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-
-  openDoc(fromHash() || V.order[0], { push: false });
 })();
