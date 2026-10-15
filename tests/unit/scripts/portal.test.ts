@@ -26,6 +26,48 @@ describe('Portal Script Module', () => {
 		expect(document.body.classList.contains('portal-open')).toBe(false);
 	});
 
+	it('opens in sign-in mode with the sign-up fields hidden and optional', () => {
+		openPortal('connect');
+		const portal = document.querySelector<HTMLElement>('#portal');
+		const confirm = document.querySelector<HTMLInputElement>('#portal-confirm-password');
+		expect(portal?.dataset.authMode).toBe('login');
+		expect(confirm?.closest<HTMLElement>('.portal-register-only')?.hidden).toBe(true);
+		expect(confirm?.required).toBe(false);
+	});
+
+	it('opens in sign-up mode with the sign-up fields shown and required', () => {
+		openPortal('start');
+		const portal = document.querySelector<HTMLElement>('#portal');
+		const confirm = document.querySelector<HTMLInputElement>('#portal-confirm-password');
+		expect(portal?.dataset.authMode).toBe('register');
+		expect(confirm?.closest<HTMLElement>('.portal-register-only')?.hidden).toBe(false);
+		expect(confirm?.required).toBe(true);
+	});
+
+	it('marks the active mode button pressed after a switch', () => {
+		openPortal('start');
+		document.querySelector<HTMLButtonElement>('[data-auth-switch="login"]')?.click();
+		expect(document.querySelector('[data-auth-switch="login"]')?.getAttribute('aria-pressed')).toBe('true');
+		expect(document.querySelector('[data-auth-switch="register"]')?.getAttribute('aria-pressed')).toBe('false');
+	});
+
+	it('draws the password meter without an HTML string sink', () => {
+		openPortal('start');
+		const meter = document.querySelector<HTMLElement>('[data-password-strength-container]');
+		// The site's CSP requires Trusted Types: a plain string assigned to innerHTML throws.
+		Object.defineProperty(meter, 'innerHTML', {
+			set: () => {
+				throw new TypeError("This document requires 'TrustedHTML' assignment.");
+			},
+		});
+		const password = document.querySelector<HTMLInputElement>('#portal-password');
+		if (!password) throw new Error('no password field');
+		password.value = 'Abcdefgh12';
+		password.dispatchEvent(new Event('input'));
+		expect(meter?.querySelector<HTMLElement>('.password-meter__bar')?.style.width).toMatch(/%$/);
+		expect(meter?.querySelector('.password-meter__label')?.textContent).not.toBe('');
+	});
+
 	it('binds password toggle buttons to switch input type', () => {
 		document.body.innerHTML = `
 			<div class="field">

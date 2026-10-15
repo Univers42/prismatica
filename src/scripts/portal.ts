@@ -526,12 +526,19 @@ function renderPasswordStrength(root: ParentNode): void {
 	const input = root.querySelector('#portal-password');
 	if (!(input instanceof HTMLInputElement)) return;
 	const strength = checkPasswordStrength(input.value);
-	container.innerHTML = `
-		<div class="password-meter" data-score="${strength.score}">
-			<div class="password-meter__bar" style="width: ${(strength.score / 4) * 100}%"></div>
-		</div>
-		<span class="password-meter__label">${strength.level || 'Enter a strong password'}</span>
-	`;
+	// DOM nodes, not markup: the CSP requires Trusted Types, so a string assigned to
+	// innerHTML throws, and its style-src refuses a style="" attribute. CSSOM is allowed.
+	const meter = document.createElement('div');
+	meter.className = 'password-meter';
+	meter.dataset.score = String(strength.score);
+	const bar = document.createElement('div');
+	bar.className = 'password-meter__bar';
+	bar.style.width = `${(strength.score / 4) * 100}%`;
+	meter.append(bar);
+	const label = document.createElement('span');
+	label.className = 'password-meter__label';
+	label.textContent = strength.level || 'Enter a strong password';
+	container.replaceChildren(meter, label);
 }
 
 function syncPasswordMatchStatus(match: boolean, confirmPassword: HTMLInputElement | null): void {
@@ -806,6 +813,8 @@ function syncAuthModeCopy(controls: AuthModeControls, mode: 'login' | 'register'
 			: 'Sign in to connect Prismatica with the osionos app.';
 	}
 	if (controls.submitBtn) controls.submitBtn.textContent = isRegister ? 'Create workspace account' : 'Sign in';
+	controls.registerBtn?.setAttribute('aria-pressed', String(isRegister));
+	controls.loginBtn?.setAttribute('aria-pressed', String(!isRegister));
 }
 
 function syncAuthModeVisibility(portal: HTMLElement, mode: 'login' | 'register'): void {
@@ -881,35 +890,37 @@ export function openPortal(mode: PortalMode): void {
 		updatePortalSubmitAvailability(portal, elements);
 	};
 
+	const applyAuthMode = (targetMode: 'login' | 'register'): void => {
+		syncAuthModeVisibility(portal, targetMode);
+		syncAuthModeCopy({
+			title: portal.querySelector('[data-auth-title]'),
+			note: portal.querySelector('[data-auth-note]'),
+			registerBtn: portal.querySelector('[data-auth-switch="register"]'),
+			loginBtn: portal.querySelector('[data-auth-switch="login"]'),
+			submitBtn: elements.submitButton,
+			usernameWrap: null,
+			confirmPasswordWrap: null,
+			termsConsent: null,
+			emailVerification: null,
+			email: elements.email,
+			username: elements.username,
+			emailVerificationConsent: elements.emailVerificationConsent,
+			password: elements.password,
+			confirmPassword: elements.confirmPassword,
+		}, targetMode);
+		syncAuthModeInputs({
+			title: null, note: null, registerBtn: null, loginBtn: null, submitBtn: null,
+			usernameWrap: null, confirmPasswordWrap: null, termsConsent: elements.termsConsent, emailVerification: null,
+			email: elements.email, username: elements.username, emailVerificationConsent: elements.emailVerificationConsent,
+			password: elements.password, confirmPassword: elements.confirmPassword,
+		}, targetMode);
+		clearPortalAuthErrors(elements);
+		refreshPortalValidation();
+	};
+
 	portal.querySelectorAll('[data-auth-switch]').forEach((btn) => {
 		btn.addEventListener('click', () => {
-			const targetMode = btn.getAttribute('data-auth-switch') === 'register' ? 'register' : 'login';
-			portal.dataset.authMode = targetMode;
-			syncAuthModeVisibility(portal, targetMode);
-			syncAuthModeCopy({
-				title: portal.querySelector('[data-auth-title]'),
-				note: portal.querySelector('[data-auth-note]'),
-				registerBtn: portal.querySelector('[data-auth-switch="register"]'),
-				loginBtn: portal.querySelector('[data-auth-switch="login"]'),
-				submitBtn: elements.submitButton,
-				usernameWrap: null,
-				confirmPasswordWrap: null,
-				termsConsent: null,
-				emailVerification: null,
-				email: elements.email,
-				username: elements.username,
-				emailVerificationConsent: elements.emailVerificationConsent,
-				password: elements.password,
-				confirmPassword: elements.confirmPassword,
-			}, targetMode);
-			syncAuthModeInputs({
-				title: null, note: null, registerBtn: null, loginBtn: null, submitBtn: null,
-				usernameWrap: null, confirmPasswordWrap: null, termsConsent: null, emailVerification: null,
-				email: elements.email, username: elements.username, emailVerificationConsent: elements.emailVerificationConsent,
-				password: elements.password, confirmPassword: elements.confirmPassword,
-			}, targetMode);
-			clearPortalAuthErrors(elements);
-			refreshPortalValidation();
+			applyAuthMode(btn.getAttribute('data-auth-switch') === 'register' ? 'register' : 'login');
 		});
 	});
 
@@ -925,6 +936,6 @@ export function openPortal(mode: PortalMode): void {
 		if (c) c.addEventListener('change', refreshPortalValidation);
 	});
 
-	refreshPortalValidation();
+	applyAuthMode(mode === 'connect' ? 'login' : 'register');
 	elements.email.focus();
 }
