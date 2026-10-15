@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { openPortal, closePortal, readTurnstileToken } from '../../../src/scripts/portal';
+import { bindPasswordToggles } from '../../../src/scripts/password-toggle';
 
 describe('Portal Script Module', () => {
 	beforeEach(() => {
@@ -114,3 +115,78 @@ describe('Portal Script Module', () => {
 		expect(button?.getAttribute('aria-pressed')).toBe('false');
 	});
 });
+
+describe('account mail from the portal (POST /api/auth/recover and /resend-verification)', () => {
+	const ACCEPTED = 'If an account can receive mail at that address, a message is on its way. Check your inbox.';
+	let fetchMock: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		document.body.innerHTML = '';
+		fetchMock = vi.fn(async () => new Response(JSON.stringify({ message: ACCEPTED }), { status: 202 }));
+		vi.stubGlobal('fetch', fetchMock);
+	});
+
+	afterEach(() => {
+		closePortal();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	const passwordHidden = () => Boolean(document.querySelector('#portal-password')?.closest('[hidden]'));
+	const submitLabel = () => document.querySelector('[data-auth-submit]')?.textContent?.trim();
+
+	async function requestFor(email: string) {
+		const field = document.querySelector<HTMLInputElement>('#portal-email')!;
+		field.value = email;
+		field.dispatchEvent(new Event('input'));
+		document.querySelector('form.portal-login')!.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		return { url, body: JSON.parse(String(init.body)) };
+	}
+
+	it('"Forgot password?" turns sign-in into a reset request that posts the email to /recover', async () => {
+		openPortal('connect');
+		document.querySelector<HTMLButtonElement>('[data-portal-action="forgot-password"]')!.click();
+		expect(passwordHidden()).toBe(true);
+		expect(submitLabel()).toBe('Send reset link');
+		const sent = await requestFor('ines@arlet.example.com');
+		expect(sent.url).toMatch(/\/recover$/);
+		expect(sent.body).toEqual({ email: 'ines@arlet.example.com', turnstileToken: 'localhost-turnstile-token' });
+	});
+
+	it('opens straight into a new confirmation link request that posts to /resend-verification', async () => {
+		openPortal('resend');
+		expect(passwordHidden()).toBe(true);
+		expect(submitLabel()).toBe('Send a new link');
+		const sent = await requestFor('ines@arlet.example.com');
+		expect(sent.url).toMatch(/\/resend-verification$/);
+	});
+
+	it('shows the gateway answer, which reads the same whether or not the account exists', async () => {
+		openPortal('recovery');
+		await requestFor('nobody@arlet.example.com');
+		await vi.waitFor(() => expect(document.querySelector('[data-auth-note]')?.textContent).toBe(ACCEPTED));
+	});
+
+	it('a sign-in refused for an unconfirmed email turns into the new-link form, email kept', async () => {
+		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Email not confirmed' }), { status: 400 }));
+		openPortal('connect');
+		const email = document.querySelector<HTMLInputElement>('#portal-email')!;
+		const password = document.querySelector<HTMLInputElement>('#portal-password')!;
+		email.value = 'ines@arlet.example.com';
+		password.value = 'Arlet!2026x';
+		document.querySelector('form.portal-login')!.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(submitLabel()).toBe('Send a new link'));
+		expect(passwordHidden()).toBe(true);
+		expect(email.value).toBe('ines@arlet.example.com');
+	});
+
+	it('"Back to sign in" brings the password field back', () => {
+		openPortal('recovery');
+		document.querySelector<HTMLButtonElement>('.portal-mail-only[data-auth-switch="login"]')!.click();
+		expect(passwordHidden()).toBe(false);
+		expect(submitLabel()).toBe('Sign in');
+	});
+});
+

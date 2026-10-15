@@ -1,4 +1,4 @@
-import { insertTrustedHTML, queryElement, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
 import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
@@ -6,8 +6,10 @@ import { notify } from './notifications';
 import { announce, ensureButtonLabels } from './theme';
 import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
+import { bindPasswordToggles } from './password-toggle';
+import { type AccountMailKind, isAccountMailKind, showAccountMailForm, showAuthForm } from './portal-account-mail';
 
-export type PortalMode = 'start' | 'connect';
+export type PortalMode = 'start' | 'connect' | AccountMailKind;
 
 type TurnstileApi = {
 	render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'error-callback': () => void; 'expired-callback': () => void }) => string;
@@ -96,23 +98,6 @@ export function mountTurnstile(portal: HTMLElement): void {
 	container.dataset.turnstileWidgetId = widgetId;
 }
 
-export function bindPasswordToggles(root: ParentNode = document): void {
-	root.querySelectorAll('[data-password-toggle]').forEach((button) => {
-		if (!isButton(button)) return;
-		button.addEventListener('click', () => {
-			const input = button.closest('.field')?.querySelector('input');
-			if (!(input instanceof HTMLInputElement)) return;
-			const isPassword = input.type === 'password';
-			input.type = isPassword ? 'text' : 'password';
-			button.setAttribute('aria-pressed', String(isPassword));
-			button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-			button.title = isPassword ? 'Hide password' : 'Show password';
-			const icon = button.querySelector('.header-icon--toggle');
-			if (icon instanceof HTMLElement) icon.textContent = isPassword ? 'Hide' : 'Show';
-		});
-	});
-}
-
 export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
 	try {
 		const parsed = new URL(redirectUrl, window.location.origin);
@@ -148,7 +133,7 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 }
 
 function createPortalMarkup(mode: PortalMode): string {
-	const quick = mode === 'connect';
+	const quick = mode !== 'start';
 	const requiresEmailVerification = authConfig.requireEmailVerification;
 	const registerNote = requiresEmailVerification
 		? 'Create an account with email verification before opening your workspace.'
@@ -163,7 +148,7 @@ function createPortalMarkup(mode: PortalMode): string {
 					<p class="portal-kicker">${quick ? 'Account connection' : 'Secure account'}</p>
 					<h2 aria-hidden="true" data-auth-title>${quick ? 'Open your workspace' : 'Create your workspace'}</h2>
 					<p class="portal-note" data-auth-note>${quick ? 'Sign in to connect Prismatica with the osionos app.' : registerNote}</p>
-					<div class="portal-auth-switch" role="group" aria-label="Authentication mode">
+					<div class="portal-auth-switch portal-auth-only" role="group" aria-label="Authentication mode">
 						<button class="portal-auth-switch__button" type="button" data-auth-switch="register" aria-pressed="${quick ? 'false' : 'true'}">Create account</button>
 						<button class="portal-auth-switch__button" type="button" data-auth-switch="login" aria-pressed="${quick ? 'true' : 'false'}">Sign in</button>
 					</div>
@@ -180,7 +165,7 @@ function createPortalMarkup(mode: PortalMode): string {
 								<p id="portal-email-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Work or personal email.</p>
 							</div>
 						</div>
-						<div class="field">
+						<div class="field portal-password-only">
 							<label for="portal-password">Password <span aria-hidden="true">*</span></label>
 							<div class="input-with-button">
 								<input id="portal-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" minlength="8" required />
@@ -227,8 +212,11 @@ function createPortalMarkup(mode: PortalMode): string {
 							${quick ? 'Sign in' : 'Create workspace account'}
 						</button>
 						<div class="portal-alt-actions">
-							<button class="portal-link-action" type="button" data-portal-action="forgot-password">
+							<button class="portal-link-action portal-auth-only" type="button" data-portal-action="forgot-password">
 								Forgot password?
+							</button>
+							<button class="portal-link-action portal-mail-only" type="button" data-auth-switch="login" hidden>
+								Back to sign in
 							</button>
 						</div>
 					</form>
@@ -468,10 +456,6 @@ function usernameValidationState(field: HTMLInputElement): { valid: boolean; mes
 	return { valid: true, message: 'Username looks good.' };
 }
 
-function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
-	return portal.dataset.emailAvailability !== 'taken' && portal.dataset.usernameAvailability !== 'taken';
-}
-
 export function bindEmailFieldValidation(scope: ParentNode = document): void {
 	scope.querySelectorAll('input[type="email"]').forEach((input) => {
 		if (!isInput(input)) return;
@@ -530,16 +514,19 @@ function syncPortalPasswordFeedback(portal: HTMLElement, elements: PortalFormEle
 }
 
 function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFormElements): void {
+	if (isAccountMailKind(portal.dataset.portalMode)) {
+		if (elements.submitButton) elements.submitButton.disabled = !hasValidEmailFormat(elements.email);
+		return;
+	}
 	const isRegister = portal.dataset.authMode === 'register';
 	const passwordReady = syncPortalPasswordFeedback(portal, elements);
 	const termsReady = !(elements.termsConsent instanceof HTMLInputElement) || elements.termsConsent.checked;
 	const verificationReady = !authConfig.requireEmailVerification || !(elements.emailVerificationConsent instanceof HTMLInputElement) || elements.emailVerificationConsent.checked;
 	const emailReady = hasValidEmailFormat(elements.email);
 	const usernameReady = !isRegister || usernameValidationState(elements.username).valid;
-	const availabilityReady = !isRegister || availabilityStateAllowsSubmit(portal);
 
 	const canSubmit = isRegister
-		? passwordReady && termsReady && verificationReady && emailReady && usernameReady && availabilityReady
+		? passwordReady && termsReady && verificationReady && emailReady && usernameReady
 		: elements.email.value.trim().length > 0 && elements.password.value.length > 0;
 
 	if (elements.submitButton) {
@@ -547,48 +534,44 @@ function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFor
 	}
 }
 
-async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
+async function submitAccountMail(portal: HTMLElement, elements: PortalFormElements, kind: AccountMailKind): Promise<void> {
 	const email = elements.email;
 	clearPortalFieldErrors(email);
 	if (!validateEmailField(email, 'Please enter your email address')) {
 		showPortalFieldError(elements.error, email, 'Please enter a valid email address (e.g. you@example.com)');
 		return;
 	}
-	setPortalSubmitBusy(elements.submitButton, true, false);
+	const button = elements.submitButton;
+	const label = button?.textContent ?? '';
+	if (button) {
+		button.disabled = true;
+		button.textContent = 'Please wait…';
+	}
 	try {
-		await authClient.recover({ email: email.value.trim(), turnstileToken: readTurnstileToken(portal) });
-		elements.error.textContent = 'Password reset instructions have been sent to your email address.';
+		const request = { email: email.value.trim(), turnstileToken: readTurnstileToken(portal) };
+		const result = kind === 'recovery' ? await authClient.recover(request) : await authClient.resendVerification(request);
+		if (result.ok) {
+			const note = portal.querySelector('[data-auth-note]');
+			if (note) note.textContent = result.message;
+			announce(result.message);
+			return;
+		}
+		elements.error.textContent = humanAuthMessage(result.message);
 		elements.error.removeAttribute('hidden');
-		notify({ kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Could not request password recovery.';
-		elements.error.textContent = humanAuthMessage(message);
+		elements.error.textContent = humanAuthMessage(error instanceof Error ? error.message : 'Could not send the email.');
 		elements.error.removeAttribute('hidden');
-		notify({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} finally {
-		setPortalSubmitBusy(elements.submitButton, false, false);
+		if (button) {
+			button.textContent = label;
+			button.disabled = !hasValidEmailFormat(email);
+		}
 	}
-}
-
-function validateRegistrationAvailability(portal: HTMLElement, elements: PortalFormElements, isRegister: boolean): boolean {
-	if (!isRegister) return true;
-	if (portal.dataset.usernameAvailability === 'taken') {
-		showPortalFieldError(elements.error, elements.username, 'Error: This username is already taken.');
-		return false;
-	}
-	if (portal.dataset.emailAvailability === 'taken') {
-		showPortalFieldError(elements.error, elements.email, 'Error: This email is already registered.');
-		return false;
-	}
-	return true;
 }
 
 export function validatePortalAuth(portal: HTMLElement, elements: PortalFormElements, isRegister: boolean): string | null {
 	clearPortalAuthErrors(elements);
 	if (!validateRegistrationIdentity(elements, isRegister) || !validatePortalPasswordFields(elements, isRegister) || !validatePortalProfileFields(elements, isRegister)) {
-		return null;
-	}
-	if (!validateRegistrationAvailability(portal, elements, isRegister)) {
 		return null;
 	}
 	const turnstileToken = readTurnstileToken(portal);
@@ -662,7 +645,8 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 	announce('Registration failed. Check the form and try again.');
 }
 
-async function processPortalLogin(elements: PortalFormElements, turnstileToken: string): Promise<void> {
+// Resolves to the email-only form to show next, when the answer calls for one.
+async function processPortalLogin(elements: PortalFormElements, turnstileToken: string): Promise<AccountMailKind | undefined> {
 	const authenticated = await authClient.signIn({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken });
 	const message = humanAuthMessage(authenticated.message);
 	if (!authenticated.ok) {
@@ -680,10 +664,10 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			notify({
 				kind: 'warning',
 				title: 'Email not confirmed',
-				message: 'Please check your inbox and click the confirmation link first.',
+				message: 'Open the confirmation link from your inbox, or ask for a new one here.',
 				duration: 9000,
 			});
-			return;
+			return 'resend';
 		}
 		if (authenticated.status === 422 || authenticated.status === 400 || authenticated.status === 401) {
 			console.warn(authenticated.status === 401
@@ -743,14 +727,15 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 	globalThis.setTimeout(() => closePortal(), 1200);
 }
 
-async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
+async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElements, offerAccountMail: (kind: AccountMailKind) => void): Promise<void> {
 	const isRegister = portal.dataset.authMode === 'register';
 	const turnstileToken = validatePortalAuth(portal, elements, isRegister);
 	if (!turnstileToken) return;
 	setPortalSubmitBusy(elements.submitButton, true, isRegister);
+	let next: AccountMailKind | undefined;
 	try {
 		if (isRegister) await processPortalRegistration(elements, turnstileToken);
-		else await processPortalLogin(elements, turnstileToken);
+		else next = await processPortalLogin(elements, turnstileToken);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Authentication failed.';
 		elements.error.textContent = humanAuthMessage(message);
@@ -759,6 +744,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}
+	if (next) offerAccountMail(next);
 }
 
 function syncAuthModeCopy(controls: AuthModeControls, mode: 'login' | 'register'): void {
@@ -850,6 +836,7 @@ export function openPortal(mode: PortalMode): void {
 	};
 
 	const applyAuthMode = (targetMode: 'login' | 'register'): void => {
+		showAuthForm(portal);
 		syncAuthModeVisibility(portal, targetMode);
 		syncAuthModeCopy({
 			title: portal.querySelector('[data-auth-title]'),
@@ -883,9 +870,19 @@ export function openPortal(mode: PortalMode): void {
 		});
 	});
 
+	const applyAccountMailMode = (kind: AccountMailKind): void => {
+		showAccountMailForm(portal, kind);
+		clearPortalAuthErrors(elements);
+		refreshPortalValidation();
+		elements.email.focus();
+	};
+
+	portal.querySelector('[data-portal-action="forgot-password"]')?.addEventListener('click', () => applyAccountMailMode('recovery'));
+
 	elements.form.addEventListener('submit', (event) => {
 		event.preventDefault();
-		void (portal.dataset.portalMode === 'recovery' ? submitPortalRecovery(portal, elements) : submitPortalLogin(portal, elements));
+		const kind = portal.dataset.portalMode;
+		void (isAccountMailKind(kind) ? submitAccountMail(portal, elements, kind) : submitPortalLogin(portal, elements, applyAccountMailMode));
 	});
 
 	[elements.email, elements.password, elements.username, elements.confirmPassword].forEach((f) => {
@@ -895,6 +892,7 @@ export function openPortal(mode: PortalMode): void {
 		if (c) c.addEventListener('change', refreshPortalValidation);
 	});
 
-	applyAuthMode(mode === 'connect' ? 'login' : 'register');
+	applyAuthMode(mode === 'start' ? 'register' : 'login');
+	if (isAccountMailKind(mode)) applyAccountMailMode(mode);
 	elements.email.focus();
 }
