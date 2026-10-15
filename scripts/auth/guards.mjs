@@ -79,6 +79,11 @@ export function collectStartupViolations(config) {
 	if (!config.serviceKey) {
 		violations.push('SERVICE_ROLE_KEY is missing — privileged auth operations cannot run in production.');
 	}
+	// Verification and reset links are signed with this key (verdict B, C1); without it
+	// no account e-mail can be sent, so production refuses to boot rather than degrade.
+	if (config.linkSigningKeyProblem) {
+		violations.push(`${config.linkSigningKeyProblem} Set a dedicated AUTH_LINK_SIGNING_KEY of at least 32 characters.`);
+	}
 	return violations;
 }
 

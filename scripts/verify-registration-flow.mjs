@@ -95,20 +95,6 @@ function registrationBody(identity) {
 	};
 }
 
-const seededAvailabilityPath = `/availability?email=${encodeURIComponent('john.doe@example.com')}&username=${encodeURIComponent('johndoe')}`;
-const seeded = await requestJson('GET', seededAvailabilityPath);
-if (seeded.status !== 200 || seeded.json.email?.available !== false || seeded.json.username?.available !== false) {
-	fail('Seeded username/email should be reported as unavailable.', JSON.stringify({ status: seeded.status, body: seeded.json }));
-}
-logPass('Seeded username and email are detected as unavailable.');
-
-const uniqueAvailabilityPath = `/availability?email=${encodeURIComponent(testIdentity.email)}&username=${encodeURIComponent(testIdentity.username)}`;
-const unique = await requestJson('GET', uniqueAvailabilityPath);
-if (unique.status !== 200 || unique.json.email?.available !== true || unique.json.username?.available !== true) {
-	fail('Unique username/email should be reported as available.', JSON.stringify({ status: unique.status, body: unique.json }));
-}
-logPass('Unique username and email are detected as available.');
-
 const created = await requestJson('POST', '/register', registrationBody(testIdentity));
 if (created.status !== 200) {
 	fail('Registration should create a local confirmed account.', JSON.stringify({ status: created.status, body: created.json }));
@@ -117,9 +103,17 @@ logPass('Registration endpoint created a new local account.');
 
 const duplicate = await requestJson('POST', '/register', registrationBody(testIdentity));
 if (duplicate.status !== 409) {
-	fail('Duplicate registration should be rejected with HTTP 409.', JSON.stringify({ status: duplicate.status, body: duplicate.json }));
+	fail('A taken username should be rejected with HTTP 409.', JSON.stringify({ status: duplicate.status, body: duplicate.json }));
 }
-logPass('Duplicate username/email registration is rejected with HTTP 409.');
+logPass('A taken username is rejected with HTTP 409.');
+
+// A taken address under a fresh username answers like a new sign-up (DECISIONS D-028, Q6)
+// and mails "you already have an account" instead of saying so.
+const takenEmail = await requestJson('POST', '/register', registrationBody({ ...testIdentity, username: `${testIdentity.username.slice(0, 24)}_b` }));
+if (takenEmail.status !== 202) {
+	fail('A taken email should get the generic HTTP 202.', JSON.stringify({ status: takenEmail.status, body: takenEmail.json }));
+}
+logPass('A taken email gets the generic HTTP 202 and no enumeration.');
 
 const login = await requestJson('POST', '/login', {
 	email: testIdentity.email,

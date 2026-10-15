@@ -104,7 +104,7 @@ async function postLoginTo(port, email, password) {
 async function waitUntilListening(port, attempts = 30) {
 	for (let index = 0; index < attempts; index += 1) {
 		try {
-			const response = await fetchWithTimeout(`http://127.0.0.1:${port}/api/auth/availability`, { method: 'GET' }, 1000);
+			const response = await fetchWithTimeout(`http://127.0.0.1:${port}/api/auth/health`, { method: 'GET' }, 1000);
 			await response.arrayBuffer().catch(() => undefined);
 			return true;
 		} catch {

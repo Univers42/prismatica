@@ -69,8 +69,8 @@ curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:30
 ```
 
 > [!tip] Health probing
-> The auth gateway has **no** `/health` route — probe
-> `https://localhost:8787/api/auth/availability` instead. `make healthcheck`
+> The auth gateway's health route is
+> `https://localhost:8787/api/auth/health` (a bare `/health` does not exist). `make healthcheck`
 > follows the HTTP → HTTPS redirects for the website automatically.
 
 Production is separate: the frontends deploy to Vercel and the backend to fly.io

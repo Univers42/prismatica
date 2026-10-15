@@ -18,7 +18,7 @@ make check_health_apps    # UP/DOWN matrix per app, localhost AND production
 ```
 
 - `make healthcheck` probes the BaaS auth health route, the bridge, osionos, the
-  website (following the HTTP→HTTPS redirect), and the auth gateway's availability
+  website (following the HTTP→HTTPS redirect), and the auth gateway's health
   endpoint.
 - `make check_health_apps` produces a per-app UP/DOWN table across **both**
   localhost and the deployed production URLs.
@@ -36,10 +36,9 @@ curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:43
 curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:3001
 ```
 
-> [!warning] The auth gateway has no /health route
-> Probe its availability endpoint instead:
-> `https://localhost:8787/api/auth/availability`. A 404 on `/health` is expected,
-> not a failure.
+> [!warning] The auth gateway's health route is under /api/auth
+> Probe `https://localhost:8787/api/auth/health`. A 404 on a bare `/health` is
+> expected, not a failure.
 
 ## Everyday inspection
 
@@ -54,7 +53,7 @@ curl --cacert apps/grobase/certs/track-binocle-local-ca.pem https://localhost:30
 - [ ] `make healthcheck` returns without errors
 - [ ] `docker compose ps` shows services healthy (a few vestigial ones may lag)
 - [ ] `https://localhost:4322` serves the website
-- [ ] `https://localhost:8787/api/auth/availability` answers
+- [ ] `https://localhost:8787/api/auth/health` answers
 
 > [!note] Production is a separate surface
 > `make check_health_apps` also probes the deployed frontends and backend. Those

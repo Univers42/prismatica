@@ -44,9 +44,8 @@ The auth gateway is the one control-plane service that also runs as a **root
 compose frontend** (`auth-gateway`, host port `8787`) — it fronts authentication
 and session management for the browser.
 
-> [!warning] The gateway has no `/health` route
-> Do not probe `/health` on the auth gateway — it does not exist. Check
-> availability at `/api/auth/availability` instead.
+> [!warning] The gateway's health route is `/api/auth/health`
+> A bare `/health` does not exist on the auth gateway.
 
 ## Tracks gate what the control plane exposes
 

@@ -17,16 +17,8 @@ import { resolve } from 'node:path';
 const templateDir = resolve(process.cwd(), 'src/email-templates');
 const templates = [
 	{
-		file: 'password-reset.html',
-		required: ['{{.Token}}', '{{.SiteURL}}', '{{.Email}}', '{{ResetURL}}', 'Reset my password →', '1 hour'],
-	},
-	{
 		file: 'account-created.html',
 		required: ['{{.SiteURL}}', '{{.Email}}', 'Your account is ready', 'Open Prismatica →'],
-	},
-	{
-		file: 'email-verification.html',
-		required: ['{{.Token}}', '{{.SiteURL}}', '{{.Email}}', 'Confirm my email →', '24 hours'],
 	},
 	{
 		file: 'newsletter-confirm.html',
@@ -39,6 +31,22 @@ const templates = [
 	{
 		file: 'newsletter-unsubscribe.html',
 		required: ['{{.SiteURL}}', '{{.Email}}', 'You are unsubscribed'],
+	},
+	{
+		file: 'confirm-email.html',
+		required: ['{{link}}', '{{siteUrl}}', '{{email}}', '{{expiresIn}}', 'Confirm my email'],
+	},
+	{
+		file: 'reset-password.html',
+		required: ['{{link}}', '{{siteUrl}}', '{{email}}', '{{expiresIn}}', 'Choose a new password'],
+	},
+	{
+		file: 'password-changed.html',
+		required: ['{{siteUrl}}', '{{email}}', '{{changedAt}}', 'Your password was changed'],
+	},
+	{
+		file: 'account-exists.html',
+		required: ['{{siteUrl}}', '{{email}}', 'You already have an account'],
 	},
 	{
 		file: 'login-alert.html',
