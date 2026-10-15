@@ -16,7 +16,7 @@
 // checkout. Base URL: AUTH_GATEWAY_TEST_URL (default http://auth-gateway:8787).
 //
 // Proves: spoofed X-Forwarded-For cannot mint fresh rate-limit buckets,
-// /availability is throttled, failed login is a fixed generic 401 with no
+// /verify is throttled, failed login is a fixed generic 401 with no
 // enumeration/leak, and newsletter subscribe is per-target throttled.
 
 import { randomBytes } from 'node:crypto';
@@ -43,10 +43,12 @@ function disposableEmail() {
 	return `devfast+nl-${Date.now()}-${randomBytes(4).toString('hex')}@mini-baas.local`;
 }
 
-async function getAvailability(headers = {}) {
+// An unsigned body: the gateway answers 410 from its own signature check, so the burst
+// never reaches GoTrue; only the per-IP limit is exercised.
+async function postVerify(headers = {}) {
 	const response = await fetchWithTimeout(
-		gatewayUrl(`/api/auth/availability?email=${encodeURIComponent(disposableEmail())}`),
-		{ method: 'GET', headers },
+		gatewayUrl('/api/auth/verify'),
+		{ method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: '{}' },
 		4000,
 	);
 	await response.arrayBuffer().catch(() => undefined);
@@ -88,7 +90,7 @@ export async function run() {
 				if (!reachable) return skipped(`auth-gateway unreachable at ${gatewayUrl('')} — start the stack to run this.`);
 				const statuses = [];
 				for (let index = 0; index < 40; index += 1) {
-					const response = await getAvailability({ 'x-forwarded-for': randomXff() });
+					const response = await postVerify({ 'x-forwarded-for': randomXff() });
 					statuses.push(response.status);
 					if (response.status === 429) break;
 				}
@@ -97,21 +99,21 @@ export async function run() {
 			},
 		},
 		{
-			name: '/availability is throttled',
-			description: 'Bursting GET /api/auth/availability past the per-IP limit returns 429 with a retry-after header.',
+			name: '/verify is throttled',
+			description: 'Bursting POST /api/auth/verify past the per-IP limit returns 429 with a retry-after header.',
 			run: async () => {
 				if (!reachable) return skipped(`auth-gateway unreachable at ${gatewayUrl('')} — start the stack to run this.`);
 				let limited = null;
 				for (let index = 0; index < 40; index += 1) {
-					const response = await getAvailability();
+					const response = await postVerify();
 					if (response.status === 429) {
 						limited = response;
 						break;
 					}
 				}
-				assert.ok(limited, 'expected a 429 within 40 /availability requests');
+				assert.ok(limited, 'expected a 429 within 40 /verify requests');
 				assert.ok(limited.headers.get('retry-after'), '429 must carry a retry-after header');
-				return passed(`/availability returned 429 with retry-after=${limited.headers.get('retry-after')}.`);
+				return passed(`/verify returned 429 with retry-after=${limited.headers.get('retry-after')}.`);
 			},
 		},
 		{

@@ -15,8 +15,10 @@ primary_region = "cdg"
   dockerfile = "Dockerfile.fly"
 
 # Non-secret config. SERVICE_ROLE_KEY / OSIONOS_BRIDGE_SHARED_SECRET /
-# TURNSTILE_SECRET_KEY / SMTP_PASSWORD are SECRETS — set via `fly secrets set`,
-# never here (this file is committed).
+# TURNSTILE_SECRET_KEY / SMTP_PASS / AUTH_LINK_SIGNING_KEY are SECRETS — set via
+# `fly secrets set`, never here (this file is committed). Without a dedicated
+# AUTH_LINK_SIGNING_KEY (>= 32 characters) the gateway refuses to boot on a public origin.
+# SMTP uses grobase's names: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM.
 [env]
   AUTH_GATEWAY_PORT = "8787"
   # grobase Kong gateway (GoTrue /auth/v1, data /query/v1, storage /storage/v1).
@@ -46,7 +48,7 @@ primary_region = "cdg"
 
   [[http_service.checks]]
     method = "GET"
-    path = "/api/auth/availability"
+    path = "/api/auth/health"
     interval = "15s"
     timeout = "5s"
     grace_period = "20s"

@@ -111,7 +111,7 @@ export function gatewayUrl(path) {
 // A network/DNS error or timeout => unreachable => caller should skip().
 export async function gatewayReachable(timeoutMs = 2500) {
 	try {
-		const response = await fetchWithTimeout(gatewayUrl('/api/auth/availability'), { method: 'GET' }, timeoutMs);
+		const response = await fetchWithTimeout(gatewayUrl('/api/auth/health'), { method: 'GET' }, timeoutMs);
 		// Drain so the socket is freed.
 		await response.arrayBuffer().catch(() => undefined);
 		return true;

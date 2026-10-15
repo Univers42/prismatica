@@ -44,7 +44,8 @@ docker run -d --name auth-gateway -p 8787:8787 \
   -e SERVICE_ROLE_KEY=...        # from Vault — never commit \
   -e OSIONOS_BRIDGE_SHARED_SECRET=... \
   -e TURNSTILE_SECRET_KEY=... \
-  -e SMTP_HOST=... -e SMTP_PORT=... -e SMTP_USERNAME=... -e SMTP_PASSWORD=... \
+  -e AUTH_LINK_SIGNING_KEY=...   # dedicated, >= 32 characters; signs verify/reset links \
+  -e SMTP_HOST=... -e SMTP_PORT=... -e SMTP_USER=... -e SMTP_PASS=... -e EMAIL_FROM=... \
   track-binocle/prismatica-auth-gateway:local
 ```
 

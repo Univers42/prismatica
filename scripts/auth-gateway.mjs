@@ -14,15 +14,24 @@
 import { createServer } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
-import net from 'node:net';
-import tls from 'node:tls';
 import { createClient, MiniBaasError } from '@grobase/js';
-import { deriveClientIp } from './auth/net-ip.mjs';
+import { createAccountMail, REGISTER_ACCEPTED } from './auth/account-mail.mjs';
+import { createGotrueApi } from './auth/gotrue-api.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
+import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
+import { createLinkFlows } from './auth/link-flows.mjs';
+import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
 import { classifyLoginFailure } from './auth/login-failure.mjs';
+import { escapeHtml, renderMessage } from './auth/mail-templates.mjs';
+import { deriveClientIp } from './auth/net-ip.mjs';
+import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
+import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
+import { hasSmtpConfig, smtpConfigFromEnv } from './auth/smtp-config.mjs';
+import { createSmtpMailer } from './auth/smtp-mailer.mjs';
 import { createStore } from './auth/store.mjs';
+import { createWorkQueue } from './auth/work-queue.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
 	const path = resolve(process.cwd(), file);
@@ -37,16 +46,6 @@ for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.
 	}
 }
 
-const smtpPort = Number(process.env.SMTP_PORT ?? 465);
-
-function normalizeSmtpEncryption(value, port) {
-	const normalized = String(value ?? '').trim().toLowerCase();
-	if (['ssl', 'tls', 'smtps', 'true', '1'].includes(normalized)) return 'ssl';
-	if (['starttls', 'start_tls'].includes(normalized)) return 'starttls';
-	if (['none', 'plain', 'false', '0'].includes(normalized)) return 'none';
-	return Number(port) === 465 ? 'ssl' : 'none';
-}
-
 const config = {
 	port: Number(process.env.AUTH_GATEWAY_PORT ?? 8787),
 	baasUrl: (process.env.PUBLIC_BAAS_URL?.startsWith('/api') ? 'http://localhost:8000' : (process.env.PUBLIC_BAAS_URL ?? 'http://localhost:8000')).replace(/\/$/, ''),
@@ -56,14 +55,9 @@ const config = {
 	turnstileBypassLocal: process.env.TURNSTILE_BYPASS_LOCAL === 'true',
 	demoInsecure: process.env.AUTH_DEMO_INSECURE === 'true',
 	siteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4322',
-	smtpHost: process.env.SMTP_HOST ?? '',
-	smtpPort,
-	smtpEncryption: normalizeSmtpEncryption(process.env.SMTP_ENCRYPTION ?? process.env.SMTP_SECURE, smtpPort),
-	smtpUsername: process.env.SMTP_USERNAME ?? process.env.SMTP_USER ?? '',
-	smtpPassword: process.env.SMTP_PASSWORD ?? process.env.SMTP_PASS ?? '',
-	smtpAuthRequired: process.env.SMTP_AUTH_REQUIRED === 'true',
-	smtpFromName: process.env.SMTP_FROM_NAME ?? 'Prismatica',
-	smtpFromAddress: process.env.SMTP_FROM_ADDRESS ?? process.env.EMAIL_FROM ?? process.env.SMTP_USERNAME ?? process.env.SMTP_USER ?? '',
+	smtp: smtpConfigFromEnv(process.env),
+	linkTtls: linkTtls(process.env),
+	mailQueueMax: Number(process.env.AUTH_MAIL_QUEUE_MAX ?? 500),
 	emailDomainAllowlist: process.env.AUTH_EMAIL_DOMAIN_ALLOWLIST ?? process.env.EMAIL_DOMAIN_ALLOWLIST ?? '',
 	requireEmailVerification: process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false' && process.env.PUBLIC_AUTH_REQUIRE_EMAIL_VERIFICATION !== 'false',
 	osionosBridgeUrl: (process.env.OSIONOS_BRIDGE_URL ?? 'http://localhost:4000/api/auth/bridge/session').replace(/\/$/, ''),
@@ -76,19 +70,15 @@ const config = {
 	loginLockoutWindowSec: Number(process.env.AUTH_LOGIN_LOCKOUT_WINDOW_SEC ?? 900),
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
 };
+config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
+config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, newsletter: 12, availability: 30 };
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12 };
 const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
 const SIGN_IN_NOTICE_TTL_SEC = 600;
-const EMAIL_ATEXT = "A-Za-z0-9!#$%&'*+/=?^_`{|}~-";
-const EMAIL_LOCAL_PART = String.raw`(?:[${EMAIL_ATEXT}]+(?:\.[${EMAIL_ATEXT}]+)*|"[^"\r\n]+")`;
-const EMAIL_DOMAIN_LABEL = '(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)';
-const EMAIL_REGEX = new RegExp(String.raw`^${EMAIL_LOCAL_PART}@(?:${EMAIL_DOMAIN_LABEL}\.)+[A-Za-z]{2,63}$`);
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-const USERNAME_REGEX = /^\w[\w.-]{2,31}$/;
 const MAIL_DOMAIN_CACHE_MS = 10 * 60 * 1000;
 const DNS_LOOKUP_TIMEOUT_MS = 3500;
 const GOTRUE_MANAGED_PROFILE_MARKER = 'managed-by-gotrue';
@@ -111,10 +101,6 @@ function sdkErrorResult(error) {
 
 function clientIp(request) {
 	return deriveClientIp(request, { trustedProxyHops: config.trustedProxyHops, trustCfConnectingIp: config.trustCfConnectingIp });
-}
-
-function keyHash(value) {
-	return createHash('sha256').update(String(value ?? '')).digest('hex').slice(0, 32);
 }
 
 function json(response, status, body, headers = {}) {
@@ -152,28 +138,6 @@ async function readJson(request) {
 	return body ? JSON.parse(body) : {};
 }
 
-function cookieValue(request, name) {
-	const cookie = request.headers.cookie ?? '';
-	return cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1) ?? '';
-}
-
-function decodeCookieValue(raw) {
-	if (!raw) return '';
-	try {
-		return decodeURIComponent(raw);
-	} catch {
-		return '';
-	}
-}
-
-function refreshCookie(token, maxAge = 60 * 60 * 24 * 30) {
-	return `prismatica_refresh=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=${maxAge}`;
-}
-
-function clearRefreshCookie() {
-	return 'prismatica_refresh=; HttpOnly; SameSite=Lax; Secure; Path=/api/auth; Max-Age=0';
-}
-
 async function rateLimit(ip, action) {
 	const limit = RATE_LIMITS[action] ?? 12;
 	const key = `rl:${action}:${ip}`;
@@ -192,20 +156,14 @@ function csvValues(value) {
 	return String(value ?? '').split(',').map((entry) => entry.trim().toLowerCase()).filter(Boolean);
 }
 
-function emailAddress(value) {
-	const raw = String(value ?? '').trim();
-	const bracketed = /<([^>]+)>/.exec(raw)?.[1] ?? raw;
-	return bracketed.trim().toLowerCase();
-}
-
 function isLocalSmtpHost() {
-	const host = config.smtpHost.trim().toLowerCase().replace(/^\[|\]$/g, '');
+	const host = config.smtp.host.toLowerCase().replace(/^\[|\]$/g, '');
 	return host === 'mailpit' || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === 'host.docker.internal' || host.endsWith('.local');
 }
 
 function allowedEmailDomains() {
 	const domains = new Set(csvValues(config.emailDomainAllowlist));
-	const senderDomain = emailDomain(emailAddress(config.smtpFromAddress));
+	const senderDomain = emailDomain(config.smtp.fromAddress);
 	if (senderDomain) domains.add(senderDomain);
 	if (isLocalSmtpHost()) {
 		domains.add('mini-baas.local');
@@ -250,25 +208,9 @@ async function signInWithPassword(body) {
 	}
 }
 
-async function refreshAuthSession(refreshToken) {
-	try {
-		return sdkResult(await publicBaas.auth.refreshSession(refreshToken));
-	} catch (error) {
-		return sdkErrorResult(error);
-	}
-}
-
 async function signUpAccount(body) {
 	try {
 		return sdkResult(await publicBaas.auth.signUp(body));
-	} catch (error) {
-		return sdkErrorResult(error);
-	}
-}
-
-async function recoverAccount(body) {
-	try {
-		return sdkResult(await publicBaas.auth.recover(body));
 	} catch (error) {
 		return sdkErrorResult(error);
 	}
@@ -278,15 +220,6 @@ async function createAdminUser(body) {
 	try {
 		if (!serviceBaas) throw new Error('Missing service role key.');
 		return sdkResult(await serviceBaas.auth.admin.createUser(body));
-	} catch (error) {
-		return sdkErrorResult(error);
-	}
-}
-
-async function generateAdminLink(body) {
-	try {
-		if (!serviceBaas) throw new Error('Missing service role key.');
-		return sdkResult(await serviceBaas.auth.admin.generateLink(body));
 	} catch (error) {
 		return sdkErrorResult(error);
 	}
@@ -304,31 +237,6 @@ async function updateAdminUser(userId, body) {
 async function localProfileExists(column, value) {
 	if (!value || !serviceBaas) return false;
 	return serviceBaas.from('users').exists({ filters: { [column]: value } });
-}
-
-async function identityAvailability({ email = '', username = '' }) {
-	const normalizedEmail = String(email).trim().toLowerCase();
-	const normalizedUsername = cleanText(username, 32);
-	const emailValid = EMAIL_REGEX.test(normalizedEmail);
-	const usernameValid = USERNAME_REGEX.test(normalizedUsername);
-	const emailTaken = emailValid ? await localProfileExists('email', normalizedEmail) : false;
-	const usernameTaken = usernameValid ? await localProfileExists('username', normalizedUsername) : false;
-	let emailMessage = 'Enter a valid email first.';
-	if (emailValid) emailMessage = emailTaken ? 'This email is already registered.' : 'Email is available.';
-	let usernameMessage = 'Use 3–32 letters, numbers, dots, underscores, or hyphens.';
-	if (usernameValid) usernameMessage = usernameTaken ? 'This username is already taken.' : 'Username is available.';
-	return {
-		email: {
-			checked: emailValid,
-			available: emailValid ? !emailTaken : null,
-			message: emailMessage,
-		},
-		username: {
-			checked: usernameValid,
-			available: usernameValid ? !usernameTaken : null,
-			message: usernameMessage,
-		},
-	};
 }
 
 async function restRpc(name, body, authorization = config.anonKey) {
@@ -356,10 +264,6 @@ function humanAuthMessage(payload, fallback) {
 	const candidates = [payload?.error_description, payload?.msg, payload?.message, payload?.error];
 	const message = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
 	return message ? message.trim().slice(0, 240) : fallback;
-}
-
-function escapeHtml(value) {
-	return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }
 
 function headerValue(request, name, fallback = 'unknown', maxLength = 240) {
@@ -395,42 +299,6 @@ function siteBaseUrl() {
 	return config.siteUrl.replace(/\/$/, '');
 }
 
-function authLinkPayload(payload) {
-	const properties = typeof payload?.properties === 'object' && payload.properties !== null ? payload.properties : {};
-	let actionLink = '';
-	let token = '';
-	if (typeof payload?.action_link === 'string') actionLink = payload.action_link;
-	else if (typeof properties.action_link === 'string') actionLink = properties.action_link;
-	if (typeof payload?.hashed_token === 'string') token = payload.hashed_token;
-	else if (typeof payload?.token_hash === 'string') token = payload.token_hash;
-	else if (typeof properties.hashed_token === 'string') token = properties.hashed_token;
-	else if (typeof properties.token_hash === 'string') token = properties.token_hash;
-	return {
-		actionLink,
-		token,
-	};
-}
-
-async function requestPasswordRecoveryEmail(request, email) {
-	if (!serviceBaas || !hasSmtpConfig()) {
-		await recoverAccount({ email });
-		return;
-	}
-	const result = await generateAdminLink({
-		type: 'recovery',
-		email,
-		password: randomBytes(18).toString('base64url'),
-		redirect_to: `${siteBaseUrl()}/auth/reset-password`,
-	});
-	if (!result.response.ok) {
-		await audit('password_recovery_link_failed', request, { email, status: result.response.status });
-		return;
-	}
-	const { token, actionLink } = authLinkPayload(result.payload);
-	const resetUrl = actionLink || (token ? `${siteBaseUrl()}/auth/reset-password?token=${encodeURIComponent(token)}` : '');
-	if (resetUrl) await sendPasswordReset(request, email, token, resetUrl);
-}
-
 function loginAlertContext(request, email, outcome = 'success') {
 	const ipAddress = clientIp(request) || 'unknown';
 	const occurredAt = new Intl.DateTimeFormat('en-GB', {
@@ -462,52 +330,44 @@ async function shouldSendSignInNotice(email, outcome) {
 	return true;
 }
 
-async function sendLoginSecurityNotification(request, email, outcome = 'success') {
-	if (!hasSmtpConfig()) {
+async function sendLoginSecurityNotification(email, outcome, context) {
+	if (!hasSmtpConfig(config.smtp)) {
 		console.warn(`[auth-gateway] login security alert skipped for ${email}: SMTP is not fully configured.`);
-		await audit('login_alert_skipped', request, { email, reason: 'smtp_not_configured' });
+		await audit('login_alert_skipped', null, { email, reason: 'smtp_not_configured' });
 		return;
 	}
 	if (!(await shouldSendSignInNotice(email, outcome))) {
-		await audit('login_alert_suppressed', request, { email, outcome, reason: 'recent_notice_sent' });
+		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
-	const context = loginAlertContext(request, email, outcome);
 	await sendSmtpMail({
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
 		html: renderEmailTemplate('login-alert.html', context),
 	});
 	console.info(`[auth-gateway] login security alert accepted by SMTP for ${email} from ${context.ipAddress}.`);
-	await audit('login_alert_sent', request, { email, outcome, ip_address: context.ipAddress, location: context.location });
+	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
+}
+
+// A failed-login alert goes only to an existing profile; looking that up before answering
+// told an attacker which addresses have accounts (verdict B, B2), so the lookup and the
+// send run after the 401, in the queue (C5).
+function scheduleLoginAlert(request, email, outcome) {
+	const context = loginAlertContext(request, email, outcome);
+	mailQueue.push('login-alert', async () => {
+		if (outcome === 'failed' && !(await localProfileExists('email', email))) return;
+		await sendLoginSecurityNotification(email, outcome, context);
+	});
 }
 
 async function sendAccountCreatedNotification(request, email) {
-	if (!hasSmtpConfig()) return;
+	if (!hasSmtpConfig(config.smtp)) return;
 	await sendSmtpMail({
 		to: email,
 		subject: 'Your Prismatica account is ready',
 		html: renderEmailTemplate('account-created.html', { Email: email, SiteURL: siteBaseUrl() }),
 	});
 	await audit('account_created_email_sent', request, { email });
-}
-
-async function sendEmailVerification(request, email, token, confirmUrl) {
-	await sendSmtpMail({
-		to: email,
-		subject: 'Confirm your Prismatica account',
-		html: renderEmailTemplate('email-verification.html', { Email: email, SiteURL: siteBaseUrl(), Token: token, ConfirmURL: confirmUrl }),
-	});
-	await audit('email_verification_sent', request, { email });
-}
-
-async function sendPasswordReset(request, email, token, resetUrl) {
-	await sendSmtpMail({
-		to: email,
-		subject: 'Reset your Prismatica password',
-		html: renderEmailTemplate('password-reset.html', { Email: email, SiteURL: siteBaseUrl(), Token: token, ResetURL: resetUrl }),
-	});
-	await audit('password_recovery_email_sent', request, { email });
 }
 
 async function sendNewsletterConfirm(request, email, token) {
@@ -537,153 +397,84 @@ async function sendNewsletterUnsubscribe(request, email) {
 	await audit('newsletter_unsubscribe_email_sent', request, { email });
 }
 
-function smtpBody({ to, subject, html }) {
-	const fromName = config.smtpFromName.replaceAll('\r', ' ').replaceAll('\n', ' ').trim();
-	const fromAddress = config.smtpFromAddress.replaceAll('\r', '').replaceAll('\n', '').trim();
-	return [
-		`From: ${fromName} <${fromAddress}>`,
-		`To: ${to}`,
-		`Subject: ${subject}`,
-		`Date: ${new Date().toUTCString()}`,
-		`Message-ID: <${randomUUID()}@prismatica.local>`,
-		'Auto-Submitted: auto-generated',
-		'X-Auto-Response-Suppress: All',
-		'MIME-Version: 1.0',
-		'Content-Type: text/html; charset=UTF-8',
-		'',
-		html,
-	].join('\r\n');
-}
-
-function hasSmtpConfig() {
-	const wantsAuth = config.smtpAuthRequired || Boolean(config.smtpUsername || config.smtpPassword);
-	const hasAuthPair = Boolean(config.smtpUsername && config.smtpPassword);
-	return Boolean(config.smtpHost && config.smtpFromAddress && (!wantsAuth || hasAuthPair));
-}
-
-function createSmtpClient(socket) {
-	socket.setEncoding('utf8');
-	let buffer = '';
-	const lines = [];
-	const waiters = [];
-
-	function flushWaiters() {
-		while (lines.length > 0 && waiters.length > 0) {
-			waiters.shift().resolve(lines.shift());
-		}
-	}
-
-	socket.on('data', (chunk) => {
-		buffer += chunk;
-		let index = buffer.indexOf('\n');
-		while (index >= 0) {
-			lines.push(buffer.slice(0, index).replace(/\r$/, ''));
-			buffer = buffer.slice(index + 1);
-			index = buffer.indexOf('\n');
-		}
-		flushWaiters();
-	});
-
-	const readLine = (timeoutMs = 10000) => new Promise((resolveLine, rejectLine) => {
-		if (lines.length > 0) {
-			resolveLine(lines.shift());
-			return;
-		}
-		const timer = setTimeout(() => rejectLine(new Error('SMTP read timed out.')), timeoutMs);
-		waiters.push({
-			resolve: (line) => {
-				clearTimeout(timer);
-				resolveLine(line);
-			},
-		});
-	});
-
-	async function readResponse() {
-		const responseLines = [];
-		let code = '';
-		for (;;) {
-			const line = String(await readLine());
-			responseLines.push(line);
-			code ||= line.slice(0, 3);
-			if (/^\d{3} /.test(line)) {
-				return { code: Number(code), text: responseLines.join('\n') };
-			}
-		}
-	}
-
-	async function send(line, expectedCodes) {
-		socket.write(`${line}\r\n`);
-		const response = await readResponse();
-		if (!expectedCodes.includes(response.code)) {
-			throw new Error(`SMTP command failed with ${response.code}.`);
-		}
-		return response;
-	}
-
-	return { socket, readResponse, send };
-}
-
-function connectPlainSmtpSocket() {
-	return new Promise((resolveSocket, rejectSocket) => {
-		const socket = net.connect({ host: config.smtpHost, port: config.smtpPort }, () => resolveSocket(socket));
-		socket.once('error', rejectSocket);
-	});
-}
-
-function connectTlsSmtpSocket(existingSocket = null) {
-	return new Promise((resolveSocket, rejectSocket) => {
-		const options = existingSocket
-			? { socket: existingSocket, host: config.smtpHost, servername: config.smtpHost, rejectUnauthorized: true }
-			: { host: config.smtpHost, port: config.smtpPort, servername: config.smtpHost, rejectUnauthorized: true };
-		const socket = tls.connect(options, () => resolveSocket(socket));
-		socket.once('error', rejectSocket);
-	});
-}
-
-async function authenticateSmtp(client) {
-	if (!config.smtpUsername && !config.smtpPassword) return;
-	if (!config.smtpUsername || !config.smtpPassword) {
-		throw Object.assign(new Error('SMTP auth requires both username and password.'), { status: 503 });
-	}
-	await client.send('AUTH LOGIN', [334]);
-	await client.send(Buffer.from(config.smtpUsername, 'utf8').toString('base64'), [334]);
-	await client.send(Buffer.from(config.smtpPassword, 'utf8').toString('base64'), [235]);
-}
-
-async function sendSmtpMail(message) {
-	if (!hasSmtpConfig()) {
-		throw Object.assign(new Error('SMTP is not configured.'), { status: 503 });
-	}
-	let client;
-	let socket;
-	try {
-		socket = config.smtpEncryption === 'ssl' ? await connectTlsSmtpSocket() : await connectPlainSmtpSocket();
-		client = createSmtpClient(socket);
-		const greeting = await client.readResponse();
-		if (greeting.code !== 220) throw new Error('SMTP greeting failed.');
-		await client.send('EHLO prismatica.local', [250]);
-		if (config.smtpEncryption === 'starttls') {
-			await client.send('STARTTLS', [220]);
-			socket = await connectTlsSmtpSocket(client.socket);
-			client = createSmtpClient(socket);
-			await client.send('EHLO prismatica.local', [250]);
-		}
-		await authenticateSmtp(client);
-		await client.send(`MAIL FROM:<${config.smtpFromAddress}>`, [250]);
-		await client.send(`RCPT TO:<${message.to}>`, [250, 251]);
-		await client.send('DATA', [354]);
-		await client.send(`${smtpBody(message)}\r\n.`, [250]);
-		await client.send('QUIT', [221]).catch(() => undefined);
-		client.socket.end();
-	} catch (error) {
-		client?.socket.destroy();
-		socket?.destroy?.();
-		throw error;
-	}
-}
-
 function cleanText(value, maxLength) {
 	return String(value ?? '').trim().slice(0, maxLength);
+}
+
+const smtpMailer = createSmtpMailer(config.smtp);
+
+function sendSmtpMail(message) {
+	if (!hasSmtpConfig(config.smtp)) return Promise.reject(Object.assign(new Error('SMTP is not configured.'), { status: 503 }));
+	return smtpMailer.send(message);
+}
+
+// Flows report through this; it never rejects, so a fire-and-forget call cannot leak.
+function flowAudit(eventType, details) {
+	audit(eventType, null, details).catch(() => undefined);
+}
+
+let droppedJobs = 0;
+let lastDropReportMs = 0;
+// Caveat: overflow is reported at most once a minute, as a count; drops after the last report
+// stay unreported until the next one (a flood that stops leaves its tail in the counter).
+function reportDroppedJob(label) {
+	droppedJobs += 1;
+	if (Date.now() - lastDropReportMs < 60_000) return;
+	lastDropReportMs = Date.now();
+	console.warn(`[auth-gateway] mail queue full: dropped ${droppedJobs} job(s), the last one "${label}".`);
+	flowAudit('mail_queue_overflow', { dropped: droppedJobs, last: label });
+	droppedJobs = 0;
+}
+
+const mailQueue = createWorkQueue({
+	maxLength: config.mailQueueMax,
+	concurrency: 2,
+	onDrop: reportDroppedJob,
+	onError: (error, label) => {
+		console.error(`[auth-gateway] queued "${label}" failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+		flowAudit('mail_job_failed', { job: label, error: error instanceof Error ? error.message : 'unknown_error' });
+	},
+});
+
+const gotrue = createGotrueApi({ baseUrl: config.baasUrl, anonKey: config.anonKey, serviceKey: config.serviceKey });
+
+const accountMail = createAccountMail({
+	store,
+	queue: mailQueue,
+	gotrue,
+	mailer: { send: sendSmtpMail },
+	render: (name, vars) => renderMessage(emailTemplateDir, name, vars),
+	links: {
+		configured: !config.linkSigningKeyProblem,
+		url: (type, tokenHash) => buildLinkUrl(siteBaseUrl(), config.linkSigningKey, { type, tokenHash, exp: Math.floor(Date.now() / 1000) + linkTtlSec(type) }),
+		expiresIn: (type) => humanDuration(linkTtlSec(type)),
+	},
+	siteUrl: siteBaseUrl(),
+	profiles: {
+		emailExists: (email) => localProfileExists('email', email),
+		usernameTaken: (username) => localProfileExists('username', username),
+		create: async (context) => (await createLocalUserProfile(context, false)).response.ok,
+	},
+	isDeliverable: hasDeliverableEmailDomain,
+	audit: flowAudit,
+	newsletterOptIn: (email) => requestNewsletterOptIn(null, email),
+});
+
+const linkFlows = createLinkFlows({
+	gotrue,
+	store,
+	linkKey: config.linkSigningKey,
+	nowMs: () => Date.now(),
+	passwordAcceptable: (password) => PASSWORD_REGEX.test(password),
+	writeCutoff: createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey }),
+	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`),
+	audit: flowAudit,
+});
+
+const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
+
+function linkTtlSec(type) {
+	return type === 'signup' ? config.linkTtls.verifySec : config.linkTtls.resetSec;
 }
 
 function registrationProfile(payload) {
@@ -775,7 +566,18 @@ async function ensureLocalUserProfile(request, response, context, isEmailVerifie
 	return false;
 }
 
+// The verification-off path (local only: guards.mjs refuses it on a public origin). A new
+// address is usable at once, so its 200 differs from a taken address's 202 by design here.
 async function handleDevConfirmedRegistration(request, response, context) {
+	if (await localProfileExists('username', context.profile.username)) {
+		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
+		return;
+	}
+	if (await localProfileExists('email', context.email)) {
+		await accountMail.scheduleAccountExists(context.email);
+		json(response, 202, REGISTER_ACCEPTED);
+		return;
+	}
 	const result = await createDevConfirmedAccount(context);
 	if (!result.response.ok) {
 		await audit('register_dev_failed', request, { email: context.email, status: result.response.status });
@@ -785,50 +587,12 @@ async function handleDevConfirmedRegistration(request, response, context) {
 	if (!await ensureLocalUserProfile(request, response, context, true)) {
 		return;
 	}
-	await sendAccountCreatedNotification(request, context.email).catch(async (error) => {
-		console.error(`[auth-gateway] account-created email failed for ${context.email}: ${error instanceof Error ? error.message : 'unknown error'}`);
-		await audit('account_created_email_failed', request, { email: context.email, error: error instanceof Error ? error.message : 'unknown_error' });
+	mailQueue.push('account-created', async () => {
+		await sendAccountCreatedNotification(null, context.email);
+		if (context.profile.newsletter_consent) await requestNewsletterOptIn(null, context.email);
 	});
-	if (context.profile.newsletter_consent) {
-		await requestNewsletterOptIn(request, context.email).catch(async (error) => {
-			console.error(`[auth-gateway] registration newsletter opt-in failed for ${context.email}: ${error instanceof Error ? error.message : 'unknown error'}`);
-			await audit('newsletter_confirmation_email_failed', request, { email: context.email, error: error instanceof Error ? error.message : 'unknown_error' });
-		});
-	}
 	await audit('register_dev_confirmed', request, { email: context.email });
 	json(response, 200, { message: 'Development account created and confirmed. You can sign in now.' });
-}
-
-async function handleEmailVerifiedRegistration(request, response, context) {
-	const result = await generateAdminLink({
-		type: 'signup',
-		email: context.email,
-		password: context.password,
-		data: context.userMetadata,
-		redirect_to: `${config.siteUrl.replace(/\/$/, '')}/auth/confirm`,
-	});
-	await audit(result.response.ok ? 'register_requested' : 'register_failed', request, { email: context.email, status: result.response.status });
-	if (!result.response.ok) {
-		json(response, result.response.status, { message: humanAuthMessage(result.payload, 'Registration failed.') });
-		return;
-	}
-	const { token, actionLink } = authLinkPayload(result.payload);
-	const confirmUrl = token ? `${siteBaseUrl()}/auth/confirm/?token=${encodeURIComponent(token)}` : actionLink;
-	if (!confirmUrl) {
-		json(response, 502, { message: 'Could not create the email verification link.' });
-		return;
-	}
-	await sendEmailVerification(request, context.email, token, confirmUrl);
-	if (context.profile.newsletter_consent) {
-		await requestNewsletterOptIn(request, context.email).catch(async (error) => {
-			console.error(`[auth-gateway] registration newsletter opt-in failed for ${context.email}: ${error instanceof Error ? error.message : 'unknown error'}`);
-			await audit('newsletter_confirmation_email_failed', request, { email: context.email, error: error instanceof Error ? error.message : 'unknown_error' });
-		});
-	}
-	if (!await ensureLocalUserProfile(request, response, context, false)) {
-		return;
-	}
-	json(response, 200, { message: 'Check your email to confirm the account before signing in.' });
 }
 
 async function handleRegister(request, response) {
@@ -842,44 +606,17 @@ async function handleRegister(request, response) {
 			json(response, 422, { message: 'Use an email domain that can receive mail.' });
 			return;
 		}
-		if (!config.serviceKey || (config.requireEmailVerification && !hasSmtpConfig())) {
+		if (!config.serviceKey || (config.requireEmailVerification && !hasSmtpConfig(config.smtp))) {
 			json(response, 503, { message: 'Email verification is not configured.' });
-			return;
-		}
-		const availability = await identityAvailability({ email: context.email, username: context.profile.username });
-		if (availability.email.available === false || availability.username.available === false) {
-			json(response, 409, {
-				message: availability.email.available === false ? availability.email.message : availability.username.message,
-				email: availability.email,
-				username: availability.username,
-			});
 			return;
 		}
 		if (!config.requireEmailVerification || !context.profile.email_verification_consent) {
 			await handleDevConfirmedRegistration(request, response, context);
 			return;
 		}
-		await handleEmailVerifiedRegistration(request, response, context);
+		const result = await accountMail.requestRegistration(context);
+		json(response, result.status, result.body);
 	});
-}
-
-async function handleAvailability(request, response) {
-	if (!config.serviceKey) {
-		json(response, 503, { message: 'Registration availability is not configured.' });
-		return;
-	}
-	const ip = clientIp(request);
-	const retryAfter = await rateLimit(ip, 'availability');
-	if (retryAfter) {
-		json(response, 429, { message: 'Too many availability checks. Please slow down.' }, { 'retry-after': String(retryAfter) });
-		return;
-	}
-	const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-	const availability = await identityAvailability({
-		email: url.searchParams.get('email') ?? '',
-		username: url.searchParams.get('username') ?? '',
-	});
-	json(response, 200, availability);
 }
 
 async function handleLogin(request, response) {
@@ -920,12 +657,7 @@ async function handleLogin(request, response) {
 				await store.del(failKey);
 				await audit('login_lockout_triggered', request, { email, failures });
 			}
-			if (await localProfileExists('email', email)) {
-				await sendLoginSecurityNotification(request, email, 'failed').catch(async (error) => {
-					console.error(`[auth-gateway] failed-login security alert failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
-					await audit('login_alert_failed', request, { email, outcome: 'failed', error: error instanceof Error ? error.message : 'unknown_error' });
-				});
-			}
+			scheduleLoginAlert(request, email, 'failed');
 			// Generic message and fixed 401 — never leak whether the email exists,
 			// the lockout counter, or GoTrue internals to an unauthenticated caller. The operator's
 			// log says what the caller may not: the password WAS checked, for which account.
@@ -935,10 +667,7 @@ async function handleLogin(request, response) {
 		}
 		await store.del(failKey);
 		await store.del(lockKey);
-		await sendLoginSecurityNotification(request, email).catch(async (error) => {
-			console.error(`[auth-gateway] login security alert failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
-			await audit('login_alert_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
-		});
+		scheduleLoginAlert(request, email, 'success');
 		const refreshToken = typeof result.payload.refresh_token === 'string' ? result.payload.refresh_token : '';
 		const headers = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
 		json(response, 200, sanitizeAuthPayload(result.payload), headers);
@@ -947,13 +676,35 @@ async function handleLogin(request, response) {
 
 async function handleRecover(request, response) {
 	await protectedAction(request, response, 'recover', async (payload) => {
-		const email = String(payload.email ?? '').trim().toLowerCase();
-		if (EMAIL_REGEX.test(email) && await hasDeliverableEmailDomain(email)) {
-			await requestPasswordRecoveryEmail(request, email);
-			await audit('password_recovery_requested', request, { email });
-		}
-		json(response, 200, { message: 'If an account exists for that email, a reset link has been sent.' });
+		const result = await accountMail.requestRecovery(payload.email);
+		json(response, result.status, result.body);
 	});
+}
+
+async function handleResendVerification(request, response) {
+	await protectedAction(request, response, 'resend', async (payload) => {
+		const result = await accountMail.requestVerificationResend(payload.email);
+		json(response, result.status, result.body);
+	});
+}
+
+// The signed link is the credential here, so these take no Turnstile token; per-IP limits only.
+async function linkAction(request, response, action, flow) {
+	const retryAfter = await rateLimit(clientIp(request), action);
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
+	const result = await flow(await readJson(request));
+	json(response, result.status, result.body);
+}
+
+async function handleVerify(request, response) {
+	await linkAction(request, response, 'verify', (payload) => linkFlows.verifyEmail(payload));
+}
+
+async function handleResetPassword(request, response) {
+	await linkAction(request, response, 'reset', (payload) => linkFlows.resetPassword(payload));
 }
 
 async function requestNewsletterOptIn(request, email) {
@@ -1063,24 +814,17 @@ async function handleNewsletterUnsubscribe(request, response) {
 }
 
 async function handleRefresh(request, response) {
-	const refreshToken = decodeCookieValue(cookieValue(request, 'prismatica_refresh'));
-	if (!refreshToken) {
-		json(response, 200, { message: 'No refresh session.' });
-		return;
-	}
-	const result = await refreshAuthSession(refreshToken);
-	await audit(result.response.ok ? 'refresh_success' : 'refresh_failed', request, { status: result.response.status });
-	if (!result.response.ok) {
-		json(response, 401, { message: 'Refresh session expired.' }, { 'set-cookie': clearRefreshCookie() });
-		return;
-	}
-	const nextRefreshToken = typeof result.payload.refresh_token === 'string' ? result.payload.refresh_token : refreshToken;
-	json(response, 200, sanitizeAuthPayload(result.payload), { 'set-cookie': refreshCookie(nextRefreshToken) });
+	const result = await sessionFlows.refresh(refreshTokenFrom(request.headers.cookie));
+	json(response, result.status, result.body, result.headers);
 }
 
 async function handleLogout(request, response) {
-	await audit('logout', request);
-	json(response, 200, { message: 'Signed out.' }, { 'set-cookie': clearRefreshCookie() });
+	const result = await sessionFlows.logout(refreshTokenFrom(request.headers.cookie));
+	json(response, result.status, result.body, result.headers);
+}
+
+function handleHealth(_request, response) {
+	json(response, 200, { status: 'ok' });
 }
 
 async function handleOsionosSession(request, response) {
@@ -1150,10 +894,13 @@ function handleMfaHook(response) {
 }
 
 const routes = new Map([
-	['GET /api/auth/availability', handleAvailability],
+	['GET /api/auth/health', handleHealth],
 	['POST /api/auth/register', handleRegister],
 	['POST /api/auth/login', handleLogin],
 	['POST /api/auth/recover', handleRecover],
+	['POST /api/auth/resend-verification', handleResendVerification],
+	['POST /api/auth/verify', handleVerify],
+	['POST /api/auth/reset-password', handleResetPassword],
 	['POST /api/auth/refresh', handleRefresh],
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
@@ -1163,6 +910,9 @@ const routes = new Map([
 ]);
 
 enforceStartupGuards(config, { logger: console });
+if (config.linkSigningKeyProblem) {
+	console.error(`[auth-gateway] ${config.linkSigningKeyProblem} Verification and reset e-mails are off: /api/auth/verify and /reset-password answer 503, /recover and /resend-verification send nothing.`);
+}
 
 createServer(async (request, response) => {
 	try {

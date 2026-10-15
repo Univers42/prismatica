@@ -1,0 +1,11 @@
+You already have an account
+
+Someone, probably you, tried to create a Prismatica account for {{email}}. This address already has one, so nothing was created.
+
+Sign in: {{siteUrl}}
+
+Forgot the password? Choose "Forgot password" in the sign-in window and we will send you a reset link.
+
+You did not try to sign up? Ignore this message; your account has not changed.
+
+Prismatica - {{siteUrl}}

@@ -43,6 +43,6 @@ EXPOSE 8787
 
 # Secrets/config arrive via env at runtime; only the port is assumed here.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=6 \
-  CMD node -e "fetch('http://127.0.0.1:8787/api/auth/availability').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:8787/api/auth/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "scripts/auth-gateway.mjs"]
