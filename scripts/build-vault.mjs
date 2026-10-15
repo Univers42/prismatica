@@ -14,16 +14,21 @@ import { join, dirname, relative, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import vm from "node:vm";
+import { rewriteDocLinks } from "./vault-links.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));            // apps/opposite-osiris/scripts
 const SITE = resolve(HERE, "..");                               // apps/opposite-osiris
 const VAULT = join(SITE, "vault");
 const OUT_DIR = join(SITE, "public", "docs");
-const MARKDOWN_DIR = resolve(SITE, "..", "osionos", "app", "src", "shared", "lib", "markengine", "markdown");
+// osionos's markdown engine, a submodule of the app since it left src/shared/lib/markengine.
+const MARKDOWN_DIR = resolve(SITE, "..", "osionos", "app", "packages", "markdown-engine", "markdown");
 
 /* ── 1. Load the markengine (parse + renderHtml) via esbuild + vm ─────────── */
 async function loadMarkengine() {
+  if (!existsSync(join(MARKDOWN_DIR, "parser.ts"))) {
+    throw new Error(`osionos's markdown engine is not checked out at ${MARKDOWN_DIR}; from the groot root run: git -C apps/osionos/app submodule update --init packages/markdown-engine`);
+  }
   const esbuild = require("esbuild");
   const out = await esbuild.build({
     stdin: {
@@ -208,6 +213,15 @@ async function main() {
   }
   docs.sort((a, b) => a.order - b.order || a.path.localeCompare(b.path));
   if (!docs.length) throw new Error("No .xmd files found under " + VAULT);
+
+  const knownDocs = new Set(docs.map((d) => d.path));
+  const broken = [];
+  for (const d of docs) {
+    const result = rewriteDocLinks(d.html, d.path, knownDocs);
+    d.html = result.html;
+    broken.push(...result.broken);
+  }
+  if (broken.length) throw new Error("links to docs that do not exist:\n  " + broken.join("\n  "));
 
   const home = docs[0];
   const totalHeadings = docs.reduce((n, d) => n + d.toc.length, 0);
