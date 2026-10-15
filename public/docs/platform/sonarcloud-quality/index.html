@@ -45,7 +45,7 @@
 </div>
 <h2 id="on-demand-scanning" data-block-state="reading">On-demand scanning</h2>
 <p data-block-state="reading">Because Automatic Analysis is <strong>off</strong>, a scan is a direct call to the scanner — no git push required. Docker-first, of course:</p>
-<pre data-block-state="reading"><code class="language-sh">docker run --rm \
+<pre tabindex="0" data-block-state="reading"><code class="language-sh">docker run --rm \
   -e SONAR_TOKEN=$SONAR_TOK \
   -e SONAR_HOST_URL=https://sonarcloud.io \
   -v &quot;$PWD:/usr/src&quot; sonarsource/sonar-scanner-cli \

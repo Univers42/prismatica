@@ -308,6 +308,7 @@ body {
   box-shadow: var(--shadow-1);
 }
 .md pre code { background: none; border: 0; padding: 0; color: inherit; }
+.md pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .md pre[data-meta]::before { content: attr(data-meta); }
 
 /* tables */

@@ -31,7 +31,7 @@
 <p data-block-state="reading">Drawing 100,000 individual nodes when they are each a fraction of a pixel is pure waste. Past a certain zoom-out on a large-enough graph, the engine stops rendering nodes and paints <strong>one translucent disc per database cluster</strong> instead.</p>
 <h2 id="the-overview-gate" data-block-state="reading">The overview gate</h2>
 <p data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">core/render/renderFrame.ts</code> checks two conditions at the top of the node pass:</p>
-<pre data-block-state="reading"><code class="language-ts">// renderFrame.ts — enter overview aggregation
+<pre tabindex="0" data-block-state="reading"><code class="language-ts">// renderFrame.ts — enter overview aggregation
 if (!f.focus &amp;&amp; camera.scale &lt; AGG_MAX_SCALE &amp;&amp; f.state.count &gt; AGG_MIN_NODES) {
   const blobs = f.state.clusterAggregates(!f.lowQuality);
   drawClusterBlobs(ctx, blobs, camera);

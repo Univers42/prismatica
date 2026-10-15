@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import { rewriteDocLinks } from "./vault-links.mjs";
-import { docHref, docPage, labelTaskItems } from "./vault-page.mjs";
+import { docHref, docPage, focusableCodeBlocks, labelTaskItems } from "./vault-page.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));            // apps/opposite-osiris/scripts
@@ -153,7 +153,7 @@ async function main() {
   for (const d of docs) {
     const result = rewriteDocLinks(d.html, d.path, knownDocs, hrefOf);
     // Pages sit at different depths, so an image's relative assets/ path is made absolute.
-    d.html = labelTaskItems(result.html.replace(/\bsrc="assets\//g, 'src="/docs/assets/'));
+    d.html = focusableCodeBlocks(labelTaskItems(result.html.replace(/\bsrc="assets\//g, 'src="/docs/assets/')));
     broken.push(...result.broken);
   }
   if (broken.length) throw new Error("links to docs that do not exist:\n  " + broken.join("\n  "));

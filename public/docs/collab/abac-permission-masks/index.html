@@ -40,7 +40,7 @@
 </tbody>
 </table>
 <p data-block-state="reading">Policies are compiled into a bundle the data plane can evaluate. osionos fetches the current bundle from the control plane:</p>
-<pre data-block-state="reading"><code class="language-text">GET /permissions/bundles/latest   →   the Rust evaluator (parity proven)</code></pre>
+<pre tabindex="0" data-block-state="reading"><code class="language-text">GET /permissions/bundles/latest   →   the Rust evaluator (parity proven)</code></pre>
 <h2 id="the-chmod-cycle-ui" data-block-state="reading">The chmod-cycle UI</h2>
 <p data-block-state="reading">Permissions are edited in a matrix in Settings, using a <strong>chmod-style cycle</strong> — a cell toggles through access levels the way <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">chmod</code> cycles Unix bits — plus the field masks and a <strong>View-as</strong> control that re-renders the surface as another role would see it. The point of View-as is to <em style="font-style:italic">check your work</em>: apply a mask, then look through someone else&#39;s eyes before you trust it.</p>
 <div class="md-callout md-callout-warning" data-block-state="reading">

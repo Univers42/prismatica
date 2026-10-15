@@ -30,7 +30,7 @@
         <article class="doc md" data-doc="graph/multi-engine-graph"><h1 id="multi-engine-graph" data-block-state="reading">Multi-Engine Graph</h1>
 <p data-block-state="reading">The graph is not just your notes. It is the whole data ecosystem an account can reach: <strong>notes ⊕ live database records</strong>, plus the relations that span <em style="font-style:italic">different</em> engines — Postgres, MySQL, Mongo, and the other backends grobase drives.</p>
 <h2 id="one-graph-many-sources" data-block-state="reading">One graph, many sources</h2>
-<pre data-block-state="reading"><code class="language-text">  notes (osionos_pages) ─┐
+<pre tabindex="0" data-block-state="reading"><code class="language-text">  notes (osionos_pages) ─┐
   Postgres records       ─┤
   MySQL records          ─┼─► merge by id ─► one GraphModel ─► engine
   Mongo records          ─┤

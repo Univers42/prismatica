@@ -35,7 +35,7 @@
 </div>
 <h2 id="indexmodel-one-pass-every-index" data-block-state="reading">indexModel — one pass, every index</h2>
 <p data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">core/model/model.ts</code> turns raw nodes and edges into a ready-to-render model in a single <strong>O(N + E)</strong> pass:</p>
-<pre data-block-state="reading"><code class="language-ts">// core/model/model.ts
+<pre tabindex="0" data-block-state="reading"><code class="language-ts">// core/model/model.ts
 export function indexModel(rawNodes: GraphNode[], rawEdges: GraphEdge[]): GraphModel {
   // de-dupe nodes by id
   // drop dangling edges (both endpoints must exist)

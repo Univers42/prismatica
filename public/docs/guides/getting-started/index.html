@@ -31,7 +31,7 @@
 <p data-block-state="reading">The entire development environment runs in containers. <strong>Never install dependencies on the host</strong> — the toolchain is Docker-only by design.</p>
 <h2 id="one-command" data-block-state="reading">One command</h2>
 <p data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">make all</code> is self-provisioning. From a clean clone it syncs submodules, pulls secrets, regenerates TLS certs, starts the grobase backend, restores demo data if the databases are empty, and builds the frontends with health validation.</p>
-<pre data-block-state="reading"><code class="language-bash"># On a machine that holds the vault key, this reconstitutes everything:
+<pre tabindex="0" data-block-state="reading"><code class="language-bash"># On a machine that holds the vault key, this reconstitutes everything:
 make all
 
 # Start the backend by hand only for a non-default edition:
@@ -52,7 +52,7 @@ make -C apps/grobase up EDITION=full</code></pre>
 </tbody>
 </table>
 <h2 id="health-checks" data-block-state="reading">Health checks</h2>
-<pre data-block-state="reading"><code class="language-bash">make healthcheck            # curls every front door + the BaaS /health
+<pre tabindex="0" data-block-state="reading"><code class="language-bash">make healthcheck            # curls every front door + the BaaS /health
 docker compose ps           # service status
 docker compose logs -f osionos-app</code></pre>
 <h2 id="editing-these-docs" data-block-state="reading">Editing these docs</h2>

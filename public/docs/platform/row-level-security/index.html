@@ -35,7 +35,7 @@
 </div>
 <h2 id="the-hardening-migration" data-block-state="reading">The hardening migration</h2>
 <p data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">models/rls-hardening-migration.sql</code> closes live-verified findings <strong>F1–F7</strong> from the internal RLS audit. It is <strong>idempotent and portable</strong> — safe to re-run — and it does three things to every table it touches:</p>
-<pre data-block-state="reading"><code class="language-sql">ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;
+<pre tabindex="0" data-block-state="reading"><code class="language-sql">ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.%I FORCE  ROW LEVEL SECURITY;
 CREATE POLICY %I ON public.%I FOR ALL TO service_role
   USING (true) WITH CHECK (true);</code></pre>

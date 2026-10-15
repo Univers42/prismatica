@@ -60,7 +60,7 @@
 </div>
 <h2 id="the-handshake" data-block-state="reading">The handshake</h2>
 <p data-block-state="reading">The one adapter follows a strict order — auth first, then subscribe to the space&#39;s topic, then start tracking presence:</p>
-<pre data-block-state="reading"><code class="language-text">open socket
+<pre tabindex="0" data-block-state="reading"><code class="language-text">open socket
   └─► AUTH { token }                        (MUST be the first frame)
         └─► AUTH_OK
               └─► SUBSCRIBE { topic: &quot;collab:&lt;spaceId&gt;&quot; }

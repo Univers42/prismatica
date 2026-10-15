@@ -39,7 +39,7 @@
 <li data-block-state="reading"><p data-block-state="reading"><strong>Parity</strong> — identical requests are sent through <strong>both</strong> paths and their results are compared. Parity holds only when the outputs match.</p></li>
 <li data-block-state="reading"><p data-block-state="reading"><strong>Cutover</strong> — once parity holds <em style="font-style:italic">and</em> CI is green with the new routing, the new path takes over real traffic. The old path stays until deletion is safe.</p></li>
 </ol>
-<pre data-block-state="reading"><code class="language-text">   ┌─ Shadow ─┐   ┌─ Parity ─┐   ┌─ Cutover ─┐   ┌─ Delete ─┐
+<pre tabindex="0" data-block-state="reading"><code class="language-text">   ┌─ Shadow ─┐   ┌─ Parity ─┐   ┌─ Cutover ─┐   ┌─ Delete ─┐
    │ new runs │   │ identical│   │ new serves│   │ old code │
    │ beside   │──►│ results  │──►│ real      │──►│ removed  │
    │ old      │   │ proven   │   │ traffic   │   │ (last)   │

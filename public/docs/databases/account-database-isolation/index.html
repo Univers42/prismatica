@@ -31,7 +31,7 @@
 <p data-block-state="reading">A workspace tool is only as trustworthy as its boundaries. osionos scopes <strong>every</strong> live-database request to the account making it: you see and touch only the databases your account belongs to, enforced on the server, not just hidden in the UI.</p>
 <h2 id="the-relation-that-grants-access" data-block-state="reading">The relation that grants access</h2>
 <p data-block-state="reading">Access is not a flat allow-list — it follows a chain of memberships that already existed in the data model:</p>
-<pre data-block-state="reading"><code class="language-text">user
+<pre tabindex="0" data-block-state="reading"><code class="language-text">user
   └─ workspace member         (which workspaces am I in?)
        └─ workspace           (what does that workspace own?)
             └─ workspace database   (which mounts are linked here?)</code></pre>

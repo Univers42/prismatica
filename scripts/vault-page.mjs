@@ -26,6 +26,13 @@ export function labelTaskItems(html) {
 	return html.replace(TASK_ITEM, (match, item, attributes, inner) => `${item}<input type="checkbox"${attributes} aria-label="${esc(plainText(inner).slice(0, 120))}">${inner}</li>`);
 }
 
+// A code block scrolls sideways at phone width (\`.md pre { overflow-x: auto }\`), and a scroll
+// region the keyboard cannot reach fails axe "scrollable-region-focusable" (phase6, 390 px). A
+// block that already states a tabindex keeps it.
+export function focusableCodeBlocks(html) {
+	return html.replace(/<pre\b(?![^>]*\btabindex=)/g, '<pre tabindex="0"');
+}
+
 // Caveat: a doc whose first paragraph is a callout or a link list gets that as its description;
 // give it a `summary:` in its frontmatter instead.
 export function describeDoc(doc) {

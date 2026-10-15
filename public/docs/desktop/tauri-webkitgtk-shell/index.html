@@ -35,7 +35,7 @@
 </div>
 <h2 id="build-in-a-container-no-host-toolchain" data-block-state="reading">Build — in a container, no host toolchain</h2>
 <p data-block-state="reading">There is no host Rust or Node; the build runs inside an image that carries Rust, Node, WebKitGTK, and the AppImage tooling.</p>
-<pre data-block-state="reading"><code class="language-bash"># 1. build the Tauri build image
+<pre tabindex="0" data-block-state="reading"><code class="language-bash"># 1. build the Tauri build image
 docker build -f apps/osionos-desktop/docker/build.Dockerfile \
   -t track-binocle/tauri-build .
 
@@ -44,7 +44,7 @@ docker run --rm -v &quot;$PWD&quot;:/work track-binocle/tauri-build \
   apps/osionos-desktop/build.sh</code></pre>
 <h2 id="run-one-time-host-libraries" data-block-state="reading">Run — one-time host libraries</h2>
 <p data-block-state="reading">A native GTK/WebKit app needs system libraries on the machine it runs on:</p>
-<pre data-block-state="reading"><code class="language-bash">sudo apt install -y libwebkit2gtk-4.1-0 libgtk-3-0 \
+<pre tabindex="0" data-block-state="reading"><code class="language-bash">sudo apt install -y libwebkit2gtk-4.1-0 libgtk-3-0 \
   libayatana-appindicator3-1 librsvg2-2</code></pre>
 <p data-block-state="reading">Then run the produced <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">.AppImage</code> (or <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">sudo apt install ./*.deb</code>). <strong>Docker must be installed and running</strong> — the shell boots the suite via <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">docker compose</code>.</p>
 <h2 id="how-it-is-wired" data-block-state="reading">How it is wired</h2>

@@ -44,7 +44,7 @@
 </div>
 <h2 id="tokens-not-cookies" data-block-state="reading">Tokens, not cookies</h2>
 <p data-block-state="reading">osionos carries a Bearer <strong><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">osionos_v1.*</code></strong> app-session token — there are <strong>no cookies</strong>. On the desktop it persists in the webview / app store; the bridge signs it (<code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">signAppSessionToken</code>) and verifies it on every request.</p>
-<pre data-block-state="reading"><code>login → gotrue verifies credentials
+<pre tabindex="0" data-block-state="reading"><code>login → gotrue verifies credentials
       → auth-gateway mints a session
       → bridge signs an app-session token (osionos_v1.*)
       → editor sends it as Bearer on every call</code></pre>

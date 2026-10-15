@@ -35,7 +35,7 @@
 </div>
 <h2 id="the-architecture-a-process-supervisor" data-block-state="reading">The architecture — a process supervisor</h2>
 <p data-block-state="reading">Electron&#39;s main process becomes a small <strong>supervisor</strong> that starts three native binaries on loopback and points the unchanged bridge at them:</p>
-<pre data-block-state="reading"><code>Electron main ──spawns──▶ postgres (embedded binary, PGDATA in userData)
+<pre tabindex="0" data-block-state="reading"><code>Electron main ──spawns──▶ postgres (embedded binary, PGDATA in userData)
                         ▶ PostgREST (static binary) ──▶ postgres
                         ▶ auth-gateway (bundled Node) ──▶ PostgREST
                         ▶ bridge-api.mjs ──▶ PostgREST + auth-gateway  (serves :4000)

@@ -35,7 +35,7 @@
 </div>
 <h2 id="how-the-data-reaches-you" data-block-state="reading">How the data reaches you</h2>
 <p data-block-state="reading">osionos never talks to a database directly from the browser. Every request goes through a Node <strong>bridge</strong> that holds the backend credentials and enforces access, so the client never sees a service key.</p>
-<pre data-block-state="reading"><code class="language-text"> Browser (osionos)
+<pre tabindex="0" data-block-state="reading"><code class="language-text"> Browser (osionos)
     │  app-session token (Bearer)
     ▼
  osionos-bridge  ── holds the service-role key, checks access

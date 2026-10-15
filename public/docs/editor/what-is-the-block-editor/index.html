@@ -48,7 +48,7 @@
 </div>
 <h2 id="how-pages-open-no-router" data-block-state="reading">How &quot;pages&quot; open — no router</h2>
 <p data-block-state="reading">There is <strong>no react-router.</strong> Navigation is a VSCode-style <strong>tab and pane layout tree</strong> held in a zustand store. What renders inside a pane is decided by its <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">tab.kind</code>:</p>
-<pre data-block-state="reading"><code class="language-ts">// widgets/page-renderer/ui/PaneContent.tsx — a guard chain, not a switch
+<pre tabindex="0" data-block-state="reading"><code class="language-ts">// widgets/page-renderer/ui/PaneContent.tsx — a guard chain, not a switch
 if (tab.kind === &#39;home&#39;)     return &lt;HomeTabView /&gt;;
 if (tab.kind === &#39;database&#39;) return &lt;DatabaseView /&gt;;
 if (tab.kind === &#39;channel&#39;)  return &lt;ChannelMessages /&gt;;

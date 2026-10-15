@@ -38,7 +38,7 @@
 <p data-block-state="reading">Click a row and the panel opens that table as a <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">database</code> tab — the same virtualized Notion grid used everywhere else.</p>
 <h2 id="discovery-goes-through-the-bridge-not-the-gateway" data-block-state="reading">Discovery goes through the bridge, not the gateway</h2>
 <p data-block-state="reading">The catalog, schema and rows are <strong>not</strong> fetched from the backend gateway by the browser — that route rejects the anonymous key with a 401. Instead the panel calls the bridge, which proxies server-side to the adapter registry and query-router with the real credentials:</p>
-<pre data-block-state="reading"><code class="language-text">GET /api/databases?tenant=&lt;tenant&gt;     → adapter registry (list of mounts)
+<pre tabindex="0" data-block-state="reading"><code class="language-text">GET /api/databases?tenant=&lt;tenant&gt;     → adapter registry (list of mounts)
 GET /api/databases/&lt;dbId&gt;/schema        → query-router  (columns per table)
 POST /api/databases/&lt;dbId&gt;/tables/&lt;t&gt;   → query-router  (rows / writes)</code></pre>
 <div class="md-callout md-callout-note" data-block-state="reading">

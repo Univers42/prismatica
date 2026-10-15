@@ -37,7 +37,7 @@
 <li data-block-state="reading"><p data-block-state="reading">Rebuilt <strong>lazily</strong>, only when the position <em style="font-style:italic">version</em> changes. Layout ticks bump the version; queries between ticks reuse the same build.</p></li>
 <li data-block-state="reading"><p data-block-state="reading">Cell size is at least <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">64</code> world units, which keeps a point query to a <strong>3×3 neighbourhood</strong> even at the maximum hit reach.</p></li>
 </ul>
-<pre data-block-state="reading"><code class="language-text">   position version changes ──► markStale()
+<pre tabindex="0" data-block-state="reading"><code class="language-text">   position version changes ──► markStale()
                                     │
    next query ──► rebuild() (O(n) counting sort, reused buffers)
                                     │

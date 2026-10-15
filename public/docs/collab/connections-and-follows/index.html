@@ -37,7 +37,7 @@
 <li data-block-state="reading"><p data-block-state="reading">You can <strong>withdraw</strong> a pending request → <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">withdrawn</code>.</p></li>
 </ol>
 <p data-block-state="reading">A withdrawn or declined edge is not a dead end — sending again <strong>reactivates</strong> the same row back to <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">pending</code>, so the addressee gets a fresh invitation to accept.</p>
-<pre data-block-state="reading"><code class="language-text">        send                accept
+<pre tabindex="0" data-block-state="reading"><code class="language-text">        send                accept
   ──────────────►  pending ─────────► accepted
                      │  ▲
             withdraw │  │ resend
@@ -56,7 +56,7 @@
 </table>
 <h2 id="the-edge-shape" data-block-state="reading">The edge shape</h2>
 <p data-block-state="reading">Each edge carries a <strong>nested</strong> <code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">peer</code> object — the person on the other side — not a bare id:</p>
-<pre data-block-state="reading"><code class="language-json">{
+<pre tabindex="0" data-block-state="reading"><code class="language-json">{
   &quot;connection&quot;: {
     &quot;id&quot;: &quot;…&quot;,
     &quot;status&quot;: &quot;pending&quot;,

@@ -137,7 +137,7 @@
 </tbody>
 </table>
 <h2 id="code-block" data-block-state="reading">Code block</h2>
-<pre data-block-state="reading"><code class="language-ts">export function renderDocs(source: string): string {
+<pre tabindex="0" data-block-state="reading"><code class="language-ts">export function renderDocs(source: string): string {
   const ast = parse(source);          // markdown → BlockNode[]
   return renderHtml(ast, {            // BlockNode[] → HTML
     classPrefix: &quot;md&quot;,

@@ -44,7 +44,7 @@
 <p data-block-state="reading">V1 stays in place under the shadow → parity → cutover discipline. Migration between the two is <strong>lossless and bidirectional</strong> (<code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">model/migration.ts</code>): blocks move by reference, free positions survive through the legacy offset.</p>
 </div>
 <h2 id="the-v2-render-path" data-block-state="reading">The V2 render path</h2>
-<pre data-block-state="reading"><code class="language-text">CanvasRoot ─▶ CanvasStage ─▶ CanvasCellView (memoized on cell identity)
+<pre tabindex="0" data-block-state="reading"><code class="language-text">CanvasRoot ─▶ CanvasStage ─▶ CanvasCellView (memoized on cell identity)
      │              │
  canvasStore    interactionStore   (transient: guides, marquee)
  (persisted)    &quot;cells never re-render during a drag&quot;</code></pre>

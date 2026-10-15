@@ -39,7 +39,7 @@
 </div>
 <h2 id="the-fix" data-block-state="reading">The fix</h2>
 <p data-block-state="reading">The edge pass now follows the same policy as the other decorative passes: on a large graph, defer it to the settled frame.</p>
-<pre data-block-state="reading"><code class="language-ts">// renderFrame.ts — defer the full edge pass while moving on big graphs
+<pre tabindex="0" data-block-state="reading"><code class="language-ts">// renderFrame.ts — defer the full edge pass while moving on big graphs
 if (!lq || f.state.count &lt;= AGG_MIN_NODES) drawLinks(base);</code></pre>
 <p data-block-state="reading">Read plainly: draw all links <strong>either</strong> when the frame is high-quality (settled) <strong>or</strong> when the graph is small enough (<code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">&lt;= 15000</code> nodes) that edges are cheap during motion. Big graphs simply skip the edge pass mid-zoom and paint it once you stop.</p>
 <h2 id="the-result" data-block-state="reading">The result</h2>

@@ -37,7 +37,7 @@
 <p data-block-state="reading">It is the acceptance test for the migration goal: <em style="font-style:italic">a new laptop, or a new teammate, can stand the project up with one command.</em> If that breaks, everything downstream breaks — so this gate catches the bugs that only appear on a truly clean box.</p>
 <h2 id="make-all-is-self-provisioning" data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">make all</code> is self-provisioning</h2>
 <p data-block-state="reading">The whole pipeline runs from one target:</p>
-<pre data-block-state="reading"><code class="language-text">sync-submodules-soft
+<pre tabindex="0" data-block-state="reading"><code class="language-text">sync-submodules-soft
   → secrets-ensure        (pull vault42 if keystore present)
   → certs → certs-trust-local
   → backend-up            (STARTS grobase, EDITION=migrate)

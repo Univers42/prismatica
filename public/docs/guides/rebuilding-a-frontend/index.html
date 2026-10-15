@@ -30,7 +30,7 @@
         <article class="doc md" data-doc="guides/rebuilding-a-frontend"><h1 id="rebuilding-a-single-frontend" data-block-state="reading">Rebuilding a Single Frontend</h1>
 <p data-block-state="reading">When you&#39;ve edited one app, you don&#39;t need to re-run the whole pipeline. Rebuild just that service.</p>
 <h2 id="the-general-form" data-block-state="reading">The general form</h2>
-<pre data-block-state="reading"><code class="language-bash">docker compose up -d --build &lt;service-name&gt;</code></pre>
+<pre tabindex="0" data-block-state="reading"><code class="language-bash">docker compose up -d --build &lt;service-name&gt;</code></pre>
 <p data-block-state="reading">This rebuilds and restarts a single frontend in place while the rest of the stack keeps running.</p>
 <h2 id="the-frontend-services" data-block-state="reading">The frontend services</h2>
 <p data-block-state="reading"><code class="inline-code" data-inline-type="code" style="background-color:var(--inline-code-background,var(--osio-accent-subtle));border-radius:5px;padding:0.1em 0.4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;color:var(--inline-code-color,var(--osio-accent-text));text-decoration-color:var(--inline-code-decoration-color,currentColor);box-decoration-break:clone;-webkit-box-decoration-break:clone;--inline-background-fill:transparent;--inline-background-padding:0;--inline-background-radius:0;">make all</code> builds this set of root frontends:</p>
@@ -47,7 +47,7 @@
 </table>
 <h2 id="the-osionos-shortcut" data-block-state="reading">The osionos shortcut</h2>
 <p data-block-state="reading">For the editor specifically there&#39;s a dedicated target that rebuilds and hard-reloads it:</p>
-<pre data-block-state="reading"><code class="language-bash">make update_web    # rebuild + restart osionos-app, then hard-reload :3001</code></pre>
+<pre tabindex="0" data-block-state="reading"><code class="language-bash">make update_web    # rebuild + restart osionos-app, then hard-reload :3001</code></pre>
 <div class="md-callout md-callout-tip" data-block-state="reading">
 <div class="md-callout-title">Avoid a restart-time 502</div>
 <p data-block-state="reading">Rebuilding a service can briefly break the container-name DNS its neighbours rely on, surfacing as a transient 502. Rebuilding <strong>only</strong> the target service (rather than pulling its dependencies with it) keeps the blast radius small and the blip short.</p>

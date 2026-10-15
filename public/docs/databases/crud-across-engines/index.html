@@ -31,7 +31,7 @@
 <p data-block-state="reading">The live grid is fully read-write. Editing a cell, adding a row, or deleting one persists straight back to the source engine — Postgres, MySQL, SQLite, MongoDB, DynamoDB or SQL Server — through one uniform path.</p>
 <h2 id="every-write-goes-through-the-bridge" data-block-state="reading">Every write goes through the bridge</h2>
 <p data-block-state="reading">Writes do <strong>not</strong> go from the browser to the backend gateway directly — that path is not authorized for the anonymous key and would be rejected. Instead the write client posts to the <strong>bridge</strong>, which carries the credential and proxies to the Rust query-router:</p>
-<pre data-block-state="reading"><code class="language-text">POST /api/databases/&lt;dbId&gt;/tables/&lt;table&gt;
+<pre tabindex="0" data-block-state="reading"><code class="language-text">POST /api/databases/&lt;dbId&gt;/tables/&lt;table&gt;
 Authorization: Bearer &lt;app-session token&gt;
 { &quot;op&quot;: &quot;update&quot;, ... }        // op ∈ insert | update | delete | upsert</code></pre>
 <p data-block-state="reading">The bridge preserves the query-router&#39;s status verbatim, so the client sees the engine&#39;s true answer.</p>

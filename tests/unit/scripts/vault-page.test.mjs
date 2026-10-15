@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDoc, docHref, docPage, labelTaskItems } from '../../../scripts/vault-page.mjs';
+import { describeDoc, docHref, docPage, focusableCodeBlocks, labelTaskItems } from '../../../scripts/vault-page.mjs';
 
 const home = { path: '00-welcome', title: 'Welcome', icon: '◆', summary: 'Start here.', crumbs: ['00-welcome.xmd'], toc: [], html: '<p>Hello.</p>' };
 const guide = {
@@ -67,5 +67,14 @@ describe('labelTaskItems', () => {
 	it('names each task checkbox after its item, done or not', () => {
 		const html = '<ul class="md-task-list"><li class="md-task-item" data-block-state="reading"><input type="checkbox" checked disabled />Render <em>fast-path</em> &amp; docs</li>\n<li class="md-task-item"><input type="checkbox" disabled />Ship it</li></ul>';
 		expect(labelTaskItems(html)).toBe('<ul class="md-task-list"><li class="md-task-item" data-block-state="reading"><input type="checkbox" checked disabled aria-label="Render fast-path &amp; docs">Render <em>fast-path</em> &amp; docs</li>\n<li class="md-task-item"><input type="checkbox" disabled aria-label="Ship it">Ship it</li></ul>');
+	});
+});
+
+describe('focusableCodeBlocks', () => {
+	it('lets the keyboard reach a code block that scrolls sideways, once', () => {
+		const html = '<pre data-block-state="reading"><code>a</code></pre><pre tabindex="-1"><code>b</code></pre><p>pre</p>';
+		const once = focusableCodeBlocks(html);
+		expect(once).toBe('<pre tabindex="0" data-block-state="reading"><code>a</code></pre><pre tabindex="-1"><code>b</code></pre><p>pre</p>');
+		expect(focusableCodeBlocks(once)).toBe(once);
 	});
 });

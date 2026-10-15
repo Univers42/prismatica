@@ -53,7 +53,7 @@
 </table>
 <h2 id="capability-aware-routing" data-block-state="reading">Capability-aware routing</h2>
 <p data-block-state="reading">The data plane is <strong>engine-agnostic</strong> by design: the same request can target different database engines, and the router forwards to the right adapter. The realtime workspace names its crate seams &quot;-agnostic&quot; for the same reason — Postgres and MongoDB are just two producers behind one engine.</p>
-<pre data-block-state="reading"><code class="language-text">   request ──► data-plane-router (Rust)
+<pre tabindex="0" data-block-state="reading"><code class="language-text">   request ──► data-plane-router (Rust)
                     │  capability check
         ┌───────────┼───────────┬───────────┐
         ▼           ▼           ▼           ▼
