@@ -189,9 +189,7 @@ body {
 .crumbs .sep { opacity: 0.5; margin: 0 0.15rem; }
 
 .doc-host { max-width: 74ch; margin: 0 auto; }
-.doc { animation: docin var(--dur) var(--ease); }
 .doc[hidden] { display: none; }
-@keyframes docin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ── Right TOC ──────────────────────────────────────────────────────────── */
 .shell__toc {
