@@ -7,7 +7,6 @@
   "use strict";
   var V = window.__VAULT || { order: [], docs: {} };
   var shell = document.querySelector(".shell");
-  var host = document.querySelector(".doc-host");
   var crumbEl = document.querySelector(".crumbs");
   var tocEl = document.querySelector(".shell__toc");
   var current = null;
@@ -169,7 +168,7 @@
 
   /* ── Theme ─────────────────────────────────────────────────────────────── */
   var THEME_KEY = "prismatica:docs:theme";
-  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
+  function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); try { localStorage.setItem(THEME_KEY, t); } catch { /* storage blocked: the theme still applies */ } }
   document.addEventListener("click", function (e) {
     if (e.target.closest('[data-action="theme"]')) {
       applyTheme(document.documentElement.getAttribute("data-theme") === "noir" ? "solar" : "noir");
@@ -178,7 +177,7 @@
     if (e.target.closest(".palette__backdrop")) closePalette();
     if (e.target.closest('[data-action="menu"]')) shell.classList.toggle("nav-open");
   });
-  try { var saved = localStorage.getItem(THEME_KEY); if (saved) applyTheme(saved); } catch (e) {}
+  try { var saved = localStorage.getItem(THEME_KEY); if (saved) applyTheme(saved); } catch { /* storage blocked: keep the default theme */ }
 
   /* ── Routing ───────────────────────────────────────────────────────────── */
   function fromHash() { return decodeURIComponent((location.hash || "").replace(/^#/, "")); }
