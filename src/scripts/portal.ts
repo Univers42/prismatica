@@ -1,28 +1,17 @@
-import { trustedHTML, insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
-import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
+import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
-import { setMountedMascotMood, notifyWithMascot } from './mascot';
+import { notify } from './notifications';
 import { announce, ensureButtonLabels } from './theme';
-import { readConsentPreferences } from './consent';
 import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
-import { MiniBaasError } from '@grobase/js';
-import { createPublicBaasClient } from '../lib/baas-client';
 
 export type PortalMode = 'start' | 'connect';
 
 type TurnstileApi = {
 	render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'error-callback': () => void; 'expired-callback': () => void }) => string;
 	reset?: (widgetId?: string) => void;
-};
-
-type TrustedHtmlPolicy = {
-	createHTML: (markup: string) => unknown;
-};
-
-type TrustedTypesFactory = {
-	createPolicy: (name: string, rules: { createHTML: (markup: string) => string }) => TrustedHtmlPolicy;
 };
 
 type AuthModeControls = {
@@ -101,14 +90,15 @@ export function mountTurnstile(portal: HTMLElement): void {
 			const tokenInput = portal.querySelector('[data-turnstile-token]');
 			if (tokenInput instanceof HTMLInputElement) tokenInput.value = token;
 		},
-		'error-callback': () => notifyWithMascot({ kind: 'error', title: 'Captcha failed', message: 'Could not verify browser. Please try again.' }),
-		'expired-callback': () => notifyWithMascot({ kind: 'warning', title: 'Captcha expired', message: 'Verification expired. Please try again.' }),
+		'error-callback': () => notify({ kind: 'error', title: 'Captcha failed', message: 'Could not verify browser. Please try again.' }),
+		'expired-callback': () => notify({ kind: 'warning', title: 'Captcha expired', message: 'Verification expired. Please try again.' }),
 	});
 	container.dataset.turnstileWidgetId = widgetId;
 }
 
 export function bindPasswordToggles(root: ParentNode = document): void {
-	queryElements('[data-password-toggle]', isButton).forEach((button) => {
+	root.querySelectorAll('[data-password-toggle]').forEach((button) => {
+		if (!isButton(button)) return;
 		button.addEventListener('click', () => {
 			const input = button.closest('.field')?.querySelector('input');
 			if (!(input instanceof HTMLInputElement)) return;
@@ -122,15 +112,6 @@ export function bindPasswordToggles(root: ParentNode = document): void {
 		});
 	});
 }
-
-function readAuthToken(): string | null {
-	return getAccessToken();
-}
-
-type RpcStatus = {
-	ok: boolean;
-	status: number;
-};
 
 export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
 	try {
@@ -156,14 +137,6 @@ export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
 }
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
-	const preferences = readConsentPreferences();
-	if (preferences?.newsletter && email) {
-		await fetch('/api/newsletter/subscribe', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email }),
-		}).catch(() => undefined);
-	}
 	const newsletterIntent = readStorage(NEWSLETTER_INTENT_KEY);
 	if (newsletterIntent && email) {
 		await fetch('/api/newsletter/subscribe', {
@@ -495,27 +468,13 @@ function usernameValidationState(field: HTMLInputElement): { valid: boolean; mes
 	return { valid: true, message: 'Username looks good.' };
 }
 
-function setPortalAvailabilityState(portal: HTMLElement, field: 'email' | 'username', state: 'unknown' | 'checking' | 'available' | 'taken'): void {
-	portal.dataset[`${field}Availability`] = state;
-}
-
-function showAvailabilityResult(field: HTMLInputElement, available: boolean, takenMessage: string, availableMessage: string): void {
-	const messageId = `${field.id || 'field'}-inline-error`;
-	if (available) {
-		clearInlineFieldError(field, messageId, availableMessage);
-		const message = document.getElementById(messageId);
-		if (message) message.dataset.validationState = 'valid';
-	} else {
-		showInlineFieldError(field, messageId, takenMessage);
-	}
-}
-
 function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
 	return portal.dataset.emailAvailability !== 'taken' && portal.dataset.usernameAvailability !== 'taken';
 }
 
 export function bindEmailFieldValidation(scope: ParentNode = document): void {
-	queryElements('input[type="email"]', isInput).forEach((input) => {
+	scope.querySelectorAll('input[type="email"]').forEach((input) => {
+		if (!isInput(input)) return;
 		input.addEventListener('blur', () => updateEmailFieldFeedback(input));
 		input.addEventListener('input', () => {
 			if (input.getAttribute('aria-invalid') === 'true') updateEmailFieldFeedback(input);
@@ -600,12 +559,12 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 		await authClient.recover({ email: email.value.trim(), turnstileToken: readTurnstileToken(portal) });
 		elements.error.textContent = 'Password reset instructions have been sent to your email address.';
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' });
+		notify({ kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Could not request password recovery.';
 		elements.error.textContent = humanAuthMessage(message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
+		notify({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, false);
 	}
@@ -655,7 +614,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 			setAccessToken(result.accessToken);
 			await syncStoredConsents(result.accessToken, elements.email.value.trim());
 		}
-		notifyWithMascot({
+		notify({
 			kind: 'success',
 			title: 'Welcome to Prismatica!',
 			message: authConfig.requireEmailVerification
@@ -663,13 +622,12 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 				: 'Your local workspace account is ready.',
 			duration: 6000,
 		});
-		setMountedMascotMood('excited', 2000);
 		announce(authConfig.requireEmailVerification ? 'Account created. Check your email before signing in.' : 'Development account created. You can sign in now.');
 		globalThis.setTimeout(() => closePortal(), 1500);
 		return;
 	}
 	if (result.status === 429) {
-		notifyWithMascot({
+		notify({
 			kind: 'warning',
 			title: 'Too many attempts',
 			message: 'You have been temporarily blocked. Please wait a few minutes.',
@@ -678,7 +636,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		return;
 	}
 	if (result.status === 422 && messageMentions(message, 'user already registered', 'already registered', 'already exists')) {
-		notifyWithMascot({
+		notify({
 			kind: 'info',
 			title: 'Account already exists',
 			message: 'An account with this email already exists. Try signing in instead.',
@@ -687,7 +645,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		return;
 	}
 	if (result.status === 409 || messageMentions(message, 'already registered', 'already taken', 'unique')) {
-		notifyWithMascot({
+		notify({
 			kind: 'warning',
 			title: 'Choose another identity',
 			message,
@@ -695,7 +653,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		});
 		return;
 	}
-	notifyWithMascot({
+	notify({
 		kind: 'error',
 		title: 'Registration failed',
 		message,
@@ -710,7 +668,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 	if (!authenticated.ok) {
 		if (authenticated.status === 429) {
 			console.warn(`[portal] sign-in refused: HTTP 429 — ${message}`);
-			notifyWithMascot({
+			notify({
 				kind: 'warning',
 				title: 'Too many attempts',
 				message: 'You have been temporarily blocked. Please wait a few minutes.',
@@ -719,7 +677,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			return;
 		}
 		if (messageMentions(message, 'email not confirmed', 'not confirmed', 'confirm your email')) {
-			notifyWithMascot({
+			notify({
 				kind: 'warning',
 				title: 'Email not confirmed',
 				message: 'Please check your inbox and click the confirmation link first.',
@@ -731,18 +689,17 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			console.warn(authenticated.status === 401
 				? `[portal] sign-in refused: the auth service checked the password for ${elements.email.value.trim()} and rejected it (HTTP 401)`
 				: `[portal] sign-in refused before the password was checked: HTTP ${authenticated.status} — ${message}`);
-			notifyWithMascot({
+			notify({
 				kind: 'error',
 				title: 'Incorrect email or password',
 				message: 'Double-check your credentials and try again.',
 				duration: 8000,
 			});
-			setMountedMascotMood('scared', 1200);
 			announce('Incorrect email or password.');
 			return;
 		}
 		console.error(`[portal] sign-in failed before the password was checked: HTTP ${authenticated.status} — ${message}`);
-		notifyWithMascot({
+		notify({
 			kind: 'error',
 			title: 'Connection failed',
 			message,
@@ -761,7 +718,7 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 		const redirectUrl = osionosBridge.redirectUrl;
 		if (!isTrustedOsionosRedirect(redirectUrl)) {
 			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
-			notifyWithMascot({
+			notify({
 				kind: 'error',
 				title: 'Workspace redirect blocked',
 				message: 'The osionos workspace link did not match the expected app origin.',
@@ -770,20 +727,19 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			announce('Workspace redirect blocked for safety.');
 			return;
 		}
-		notifyWithMascot({
+		notify({
 			kind: 'success',
 			title: 'Opening osionos',
 			message: 'Your private osionos workspace is ready.',
 			duration: 2500,
 		});
-		setMountedMascotMood('happy', 1800);
 		announce('Opening your osionos workspace.');
 		globalThis.setTimeout(() => {
 			globalThis.location.assign(redirectUrl);
 		}, 700);
 		return;
 	}
-	notifyWithMascot({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
+	notify({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
 	globalThis.setTimeout(() => closePortal(), 1200);
 }
 
@@ -799,7 +755,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 		const message = error instanceof Error ? error.message : 'Authentication failed.';
 		elements.error.textContent = humanAuthMessage(message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
+		notify({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}

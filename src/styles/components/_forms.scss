@@ -1,0 +1,104 @@
+// Forms outside the portal (newsletter, data rights, the /auth landings) and the legal pages'
+// tables. Field inputs themselves are styled once, in _portal.scss (.field), and reused here.
+
+.newsletter-signup,
+.data-rights-form,
+.auth-form {
+	display: grid;
+	gap: var(--space-4);
+}
+
+.form-note,
+.form-status {
+	font-size: var(--step--1);
+	color: var(--graphite);
+}
+
+.form-status:empty {
+	display: none;
+}
+
+.consent-toggle {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-3);
+	font-size: var(--step--1);
+}
+
+.consent-toggle input {
+	flex: none;
+	width: 1.25rem;
+	height: 1.25rem;
+	margin-top: 0.15em;
+	accent-color: var(--ink);
+}
+
+.auth-page {
+	min-height: 70svh;
+	display: grid;
+	place-items: center;
+	padding-block: var(--space-8);
+	padding-inline: var(--gutter);
+}
+
+.auth-card {
+	display: grid;
+	gap: var(--space-4);
+	width: min(100%, 36rem);
+	padding: var(--space-6);
+	background: var(--raised);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-l);
+}
+
+.auth-card h1 {
+	font-size: var(--step-3);
+}
+
+.auth-card__hint {
+	color: var(--graphite);
+}
+
+// Reserves the status line's height so the result never shifts the card (PLAN §8.2, CLS 0.044).
+.auth-card [role='status'] {
+	min-height: 3lh;
+}
+
+.auth-card [role='status'].is-error,
+.auth-form output.is-error {
+	color: var(--danger);
+}
+
+.field-error-message {
+	font-size: var(--step--1);
+	color: var(--danger);
+}
+
+.field-error-message:empty {
+	display: none;
+}
+
+.legal-table {
+	width: 100%;
+	min-width: 40rem;
+	border-collapse: collapse;
+	font-size: var(--step--1);
+}
+
+.legal-table th,
+.legal-table td {
+	padding: var(--space-3);
+	border-bottom: 1px solid var(--rule);
+	text-align: start;
+	vertical-align: top;
+}
+
+.legal-table th {
+	font-weight: 600;
+}
+
+// A table wider than the phone scrolls inside its own box, never the page (R7).
+.table-scroll {
+	max-width: 100%;
+	overflow-x: auto;
+}

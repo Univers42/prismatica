@@ -1,0 +1,92 @@
+// Page frame: the content column, section rhythm, and the two prose layouts (legal pages and the
+// single-message landings under /auth and /newsletter). Section components keep their own layout
+// in scoped <style>; what lives here is what every page shares.
+
+.container {
+	width: 100%;
+	max-width: calc(var(--content-max) + 2 * var(--gutter));
+	margin-inline: auto;
+	padding-inline: var(--gutter);
+}
+
+.container--wide {
+	max-width: calc(var(--wide-max) + 2 * var(--gutter));
+}
+
+.section {
+	padding-block: var(--space-8);
+	border-top: 1px solid var(--rule);
+}
+
+@media (min-width: 64rem) {
+	.section {
+		padding-block: var(--space-10) var(--space-9);
+	}
+}
+
+.section__head {
+	display: grid;
+	gap: var(--space-4);
+	margin-bottom: var(--space-7);
+}
+
+.prose {
+	max-width: var(--measure);
+	display: grid;
+	gap: var(--space-4);
+}
+
+.prose h1 {
+	font-size: var(--step-3);
+	margin-bottom: var(--space-2);
+}
+
+.prose h2 {
+	font-size: var(--step-2);
+	margin-top: var(--space-6);
+}
+
+.prose ul,
+.prose ol {
+	padding-inline-start: var(--space-5);
+	display: grid;
+	gap: var(--space-2);
+}
+
+.prose table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	border-collapse: collapse;
+}
+
+.prose th,
+.prose td {
+	padding: var(--space-2) var(--space-3);
+	border-bottom: 1px solid var(--rule);
+	text-align: start;
+	vertical-align: top;
+}
+
+.page-main {
+	padding-block: var(--space-8) var(--space-9);
+}
+
+.message-card {
+	max-width: 36rem;
+	margin-inline: auto;
+	padding: var(--space-6);
+	background: var(--raised);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-l);
+	display: grid;
+	gap: var(--space-4);
+}
+
+.message-card h1 {
+	font-size: var(--step-3);
+}
+
+.message-card [role='status'] {
+	min-height: 3lh;
+}

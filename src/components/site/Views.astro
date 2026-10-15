@@ -1,0 +1,112 @@
+---
+// Section 4: one dataset, four views. With JavaScript, a real tablist (arrow keys, Home, End)
+// swaps the capture through a View Transition (motion M4). Without it, all four captures stack,
+// each under its own heading, and the tablist is absent (data-js-only). The pre-paint script sets
+// html[data-js] before first paint, so the panels never stack and then collapse.
+import CaptureFrame from './CaptureFrame.astro';
+import type { ShotId } from '../../data/shots';
+
+const views: { key: string; label: string; shot: ShotId; note: string }[] = [
+	{ key: 'table', label: 'Table', shot: 'S5', note: 'A saved view: open deals over €5,000, sorted by owner.' },
+	{ key: 'board', label: 'Board', shot: 'S4', note: 'Every stage of the pipeline, from lead to won and lost.' },
+	{ key: 'calendar', label: 'Calendar', shot: 'S6', note: 'Calls and meetings, on the month they happened.' },
+	{ key: 'chart', label: 'Chart', shot: 'S7', note: 'Eighteen months of revenue, the two weak months included.' },
+];
+---
+
+<section class="section" id="views" aria-labelledby="views-title">
+	<div class="container container--wide">
+		<div class="section__head views__head">
+			<h2 id="views-title">Views, not copies.</h2>
+			<p class="lead">The same deals, four ways. Pick one: nothing is exported or entered again.</p>
+		</div>
+
+		<div class="views" data-views>
+			<div class="views__tabs" role="tablist" aria-label="Views of the deals" data-js-only>
+				{views.map((view, i) => (
+					<button
+						class="views__tab"
+						type="button"
+						role="tab"
+						id={`view-tab-${view.key}`}
+						aria-controls={`view-panel-${view.key}`}
+						aria-selected={i === 0 ? 'true' : 'false'}
+						tabindex={i === 0 ? 0 : -1}
+					>
+						{view.label}
+					</button>
+				))}
+			</div>
+
+			{views.map((view, i) => (
+				<div class="views__panel" id={`view-panel-${view.key}`} data-view-panel data-active={i === 0 ? '' : undefined}>
+					<h3 class="views__panel-title">{view.label}</h3>
+					<CaptureFrame shot={view.shot} />
+					<p class="views__note label">{view.note}</p>
+				</div>
+			))}
+		</div>
+	</div>
+</section>
+
+<style>
+	.views__head {
+		text-align: center;
+		justify-items: center;
+	}
+
+	.views {
+		display: grid;
+		gap: var(--space-6);
+	}
+
+	.views__tabs {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: var(--space-2);
+	}
+
+	.views__tab {
+		min-height: var(--control-h);
+		padding: 0 var(--space-5);
+		border: 1px solid var(--graphite);
+		border-radius: var(--radius-pill);
+		background: transparent;
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	.views__tab[aria-selected='true'] {
+		background: var(--ink);
+		border-color: var(--ink);
+		color: var(--paper);
+	}
+
+	.views__panel {
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	.views__note {
+		text-align: center;
+		max-width: none;
+	}
+
+	:global(html[data-js]) .views__panel-title {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	:global(html[data-js]) .views__panel:not([data-active]) {
+		display: none;
+	}
+
+	.views__panel :global(.frame) {
+		view-transition-name: views-capture;
+	}
+</style>

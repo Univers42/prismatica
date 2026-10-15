@@ -1,41 +1,11 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.scss                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
+// Global layers, in cascade order. Section and page layout live in each component's scoped
+// <style>; only what more than one page shares is here. Animations are declared inside
+// `prefers-reduced-motion: no-preference` where they are defined, so a reduced-motion visitor
+// gets no animation object at all (tests/e2e st2-reduced-motion asserts getAnimations() is empty).
 @use 'abstracts/tokens';
-@use 'themes/color-modes';
-@use 'abstracts/premium';
-@use 'base/reset';
-@use 'base/typography';
-@use 'utilities/accessibility';
-@use 'utilities/scroll-effects';
-@use 'utilities/swipe-stack';
-@use 'layout/background';
-@use 'layout/header';
-@use 'layout/shell';
-@use 'sections/section-base';
-@use 'sections/hero';
-@use 'components/buttons';
-@use 'components/illustrations';
-@use 'components/mascot';
-@use 'components/cards';
-@use 'components/media';
-@use 'components/gdpr';
+@use 'base/base';
+@use 'layout/page';
+@use 'components/button';
 @use 'components/notifications';
-@use 'sections/content';
-@use 'sections/baas-status';
-@use 'layout/footer';
 @use 'components/portal';
-@use 'utilities/animations';
-@use 'utilities/responsive';
-// Swiss / Vignelli theme (DEFAULT) — loaded last so its [data-theme='swiss']
-// overrides win ties against component styles emitted above.
-@use 'abstracts/swiss';
+@use 'components/forms';

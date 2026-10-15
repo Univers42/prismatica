@@ -1,42 +1,30 @@
-export type ThemeName = 'swiss' | 'aurora' | 'solar' | 'ember' | 'forest';
+// Light or dark, or no choice at all (follow the OS). One design, two palettes: the five named
+// themes of the old site (swiss, aurora, solar, ember, forest) map onto these two so a stored
+// choice from before the redesign still means something.
+export type ThemeChoice = 'system' | 'light' | 'dark';
 
-export const THEMES: ThemeName[] = ['swiss', 'aurora', 'solar', 'ember', 'forest'];
+export const THEME_KEY = 'prismatica-theme';
 
-export function isThemeName(value: string | null | undefined): value is ThemeName {
-	return value === 'swiss' || value === 'aurora' || value === 'solar' || value === 'ember' || value === 'forest';
+const ORDER: ThemeChoice[] = ['system', 'light', 'dark'];
+
+const LEGACY_THEMES: Readonly<Record<string, ThemeChoice>> = {
+	swiss: 'light',
+	solar: 'light',
+	aurora: 'dark',
+	ember: 'dark',
+	forest: 'dark',
+	night: 'dark',
+};
+
+export function normalizeTheme(value: string | null | undefined): ThemeChoice {
+	if (value === 'light' || value === 'dark' || value === 'system') return value;
+	return (value && LEGACY_THEMES[value]) || 'system';
 }
 
-export function normalizeTheme(value: string | null): ThemeName | null {
-	if (isThemeName(value)) {
-		return value;
-	}
-	if (value === 'light') {
-		return 'swiss';
-	}
-	if (value === 'dark' || value === 'night') {
-		return 'aurora';
-	}
-	return null;
+export function nextTheme(current: ThemeChoice): ThemeChoice {
+	return ORDER[(ORDER.indexOf(current) + 1) % ORDER.length] ?? 'system';
 }
 
-export function themeIcon(theme: ThemeName): string {
-	const icons: Record<ThemeName, string> = {
-		swiss: '▦',
-		aurora: '✦',
-		solar: '☼',
-		ember: '◒',
-		forest: '◆',
-	};
-	return icons[theme];
-}
-
-export function themeDisplayName(theme: ThemeName): string {
-	const labels: Record<ThemeName, string> = {
-		swiss: 'Swiss',
-		aurora: 'Aurora',
-		solar: 'Solar',
-		ember: 'Ember',
-		forest: 'Forest',
-	};
-	return labels[theme];
+export function themeLabel(choice: ThemeChoice): string {
+	return { system: 'Match system', light: 'Light', dark: 'Dark' }[choice];
 }

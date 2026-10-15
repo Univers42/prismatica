@@ -1,51 +1,35 @@
 import { describe, it, expect } from 'vitest';
-import { isThemeName, normalizeTheme, themeIcon, themeDisplayName } from '../../../src/lib/theme-config';
+import { normalizeTheme, nextTheme, themeLabel } from '../../../src/lib/theme-config';
 
 describe('theme-config', () => {
-	describe('isThemeName', () => {
-		it('returns true for valid themes', () => {
-			expect(isThemeName('swiss')).toBe(true);
-			expect(isThemeName('aurora')).toBe(true);
-			expect(isThemeName('solar')).toBe(true);
-			expect(isThemeName('ember')).toBe(true);
-			expect(isThemeName('forest')).toBe(true);
-		});
-		it('returns false for invalid themes', () => {
-			expect(isThemeName('light')).toBe(false);
-			expect(isThemeName(null)).toBe(false);
-			expect(isThemeName(undefined)).toBe(false);
-			expect(isThemeName('unknown')).toBe(false);
-		});
+	it('keeps the three current choices', () => {
+		expect(normalizeTheme('light')).toBe('light');
+		expect(normalizeTheme('dark')).toBe('dark');
+		expect(normalizeTheme('system')).toBe('system');
 	});
 
-	describe('normalizeTheme', () => {
-		it('returns valid themes directly', () => {
-			expect(normalizeTheme('swiss')).toBe('swiss');
-		});
-		it('maps legacy "light" to "swiss"', () => {
-			expect(normalizeTheme('light')).toBe('swiss');
-		});
-		it('maps legacy "dark" or "night" to "aurora"', () => {
-			expect(normalizeTheme('dark')).toBe('aurora');
-			expect(normalizeTheme('night')).toBe('aurora');
-		});
-		it('returns null for unknown themes', () => {
-			expect(normalizeTheme('unknown')).toBeNull();
-			expect(normalizeTheme(null)).toBeNull();
-		});
+	it('maps a choice stored by the old five-theme site onto light or dark', () => {
+		expect(normalizeTheme('swiss')).toBe('light');
+		expect(normalizeTheme('solar')).toBe('light');
+		expect(normalizeTheme('aurora')).toBe('dark');
+		expect(normalizeTheme('ember')).toBe('dark');
+		expect(normalizeTheme('forest')).toBe('dark');
 	});
 
-	describe('themeIcon', () => {
-		it('returns correct icons', () => {
-			expect(themeIcon('swiss')).toBe('▦');
-			expect(themeIcon('aurora')).toBe('✦');
-		});
+	it('falls back to the OS for anything else', () => {
+		expect(normalizeTheme(null)).toBe('system');
+		expect(normalizeTheme(undefined)).toBe('system');
+		expect(normalizeTheme('neon')).toBe('system');
 	});
 
-	describe('themeDisplayName', () => {
-		it('returns capitalized labels', () => {
-			expect(themeDisplayName('swiss')).toBe('Swiss');
-			expect(themeDisplayName('ember')).toBe('Ember');
-		});
+	it('cycles system → light → dark → system', () => {
+		expect(nextTheme('system')).toBe('light');
+		expect(nextTheme('light')).toBe('dark');
+		expect(nextTheme('dark')).toBe('system');
+	});
+
+	it('names each choice for the toggle', () => {
+		expect(themeLabel('system')).toBe('Match system');
+		expect(themeLabel('dark')).toBe('Dark');
 	});
 });

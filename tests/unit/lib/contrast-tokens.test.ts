@@ -1,120 +1,86 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-	const cleaned = hex.replace('#', '');
-	if (hex.startsWith('color-mix') || cleaned === '') {
-		return { r: 0, g: 0, b: 0 };
+// Reads the palettes straight from the stylesheet, so a token edit that breaks contrast fails
+// here; nothing is copied into the test. WCAG 2.x: 4.5:1 for text, 3:1 for control boundaries
+// and the focus ring (1.4.3, 1.4.11).
+
+const source = readFileSync(join(process.cwd(), 'src/styles/abstracts/_tokens.scss'), 'utf-8');
+
+function block(pattern: RegExp): string {
+	const match = source.match(pattern);
+	if (!match?.[1]) throw new Error(`token block not found: ${pattern}`);
+	return match[1];
+}
+
+function hexTokens(body: string): Record<string, string> {
+	const tokens: Record<string, string> = {};
+	for (const [, name, value] of body.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{3,6})\s*;/gi)) {
+		tokens[name] = value.length === 4 ? `#${[...value.slice(1)].map((c) => c + c).join('')}` : value;
 	}
-	const bigint = parseInt(cleaned, 16);
-	return {
-		r: (bigint >> 16) & 255,
-		g: (bigint >> 8) & 255,
-		b: bigint & 255,
+	return tokens;
+}
+
+const light = hexTokens(block(/^:root\s*\{([\s\S]*?)^\}/m));
+const dark = { ...light, ...hexTokens(block(/@mixin dark-palette\s*\{([\s\S]*?)^\}/m)) };
+
+function luminance(hex: string): number {
+	const channel = (offset: number): number => {
+		const c = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 	};
+	return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
 }
 
-function linearizeComponent(component: number): number {
-	const normalized = component / 255;
-	if (normalized <= 0.03928) {
-		return normalized / 12.92;
-	}
-	return Math.pow((normalized + 0.055) / 1.055, 2.4);
+function contrast(a: string, b: string): number {
+	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (hi + 0.05) / (lo + 0.05);
 }
 
-function relativeLuminance(hex: string): number {
-	const { r, g, b } = hexToRgb(hex);
-	return 0.2126 * linearizeComponent(r) + 0.7152 * linearizeComponent(g) + 0.0722 * linearizeComponent(b);
-}
+const TEXT: [string, string][] = [
+	['ink', 'paper'], ['ink', 'raised'], ['ink', 'tint'],
+	['graphite', 'paper'], ['graphite', 'raised'], ['graphite', 'tint'],
+	['signal', 'paper'], ['signal', 'raised'],
+	['danger', 'paper'], ['danger', 'raised'],
+	['success', 'paper'], ['success', 'raised'],
+	['warning', 'paper'], ['warning', 'raised'],
+	['on-signal', 'signal'], ['paper', 'ink'],
+];
 
-function contrastRatio(l1: number, l2: number): number {
-	return (l1 + 0.05) / (l2 + 0.05);
-}
+const BOUNDARY: [string, string][] = [
+	['graphite', 'paper'], ['graphite', 'raised'],
+	['signal', 'paper'], ['signal', 'raised'], ['signal', 'tint'],
+];
 
-const themeNames = ['swiss', 'aurora', 'solar', 'ember', 'forest'] as const;
+describe.each([
+	['light', light],
+	['dark', dark],
+])('%s palette', (_, palette) => {
+	it('defines every token the pairs below use', () => {
+		for (const [fg, bg] of [...TEXT, ...BOUNDARY]) {
+			expect(palette[fg], `--${fg}`).toMatch(/^#[0-9a-f]{6}$/i);
+			expect(palette[bg], `--${bg}`).toMatch(/^#[0-9a-f]{6}$/i);
+		}
+	});
 
-const surfaceValues: Record<string, string> = {
-	swiss: '#ffffff',
-	aurora: '#15151f',
-	solar: '#ffffff',
-	ember: '#1c110d',
-	forest: '#0f2419',
-};
+	it.each(TEXT)('text --%s on --%s is at least 4.5:1', (fg, bg) => {
+		expect(contrast(palette[fg]!, palette[bg]!)).toBeGreaterThanOrEqual(4.5);
+	});
 
-const textStrongValues: Record<string, string> = {
-	swiss: '#1a1812',
-	aurora: '#f0f0f5',
-	solar: '#1a1812',
-	ember: '#fef3e2',
-	forest: '#ecfdf5',
-};
+	it.each(BOUNDARY)('boundary --%s on --%s is at least 3:1', (fg, bg) => {
+		expect(contrast(palette[fg]!, palette[bg]!)).toBeGreaterThanOrEqual(3);
+	});
+});
 
-const borderSolidHex: Record<string, string | null> = {
-	swiss: '#6b6b6b',
-	aurora: '#6b6b6b',
-	solar: '#827767',
-	ember: null,
-	forest: null,
-};
+describe('the contrast helper', () => {
+	it('gives 21:1 for black on white and 1:1 for a colour on itself', () => {
+		expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
+		expect(contrast('#56565f', '#56565f')).toBeCloseTo(1, 5);
+	});
 
-describe('WCAG 2.2 Color Token Contrast Ratio Suite', () => {
-	for (const theme of themeNames) {
-		beforeEach(() => {
-			document.body.innerHTML = '';
-		});
-
-		it(`computes relative luminance correctly for ${theme} theme`, () => {
-			const luminance = relativeLuminance(textStrongValues[theme as keyof typeof textStrongValues]);
-			expect(luminance).toBeGreaterThan(0);
-			expect(luminance).toBeLessThan(1);
-		});
-
-		it(`computes contrast ratio correctly for ${theme} theme`, () => {
-			const l1 = relativeLuminance(textStrongValues[theme as keyof typeof textStrongValues]);
-			const l2 = relativeLuminance(surfaceValues[theme as keyof typeof surfaceValues]);
-			const ratio = contrastRatio(Math.max(l1, l2), Math.min(l1, l2));
-			expect(ratio).toBeGreaterThan(0);
-			expect(ratio).toBeLessThanOrEqual(21);
-		});
-
-		it(`normal text contrast >= 4.5:1 for ${theme} theme`, () => {
-			const luminanceText = relativeLuminance(textStrongValues[theme as keyof typeof textStrongValues]);
-			const luminanceSurface = relativeLuminance(surfaceValues[theme as keyof typeof surfaceValues]);
-
-			const light = luminanceText > luminanceSurface ? luminanceText : luminanceSurface;
-			const dark = luminanceText > luminanceSurface ? luminanceSurface : luminanceText;
-			const ratio = contrastRatio(light, dark);
-
-			expect(ratio).toBeGreaterThanOrEqual(4.5);
-		});
-
-		it(`large text contrast >= 3:1 for ${theme} theme`, () => {
-			const luminanceText = relativeLuminance(textStrongValues[theme as keyof typeof textStrongValues]);
-			const luminanceSurface = relativeLuminance(surfaceValues[theme as keyof typeof surfaceValues]);
-
-			const light = luminanceText > luminanceSurface ? luminanceText : luminanceSurface;
-			const dark = luminanceText > luminanceSurface ? luminanceSurface : luminanceText;
-			const ratio = contrastRatio(light, dark);
-
-			expect(ratio).toBeGreaterThanOrEqual(3);
-		});
-
-		it(`UI boundary contrast >= 3:1 for ${theme} theme`, () => {
-			const borderHex = borderSolidHex[theme as keyof typeof borderSolidHex];
-			const surfaceHex = surfaceValues[theme as keyof typeof surfaceValues];
-
-			if (!borderHex) {
-				expect(true).toBe(true);
-				return;
-			}
-
-			const luminanceBorder = relativeLuminance(borderHex);
-			const luminanceSurface = relativeLuminance(surfaceHex);
-
-			const light = luminanceBorder > luminanceSurface ? luminanceBorder : luminanceSurface;
-			const dark = luminanceBorder > luminanceSurface ? luminanceSurface : luminanceBorder;
-			const ratio = contrastRatio(light, dark);
-
-			expect(ratio).toBeGreaterThanOrEqual(3);
-		});
-	}
+	it('reads dark overrides over the light palette', () => {
+		expect(dark.paper).not.toBe(light.paper);
+		expect(dark['font-display']).toBeUndefined();
+	});
 });

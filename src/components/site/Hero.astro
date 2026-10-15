@@ -1,0 +1,53 @@
+---
+// Section 1: the claim, and the product as its proof. One primary action (the tour) and one text
+// link, so the first viewport holds a single filled control (PLAN §2.4). The convergence ends on
+// the capture's frame.
+import CaptureFrame from './CaptureFrame.astro';
+import Convergence from './Convergence.astro';
+---
+
+<section class="hero" aria-labelledby="hero-title">
+	<div class="container container--wide">
+		<div class="hero__copy">
+			<h1 id="hero-title">One workspace for every department.</h1>
+			<p class="lead">Customers, orders, invoices and what your team learns, linked in one place instead of copied across five tools.</p>
+			<div class="hero__actions">
+				<a class="button button--primary" href="/tour/" data-open-tour>
+					<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 2.5v11l9-5.5z" fill="currentColor" /></svg>
+					Watch the 75-second tour
+				</a>
+				<button class="text-link" type="button" data-open-portal data-js-only>Create a workspace</button>
+			</div>
+		</div>
+		<Convergence />
+		<CaptureFrame shot="S1" eager sizes="(min-width: 80rem) 80rem, 100vw" />
+	</div>
+</section>
+
+<style>
+	.hero {
+		padding-block: var(--space-8) var(--space-9);
+	}
+
+	.hero__copy {
+		display: grid;
+		gap: var(--space-5);
+		max-width: 44rem;
+		margin-inline: auto;
+		text-align: center;
+		justify-items: center;
+	}
+
+	.hero__actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-3) var(--space-6);
+		margin-top: var(--space-2);
+	}
+
+	.hero :global(.convergence) {
+		margin-block: var(--space-7) 0;
+	}
+</style>

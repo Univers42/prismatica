@@ -11,6 +11,19 @@ describe('Portal Script Module', () => {
 		document.body.innerHTML = '';
 	});
 
+	it('binds password toggles only inside the given root, once per call', () => {
+		const field = (id: string): string => `<div class="field" id="${id}"><input type="password" /><button type="button" data-password-toggle></button></div>`;
+		document.body.innerHTML = field('a') + field('b');
+		const [a, b] = ['a', 'b'].map((id) => document.getElementById(id)!);
+		bindPasswordToggles(a);
+		bindPasswordToggles(b);
+		a.querySelector('button')!.click();
+		b.querySelector('button')!.click();
+		// One listener each: a second binding of the same toggle would flip the field back.
+		expect(a.querySelector('input')!.type).toBe('text');
+		expect(b.querySelector('input')!.type).toBe('text');
+	});
+
 	it('opens portal and adds modal dialog to body', () => {
 		openPortal('start');
 		const portal = document.querySelector('#portal');

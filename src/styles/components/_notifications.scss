@@ -22,7 +22,7 @@
 }
 
 .notification-card {
-	--notification-accent: var(--hl-blue);
+	--notification-accent: var(--tint);
 	position: relative;
 	display: grid;
 	grid-template-columns: auto 1fr auto;
@@ -30,22 +30,22 @@
 	align-items: start;
 	min-width: 0;
 	padding: 0.9rem 0.9rem 1rem;
-	border: 2px solid var(--surface-line);
+	border: 2px solid var(--rule);
 	border-left-width: 0.45rem;
 	border-left-color: var(--notification-accent);
 	border-radius: 20px 16px 22px 17px / 16px 22px 17px 20px;
-	background: color-mix(in srgb, var(--surface-strong) 94%, var(--brand-canvas-text));
+	background: color-mix(in srgb, var(--raised) 94%, var(--ink));
 	color: var(--ink);
-	box-shadow: var(--shadow-lift);
+	box-shadow: var(--shadow-2);
 	pointer-events: auto;
 	overflow: hidden;
-	animation: notification-enter 240ms var(--ease-out-sketch) both;
+	animation: notification-enter 240ms var(--ease-out) both;
 }
 
-.notification-card--success { --notification-accent: var(--system-success-border); }
-.notification-card--error { --notification-accent: var(--system-danger-border); }
-.notification-card--warning { --notification-accent: var(--system-warning-border); }
-.notification-card--info { --notification-accent: var(--system-info-border); }
+.notification-card--success { --notification-accent: var(--success); }
+.notification-card--error { --notification-accent: var(--danger); }
+.notification-card--warning { --notification-accent: var(--warning); }
+.notification-card--info { --notification-accent: var(--graphite); }
 
 .notification-card--leaving {
 	animation: notification-leave 180ms ease-in both;
@@ -56,10 +56,10 @@
 	place-items: center;
 	width: 2rem;
 	height: 2rem;
-	border: 2px solid var(--surface-line);
+	border: 2px solid var(--rule);
 	border-radius: 999px;
 	background: var(--notification-accent);
-	font-family: var(--font-mono-sketch);
+	font-family: var(--font-mono);
 	font-weight: 700;
 	line-height: 1;
 }
@@ -79,10 +79,10 @@
 
 .notification-card__message {
 	margin: 0;
-	font-family: var(--font-body);
+	font-family: var(--font-text);
 	font-size: 0.98rem;
 	line-height: 1.35;
-	color: var(--ink-mid);
+	color: var(--graphite);
 }
 
 .notification-card__dismiss {
@@ -91,9 +91,9 @@
 	place-items: center;
 	width: 2rem;
 	height: 2rem;
-	border: 1.5px solid var(--surface-line-soft);
+	border: 1.5px solid var(--rule);
 	border-radius: 999px;
-	background: var(--surface-muted);
+	background: var(--tint);
 	color: inherit;
 	font: inherit;
 	font-size: 1.35rem;
@@ -122,7 +122,7 @@
 }
 
 .notification-card__dismiss-progress-track {
-	stroke: color-mix(in srgb, var(--surface-line-soft) 60%, transparent);
+	stroke: color-mix(in srgb, var(--rule) 60%, transparent);
 }
 
 .notification-card__dismiss-progress-ring {
@@ -134,7 +134,7 @@
 }
 
 .notification-card__dismiss:focus-visible {
-	outline: var(--stroke-focus) solid var(--hl-yellow);
+	outline: var(--signal) solid var(--tint);
 	outline-offset: 2px;
 }
 
