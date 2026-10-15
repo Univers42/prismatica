@@ -10,11 +10,11 @@
   --surface-2: #efe7d9;
   --ink: #2b2722;
   --ink-soft: #4a4239;
-  --muted: #877c6d;
+  --muted: #695f53;
   --line: #e6ddcd;
   --line-strong: #d7ccb8;
   --accent: #cc785c;
-  --accent-deep: #b5532e;
+  --accent-deep: #983f1f;
   --accent-soft: #f0dccf;
   --shell-ink: #3a342d;
   --shell-bg: #f1e9da;
@@ -25,7 +25,7 @@
 
   --k-note: #5a7a8c;   --k-note-bg: #eaf0f3;
   --k-info: #5a7a8c;   --k-info-bg: #eaf0f3;
-  --k-tip: #5f8a6a;    --k-tip-bg: #e9f1ea;
+  --k-tip: #3f6549;    --k-tip-bg: #e9f1ea;
   --k-success: #5f8a6a;--k-success-bg: #e9f1ea;
   --k-warning: #b0842f;--k-warning-bg: #f7efdc;
   --k-todo: #b0842f;   --k-todo-bg: #f7efdc;
