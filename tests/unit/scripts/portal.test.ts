@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { openPortal, closePortal, bindPasswordToggles } from '../../../src/scripts/portal';
+import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
 
 describe('Portal Script Module', () => {
 	beforeEach(() => {
@@ -42,6 +42,15 @@ describe('Portal Script Module', () => {
 		expect(portal?.dataset.authMode).toBe('register');
 		expect(confirm?.closest<HTMLElement>('.portal-register-only')?.hidden).toBe(false);
 		expect(confirm?.required).toBe(true);
+	});
+
+	it('sends the token the auth gateway bypasses locally when no Turnstile site key is set', () => {
+		openPortal('start');
+		const portal = document.querySelector<HTMLElement>('#portal');
+		if (!portal) throw new Error('no portal');
+		// scripts/auth-gateway.mjs verifyTurnstile: TURNSTILE_BYPASS_LOCAL admits only this value.
+		expect(document.querySelector<HTMLInputElement>('[data-turnstile-token]')?.value).toBe('localhost-turnstile-token');
+		expect(readTurnstileToken(portal)).toBe('localhost-turnstile-token');
 	});
 
 	it('marks the active mode button pressed after a switch', () => {

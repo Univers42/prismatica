@@ -61,13 +61,16 @@ const authClient = useAuth();
 let portalPreviousFocus: HTMLElement | null = null;
 let portalReleaseFocusTrap: (() => void) | null = null;
 
+// The one value scripts/auth-gateway.mjs (verifyTurnstile) admits under TURNSTILE_BYPASS_LOCAL.
+const LOCAL_TURNSTILE_TOKEN = 'localhost-turnstile-token';
+
 export function readTurnstileToken(portal: HTMLElement): string {
 	const token = portal.querySelector('[data-turnstile-token]');
 	if (token instanceof HTMLInputElement && token.value) {
 		return token.value;
 	}
 	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key' || !import.meta.env.PUBLIC_TURNSTILE_SITE_KEY) {
-		return 'local-dev-turnstile-token';
+		return LOCAL_TURNSTILE_TOKEN;
 	}
 	return '';
 }
@@ -79,7 +82,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 	if (!sitekey || sitekey === 'local-dev-turnstile-key') {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
-			tokenInput.value = 'local-dev-turnstile-token';
+			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
 		}
 		return;
 	}
