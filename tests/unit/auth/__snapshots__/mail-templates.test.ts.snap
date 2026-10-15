@@ -1,0 +1,199 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`message accountExists > matches its HTML and text snapshots > html 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>You already have an account</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F5F1;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F6F5F1;">Someone tried to create a Prismatica account for ines@arlet.test.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F5F1;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 0 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:0.02em;color:#15151A;">Prismatica</td></tr>
+<tr><td style="background-color:#FFFFFF;border:1px solid #DCDAD2;border-radius:6px;padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15151A;">
+<h1 style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;line-height:1.25;font-weight:600;color:#15151A;">You already have an account</h1>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">Someone, probably you, tried to create a Prismatica account for ines@arlet.test. This address already has one, so nothing was created.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#B93A0C" style="border-radius:4px;background-color:#B93A0C;"><a href="https://prismatica.example" style="display:inline-block;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.25;color:#FFFFFF;text-decoration:none;border-radius:4px;">Sign in</a></td></tr></table>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">Forgot the password? Choose <strong>Forgot password</strong> in the sign-in window and we will send you a reset link.</p>
+</td></tr>
+<tr><td style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#56565F;">You did not try to sign up? Ignore this message; your account has not changed. Sent by <a href="https://prismatica.example" style="color:#56565F;">Prismatica</a> to ines@arlet.test.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+"
+`;
+
+exports[`message accountExists > matches its HTML and text snapshots > subject 1`] = `"You already have an account"`;
+
+exports[`message accountExists > matches its HTML and text snapshots > text 1`] = `
+"You already have an account
+
+Someone, probably you, tried to create a Prismatica account for ines@arlet.test. This address already has one, so nothing was created.
+
+Sign in: https://prismatica.example
+
+Forgot the password? Choose "Forgot password" in the sign-in window and we will send you a reset link.
+
+You did not try to sign up? Ignore this message; your account has not changed.
+
+Prismatica - https://prismatica.example
+"
+`;
+
+exports[`message confirmEmail > matches its HTML and text snapshots > html 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Confirm your email</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F5F1;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F6F5F1;">Confirm ines@arlet.test to finish creating your Prismatica account.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F5F1;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 0 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:0.02em;color:#15151A;">Prismatica</td></tr>
+<tr><td style="background-color:#FFFFFF;border:1px solid #DCDAD2;border-radius:6px;padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15151A;">
+<h1 style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;line-height:1.25;font-weight:600;color:#15151A;">Confirm your email</h1>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">A Prismatica account was created for ines@arlet.test. Confirm the address to start using it.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#B93A0C" style="border-radius:4px;background-color:#B93A0C;"><a href="https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz" style="display:inline-block;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.25;color:#FFFFFF;text-decoration:none;border-radius:4px;">Confirm my email</a></td></tr></table>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">The link works once and expires in 60 minutes.</p>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">If the button does not work, paste this address into your browser:<br><a href="https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz" style="color:#B93A0C;word-break:break-all;">https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz</a></p>
+</td></tr>
+<tr><td style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#56565F;">You did not create this account? Ignore this message; an unconfirmed account cannot be used. Sent by <a href="https://prismatica.example" style="color:#56565F;">Prismatica</a> to ines@arlet.test.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+"
+`;
+
+exports[`message confirmEmail > matches its HTML and text snapshots > subject 1`] = `"Confirm your email"`;
+
+exports[`message confirmEmail > matches its HTML and text snapshots > text 1`] = `
+"Confirm your email
+
+A Prismatica account was created for ines@arlet.test. Confirm the address to start using it:
+
+https://prismatica.example/auth/reset-password#token_hash=abc&type=recovery&exp=1800000000&sig=xyz
+
+The link works once and expires in 60 minutes.
+
+You did not create this account? Ignore this message; an unconfirmed account cannot be used.
+
+Prismatica - https://prismatica.example
+"
+`;
+
+exports[`message passwordChanged > matches its HTML and text snapshots > html 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Your password was changed</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F5F1;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F6F5F1;">The password of ines@arlet.test was changed on Thursday 15 October 2026 at 12:00 UTC.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F5F1;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 0 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:0.02em;color:#15151A;">Prismatica</td></tr>
+<tr><td style="background-color:#FFFFFF;border:1px solid #DCDAD2;border-radius:6px;padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15151A;">
+<h1 style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;line-height:1.25;font-weight:600;color:#15151A;">Your password was changed</h1>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">The password of the Prismatica account ines@arlet.test was changed on Thursday 15 October 2026 at 12:00 UTC.</p>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">Every device that was signed in has been signed out. Sign in again with the new password.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#B93A0C" style="border-radius:4px;background-color:#B93A0C;"><a href="https://prismatica.example" style="display:inline-block;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.25;color:#FFFFFF;text-decoration:none;border-radius:4px;">Sign in</a></td></tr></table>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">This was not you? Open Prismatica, choose <strong>Forgot password</strong> in the sign-in window, and set a new password at once.</p>
+</td></tr>
+<tr><td style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#56565F;">This is a security notice about your account; it is sent whatever your e-mail preferences. Sent by <a href="https://prismatica.example" style="color:#56565F;">Prismatica</a> to ines@arlet.test.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+"
+`;
+
+exports[`message passwordChanged > matches its HTML and text snapshots > subject 1`] = `"Your password was changed"`;
+
+exports[`message passwordChanged > matches its HTML and text snapshots > text 1`] = `
+"Your password was changed
+
+The password of the Prismatica account ines@arlet.test was changed on Thursday 15 October 2026 at 12:00 UTC.
+Every device that was signed in has been signed out. Sign in again with the new password:
+
+https://prismatica.example
+
+This was not you? Open Prismatica, choose "Forgot password" in the sign-in window, and set a new password at once.
+
+This is a security notice about your account; it is sent whatever your e-mail preferences.
+
+Prismatica - https://prismatica.example
+"
+`;
+
+exports[`message resetPassword > matches its HTML and text snapshots > html 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Reset your password</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F5F1;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F6F5F1;">A password reset was requested for ines@arlet.test.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F5F1;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 0 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:0.02em;color:#15151A;">Prismatica</td></tr>
+<tr><td style="background-color:#FFFFFF;border:1px solid #DCDAD2;border-radius:6px;padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15151A;">
+<h1 style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;line-height:1.25;font-weight:600;color:#15151A;">Reset your password</h1>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">A password reset was requested for the Prismatica account ines@arlet.test. Choose a new password with the button below.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#B93A0C" style="border-radius:4px;background-color:#B93A0C;"><a href="https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz" style="display:inline-block;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.25;color:#FFFFFF;text-decoration:none;border-radius:4px;">Choose a new password</a></td></tr></table>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">The link works once and expires in 60 minutes. Asking for another link cancels this one.</p>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">Setting a new password signs you out on every device.</p>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">If the button does not work, paste this address into your browser:<br><a href="https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz" style="color:#B93A0C;word-break:break-all;">https://prismatica.example/auth/reset-password#token_hash=abc&amp;type=recovery&amp;exp=1800000000&amp;sig=xyz</a></p>
+</td></tr>
+<tr><td style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#56565F;">You did not ask for this? Ignore this message; your password stays as it is. Sent by <a href="https://prismatica.example" style="color:#56565F;">Prismatica</a> to ines@arlet.test.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+"
+`;
+
+exports[`message resetPassword > matches its HTML and text snapshots > subject 1`] = `"Reset your password"`;
+
+exports[`message resetPassword > matches its HTML and text snapshots > text 1`] = `
+"Reset your password
+
+A password reset was requested for the Prismatica account ines@arlet.test. Choose a new password here:
+
+https://prismatica.example/auth/reset-password#token_hash=abc&type=recovery&exp=1800000000&sig=xyz
+
+The link works once and expires in 60 minutes. Asking for another link cancels this one.
+Setting a new password signs you out on every device.
+
+You did not ask for this? Ignore this message; your password stays as it is.
+
+Prismatica - https://prismatica.example
+"
+`;

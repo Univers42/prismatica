@@ -1,0 +1,11 @@
+Confirm your email
+
+A Prismatica account was created for {{email}}. Confirm the address to start using it:
+
+{{link}}
+
+The link works once and expires in {{expiresIn}}.
+
+You did not create this account? Ignore this message; an unconfirmed account cannot be used.
+
+Prismatica - {{siteUrl}}
