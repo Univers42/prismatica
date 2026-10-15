@@ -9,7 +9,8 @@ describe('Docs Page', () => {
 
 	it('does not contain the temporary placeholder and shows real technical content', () => {
 		expect(docsApp).not.toContain('currently being written');
-		expect(docsApp).toContain('<title>Prismatica Docs</title>');
+		// One static page per doc (1449dfa): /docs/ is the first doc, titled "<doc> · Prismatica Docs".
+		expect(docsApp).toMatch(/<title>[^<]+ · Prismatica Docs<\/title>/);
 		expect(docsApp).toContain('Architecture');
 	});
 
