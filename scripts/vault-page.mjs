@@ -26,11 +26,25 @@ export function labelTaskItems(html) {
 	return html.replace(TASK_ITEM, (match, item, attributes, inner) => `${item}<input type="checkbox"${attributes} aria-label="${esc(plainText(inner).slice(0, 120))}">${inner}</li>`);
 }
 
-// A code block scrolls sideways at phone width (\`.md pre { overflow-x: auto }\`), and a scroll
+// A code block scrolls sideways at phone width (`.md pre { overflow-x: auto }`), and a scroll
 // region the keyboard cannot reach fails axe "scrollable-region-focusable" (phase6, 390 px). A
 // block that already states a tabindex keeps it.
 export function focusableCodeBlocks(html) {
 	return html.replace(/<pre\b(?![^>]*\btabindex=)/g, '<pre tabindex="0"');
+}
+
+// A doc image fetched with the page held mobile LCP on /docs/ at 2.61 s: Lighthouse counts the
+// 194 KB screenshot, which sits below the fold at 390 px, as a dependency of the first paragraph.
+// Each image now loads lazily, decodes off the main thread and carries its size (sizeOf reads
+// it from the asset), so it reserves its box. An image that states its loading keeps it.
+export function lazyImages(html, sizeOf) {
+	return html.replace(/<img\b([^>]*)>/g, (tag, attributes) => {
+		const src = /\bsrc="([^"]+)"/.exec(attributes)?.[1];
+		const size = /\b(width|height)=/.test(attributes) ? null : sizeOf(src);
+		const loading = /\bloading=/.test(attributes) ? '' : ' loading="lazy"';
+		const dimensions = size ? ` width="${size.width}" height="${size.height}"` : '';
+		return `<img${loading} decoding="async"${dimensions}${attributes}>`;
+	});
 }
 
 // Caveat: a doc whose first paragraph is a callout or a link list gets that as its description;

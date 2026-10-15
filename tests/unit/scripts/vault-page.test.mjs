@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDoc, docHref, docPage, focusableCodeBlocks, labelTaskItems } from '../../../scripts/vault-page.mjs';
+import { describeDoc, docHref, docPage, focusableCodeBlocks, labelTaskItems, lazyImages } from '../../../scripts/vault-page.mjs';
 
 const home = { path: '00-welcome', title: 'Welcome', icon: '◆', summary: 'Start here.', crumbs: ['00-welcome.xmd'], toc: [], html: '<p>Hello.</p>' };
 const guide = {
@@ -76,5 +76,13 @@ describe('focusableCodeBlocks', () => {
 		const once = focusableCodeBlocks(html);
 		expect(once).toBe('<pre tabindex="0" data-block-state="reading"><code>a</code></pre><pre tabindex="-1"><code>b</code></pre><p>pre</p>');
 		expect(focusableCodeBlocks(once)).toBe(once);
+	});
+});
+
+describe('lazyImages', () => {
+	it('defers a doc image, sized so it reserves its box, and keeps what is already stated', () => {
+		const sizeOf = (src) => (src === '/docs/assets/a.png' ? { width: 1600, height: 900 } : null);
+		const html = '<p>x</p><img src="/docs/assets/a.png" alt="A" /><img src="/docs/assets/b.png" alt="B" loading="eager">';
+		expect(lazyImages(html, sizeOf)).toBe('<p>x</p><img loading="lazy" decoding="async" width="1600" height="900" src="/docs/assets/a.png" alt="A" /><img decoding="async" src="/docs/assets/b.png" alt="B" loading="eager">');
 	});
 });

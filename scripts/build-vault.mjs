@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import { rewriteDocLinks } from "./vault-links.mjs";
-import { docHref, docPage, focusableCodeBlocks, labelTaskItems } from "./vault-page.mjs";
+import { docHref, docPage, focusableCodeBlocks, labelTaskItems, lazyImages } from "./vault-page.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));            // apps/opposite-osiris/scripts
@@ -45,6 +45,16 @@ async function loadMarkengine() {
   const localRequire = (id) => (id === "react" ? { createElement: () => ({}), Fragment: Symbol("f") } : require(id));
   vm.runInNewContext(out.outputFiles[0].text, { module: mod, exports: mod.exports, require: localRequire, console, process, Buffer, TextEncoder, TextDecoder, URL });
   return mod.exports;
+}
+
+// The pixel size of a vault PNG, from its IHDR chunk (bytes 16-23), so a doc image reserves
+// its box. Any other source gets no size and lays out once it loads.
+function assetSize(src) {
+  const name = /^\/docs\/assets\/([^/]+\.png)$/.exec(src ?? "")?.[1];
+  const file = name && join(VAULT, "assets", name);
+  if (!file || !existsSync(file)) return null;
+  const header = readFileSync(file).subarray(16, 24);
+  return { width: header.readUInt32BE(0), height: header.readUInt32BE(4) };
 }
 
 /* ── 2. Walk vault/ recursively for .xmd files (any depth) ────────────────── */
@@ -153,7 +163,7 @@ async function main() {
   for (const d of docs) {
     const result = rewriteDocLinks(d.html, d.path, knownDocs, hrefOf);
     // Pages sit at different depths, so an image's relative assets/ path is made absolute.
-    d.html = focusableCodeBlocks(labelTaskItems(result.html.replace(/\bsrc="assets\//g, 'src="/docs/assets/')));
+    d.html = lazyImages(focusableCodeBlocks(labelTaskItems(result.html.replace(/\bsrc="assets\//g, 'src="/docs/assets/'))), assetSize);
     broken.push(...result.broken);
   }
   if (broken.length) throw new Error("links to docs that do not exist:\n  " + broken.join("\n  "));
