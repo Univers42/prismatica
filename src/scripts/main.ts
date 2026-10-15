@@ -7,6 +7,7 @@ import { bindSkipLinkFocus } from '../lib/a11y';
 import { bindThemeToggle, ensureButtonLabels } from './theme';
 import { bindTourDialog } from './tour';
 import { bindViewTabs } from './views';
+import { bindSavedView } from './saved-view';
 import { isAccountMailKind } from './portal-account-mail';
 
 function closestFromEvent(event: Event, selector: string): Element | null {
@@ -39,6 +40,7 @@ function bindNewsletterForms(): void {
 bindSkipLinkFocus();
 bindThemeToggle();
 bindViewTabs();
+bindSavedView();
 bindTourDialog();
 bindPortalTriggers();
 bindNewsletterForms();

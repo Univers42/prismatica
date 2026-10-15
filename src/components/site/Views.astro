@@ -4,10 +4,11 @@
 // each under its own heading, and the tablist is absent (data-js-only). The pre-paint script sets
 // html[data-js] before first paint, so the panels never stack and then collapse.
 import CaptureFrame from './CaptureFrame.astro';
+import SavedView from './SavedView.astro';
 import type { ShotId } from '../../data/shots';
 
 const views: { key: string; label: string; shot: ShotId; note: string }[] = [
-	{ key: 'table', label: 'Table', shot: 'S5', note: 'A saved view: open deals over €5,000, sorted by owner.' },
+	{ key: 'table', label: 'Table', shot: 'S5', note: 'A saved view: open deals over €5,000, largest first.' },
 	{ key: 'board', label: 'Board', shot: 'S4', note: 'Every stage of the pipeline, from lead to won and lost.' },
 	{ key: 'calendar', label: 'Calendar', shot: 'S6', note: 'Calls and meetings, on the month they happened.' },
 	{ key: 'chart', label: 'Chart', shot: 'S7', note: 'Eighteen months of revenue, the two weak months included.' },
@@ -20,6 +21,8 @@ const views: { key: string; label: string; shot: ShotId; note: string }[] = [
 			<h2 id="views-title">Views, not copies.</h2>
 			<p class="lead">The same deals, four ways. Pick one: nothing is exported or entered again.</p>
 		</div>
+
+		<SavedView />
 
 		<div class="views" data-views>
 			<div class="views__tabs" role="tablist" aria-label="Views of the deals" data-js-only>
@@ -56,6 +59,7 @@ const views: { key: string; label: string; shot: ShotId; note: string }[] = [
 	}
 
 	.views {
+		margin-top: var(--space-7);
 		display: grid;
 		gap: var(--space-6);
 	}
