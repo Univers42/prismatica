@@ -79,8 +79,16 @@ const view = deals.filter(matches).sort((a, b) => b.amount - a.amount);
 		padding: var(--space-2) var(--space-3);
 	}
 
+	/* Out of the view, but still readable: opacity would take the text under 4.5:1 (axe
+	   color-contrast, 6 nodes in st3). Graphite on paper is 6.66:1 (D-017). */
 	.v4__card[data-out] {
-		opacity: 0.45;
+		background: transparent;
+		border-style: dashed;
+	}
+
+	.v4__card[data-out] .v4__title,
+	.v4__card[data-out] .v4__meta {
+		color: var(--graphite);
 	}
 
 	.v4__view {
@@ -123,24 +131,40 @@ const view = deals.filter(matches).sort((a, b) => b.amount - a.amount);
 	}
 
 	.v4[data-armed] .v4__card[data-out] {
-		opacity: 1;
+		background: var(--raised);
+		border-style: solid;
+	}
+
+	.v4[data-armed] .v4__card[data-out] .v4__title {
+		color: inherit;
 	}
 
 	.v4[data-armed] .v4__row {
-		opacity: 0.35;
+		color: var(--graphite);
+		background: transparent;
+		border-style: dashed;
 		transform: translateY(calc(-1 * var(--space-3)));
 	}
 
 	.v4[data-play] .v4__card[data-out] {
-		opacity: 0.45;
-		transition: opacity 400ms ease-out;
+		background: transparent;
+		border-style: dashed;
+		transition: background-color 400ms ease-out;
+	}
+
+	.v4[data-play] .v4__card[data-out] .v4__title {
+		color: var(--graphite);
+		transition: color 400ms ease-out;
 	}
 
 	.v4[data-play] .v4__row {
-		opacity: 1;
+		color: var(--ink);
+		background: var(--raised);
+		border-style: solid;
 		transform: none;
 		transition:
-			opacity 400ms ease-out,
+			color 400ms ease-out,
+			background-color 400ms ease-out,
 			transform 400ms ease-out;
 		transition-delay: calc(400ms + var(--i, 0) * 140ms);
 	}
