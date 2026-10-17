@@ -48,6 +48,8 @@ export function isProductionOrigin(siteUrl) {
 	return !isLocal;
 }
 
+const DUMMY_TURNSTILE_SECRET = /^[123]x0{20,}/;
+
 // Returns a list of human-readable violations. Empty list = safe to boot.
 // Only enforced when the site origin is a public https host.
 export function collectStartupViolations(config) {
@@ -72,6 +74,14 @@ export function collectStartupViolations(config) {
 	}
 	if (!demoInsecure && !config.turnstileSecret) {
 		violations.push('TURNSTILE_SECRET_KEY is missing — Turnstile cannot be verified in production.');
+	}
+	// Cloudflare's published test secrets (1x/2x/3x + zeros) always pass or always fail, so a copy
+	// in a public deploy silently disables the CAPTCHA. Caveat: shape match only; the gateway never
+	// reads the site key (it lives in the site build), so a dummy site key is not detectable here.
+	if (!demoInsecure && DUMMY_TURNSTILE_SECRET.test(config.turnstileSecret ?? '')) {
+		violations.push(
+			'TURNSTILE_SECRET_KEY is a Cloudflare dummy test key — it makes Turnstile always pass or always fail. Create a real widget at dash.cloudflare.com → Turnstile for the site hostname and use its secret.',
+		);
 	}
 	if (Number(config.trustedProxyHops ?? 0) <= 0) {
 		violations.push(
