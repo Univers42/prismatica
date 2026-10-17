@@ -157,6 +157,42 @@ describe('register answers 202 either way (Q6)', () => {
 	});
 });
 
+describe('register honours the signup allowlist (SGN-2)', () => {
+	const context = (email: string) => ({ email, password: 'Sign-Up-Pass-1!', profile: { username: 'ines_c', newsletter_consent: false }, userMetadata: { username: 'ines_c' } });
+	const onlyInes = (email: string) => email === 'new@arlet.test';
+
+	it('answers a refused address like an allowed one, but creates no user, mails nothing and takes no bucket slot', async () => {
+		const { mail, deps, api } = setup({ signupAllowed: onlyInes });
+		const refused = await mail.requestRegistration(context('stranger@evil.test'));
+		const allowed = await mail.requestRegistration(context('new@arlet.test'));
+		expect(refused).toEqual({ status: 202, body: REGISTER_ACCEPTED });
+		expect(refused).toEqual(allowed);
+		await deps.queue.runAll();
+		expect(deps.mailer.send).toHaveBeenCalledTimes(1);
+		expect(deps.mailer.send.mock.calls[0]?.[0].to).toBe('new@arlet.test');
+		expect(api.generateLink).toHaveBeenCalledTimes(1);
+		expect(deps.profiles.create).toHaveBeenCalledTimes(1);
+		expect(await deps.store.get(addressBucketKey('stranger@evil.test'))).toBeNull();
+		expect(deps.audit).toHaveBeenCalledWith('signup_refused_allowlist', { email: 'stranger@evil.test', source: 'register' });
+	});
+
+	it('still answers a taken username with 409 for a refused address, so the 409 is no oracle for the list', async () => {
+		const { mail } = setup({ signupAllowed: onlyInes, profiles: { emailExists: vi.fn(), usernameTaken: vi.fn(async () => true), create: vi.fn() } });
+		const refused = await mail.requestRegistration(context('stranger@evil.test'));
+		expect(refused.status).toBe(409);
+		expect(await mail.requestRegistration(context('new@arlet.test'))).toEqual(refused);
+	});
+
+	it('leaves /recover and /resend-verification ungated (SGN-4)', async () => {
+		const { mail, deps } = setup({ signupAllowed: () => false });
+		await mail.requestRecovery('ines@arlet.test');
+		await mail.requestVerificationResend('ines@arlet.test');
+		await deps.queue.runAll();
+		expect(deps.mailer.send).toHaveBeenCalledTimes(2);
+		expect(deps.audit).not.toHaveBeenCalledWith('signup_refused_allowlist', expect.anything());
+	});
+});
+
 describe('work after the 202 cannot crash the gateway (C6)', () => {
 	it('keeps serving when GoTrue throws inside a queued job, with no unhandled rejection', async () => {
 		const unhandled = vi.fn();

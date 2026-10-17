@@ -56,6 +56,8 @@ const year = new Date().getFullYear();
 					<input id="footer-newsletter-consent" type="checkbox" name="newsletter_consent" required />
 					<span>I agree to receive release emails and can unsubscribe from any footer.</span>
 				</label>
+				<div class="footer-new__newsletter-turnstile" data-turnstile-slot></div>
+				<input type="hidden" name="turnstileToken" data-turnstile-token />
 				<output class="footer-new__newsletter-status" data-newsletter-status aria-live="polite"></output>
 				<p class="footer-new__newsletter-meta">One email per release. No tracking pixels.</p>
 			</form>

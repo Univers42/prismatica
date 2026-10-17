@@ -33,6 +33,7 @@ import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/sess
 import { createEmailApiMailer } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
+import { isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
@@ -72,6 +73,7 @@ const config = {
 	loginLockoutWindowSec: Number(process.env.AUTH_LOGIN_LOCKOUT_WINDOW_SEC ?? 900),
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
 	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
+	signupAllowlist: process.env.AUTH_SIGNUP_ALLOWLIST ?? '',
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
@@ -391,6 +393,8 @@ function cleanText(value, maxLength) {
 	return String(value ?? '').trim().slice(0, maxLength);
 }
 
+const signupAllowlist = parseSignupAllowlist(config.signupAllowlist);
+const signupAllowed = (email) => isSignupAllowed(signupAllowlist, email);
 const mailDailyCap = createMailDailyCap({ store, cap: resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl)) });
 const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, dailyCap: mailDailyCap });
 
@@ -453,6 +457,7 @@ const accountMail = createAccountMail({
 	isDeliverable: hasDeliverableEmailDomain,
 	audit: flowAudit,
 	newsletterOptIn: (email) => requestNewsletterOptIn(null, email),
+	signupAllowed,
 });
 
 const linkFlows = createLinkFlows({
@@ -576,6 +581,11 @@ async function ensureLocalUserProfile(request, response, context, isEmailVerifie
 async function handleDevConfirmedRegistration(request, response, context) {
 	if (await localProfileExists('username', context.profile.username)) {
 		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
+		return;
+	}
+	if (!signupAllowed(context.email)) {
+		flowAudit('signup_refused_allowlist', { email: context.email, source: 'register' });
+		json(response, 200, { message: 'Development account created and confirmed. You can sign in now.' });
 		return;
 	}
 	if (await localProfileExists('email', context.email)) {
@@ -769,36 +779,33 @@ async function requestNewsletterOptIn(request, email) {
 }
 
 async function handleNewsletterSubscribe(request, response) {
-	const ip = clientIp(request);
-	const retryAfter = await rateLimit(ip, 'newsletter');
-	if (retryAfter) {
-		json(response, 429, { message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
-		return;
-	}
-	const payload = await readJson(request);
-	const email = String(payload.email ?? '').trim().toLowerCase();
-	if (!EMAIL_REGEX.test(email)) {
-		json(response, 422, { message: 'Use a valid email address.' });
-		return;
-	}
-	if (!await hasDeliverableEmailDomain(email)) {
-		json(response, 422, { message: 'Use an email domain that can receive mail.' });
-		return;
-	}
-	// Per-target cap: stop the newsletter from being used as an email-bomb
-	// amplifier against a victim's inbox, independent of source IP rotation.
-	const targetCount = await store.incrWithTtl(`rl:newsletter-target:${keyHash(email)}`, NEWSLETTER_TARGET_WINDOW_SEC);
-	if (targetCount > NEWSLETTER_TARGET_LIMIT) {
-		await audit('newsletter_target_throttled', request, { email });
-		json(response, 429, { message: 'Too many confirmation emails were requested for this address. Please check your inbox or try again later.' });
-		return;
-	}
-	const result = await requestNewsletterOptIn(request, email);
-	if (!result.ok) {
+	await protectedAction(request, response, 'newsletter', async (payload) => {
+		const email = String(payload.email ?? '').trim().toLowerCase();
+		if (!EMAIL_REGEX.test(email)) {
+			json(response, 422, { message: 'Use a valid email address.' });
+			return;
+		}
+		// Same 200 and body as a sent confirmation, so the answer is no oracle for the list (SGN-3).
+		if (!signupAllowed(email)) {
+			await audit('signup_refused_allowlist', request, { email, source: 'newsletter' });
+			json(response, 200, { message: `Check ${escapeHtml(email)} to confirm your subscription.` });
+			return;
+		}
+		if (!await hasDeliverableEmailDomain(email)) {
+			json(response, 422, { message: 'Use an email domain that can receive mail.' });
+			return;
+		}
+		// Per-target cap: stop the newsletter from being used as an email-bomb
+		// amplifier against a victim's inbox, independent of source IP rotation.
+		const targetCount = await store.incrWithTtl(`rl:newsletter-target:${keyHash(email)}`, NEWSLETTER_TARGET_WINDOW_SEC);
+		if (targetCount > NEWSLETTER_TARGET_LIMIT) {
+			await audit('newsletter_target_throttled', request, { email });
+			json(response, 429, { message: 'Too many confirmation emails were requested for this address. Please check your inbox or try again later.' });
+			return;
+		}
+		const result = await requestNewsletterOptIn(request, email);
 		json(response, result.status, { message: result.message });
-		return;
-	}
-	json(response, result.status, { message: result.message });
+	});
 }
 
 async function handleNewsletterConfirm(request, response) {
