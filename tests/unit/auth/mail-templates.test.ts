@@ -10,6 +10,11 @@ const vars = {
 	link: 'https://prismatica.example/auth/reset-password#token_hash=abc&type=recovery&exp=1800000000&sig=xyz',
 	expiresIn: '60 minutes',
 	changedAt: 'Thursday 15 October 2026 at 12:00 UTC',
+	approveUrl: 'https://prismatica.example/auth/approve#t=abcDEF123_-abcDEF123_-abcDEF123_-abcDEF123_-',
+	occurredAt: 'Saturday, 17 October 2026 at 12:00:00 UTC',
+	userAgent: 'Mozilla/5.0 (X11 Linux x86_64) Firefox/131.0',
+	ipAddress: '203.0.113.7',
+	location: 'Unknown location',
 };
 const PALETTE = ['#F6F5F1', '#15151A', '#56565F', '#B93A0C'];
 

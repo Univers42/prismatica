@@ -22,6 +22,8 @@ import { createGotrueApi } from './auth/gotrue-api.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
+import { approveRoutes } from './auth/approve-routes.mjs';
+import { createLoginApprove, createSignInMailCap } from './auth/login-approve.mjs';
 import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
 import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
 import { classifyLoginFailure } from './auth/login-failure.mjs';
@@ -72,13 +74,14 @@ const config = {
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
 	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
+	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
 // otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20 };
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
 const RATE_WINDOWS_SEC = { otpResend: 3600 };
 const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
@@ -466,6 +469,8 @@ const linkFlows = createLinkFlows({
 
 const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
 
+const mailCap = config.loginApproveLink ? createSignInMailCap({ store }) : undefined;
+
 const loginOtp = createLoginOtp({
 	store,
 	otp: createOtpClient({ baseUrl: config.baasUrl, serviceKey: config.serviceKey }),
@@ -474,7 +479,21 @@ const loginOtp = createLoginOtp({
 	signingKey: config.linkSigningKey,
 	resendGapSec: config.loginOtpResendGapSec,
 	audit: flowAudit,
+	mailCap,
 });
+
+const loginApprove = config.loginApproveLink
+	? createLoginApprove({
+			otp: loginOtp,
+			store,
+			sessions: sessionFlows,
+			mail: { send: sendMail, render: (name, vars) => renderMessage(emailTemplateDir, name, vars) },
+			siteUrl: siteBaseUrl(),
+			mailCap,
+			lockLogin: (email) => store.set(`lock:login:${keyHash(email)}`, '1', config.loginLockoutSec),
+			audit: flowAudit,
+		})
+	: null;
 
 function linkTtlSec(type) {
 	return type === 'signup' ? config.linkTtls.verifySec : config.linkTtls.resetSec;
@@ -682,7 +701,7 @@ async function handleLogin(request, response) {
 		await store.del(failKey);
 		await store.del(lockKey);
 		if (config.loginEmailOtp) {
-			await handleLoginCodeStep(response, email, result.payload);
+			await handleLoginCodeStep(request, response, email, result.payload, ip);
 			return;
 		}
 		scheduleLoginAlert(request, email, 'success');
@@ -693,15 +712,24 @@ async function handleLogin(request, response) {
 }
 
 // The session exists in GoTrue but is withheld: no token, no refresh cookie, only the ticket cookie.
-async function handleLoginCodeStep(response, email, grant) {
+async function handleLoginCodeStep(request, response, email, grant, ip) {
 	const refreshToken = typeof grant.refresh_token === 'string' ? grant.refresh_token : '';
 	const userId = typeof grant.user?.id === 'string' ? grant.user.id : '';
-	const started = refreshToken ? await loginOtp.begin({ email, userId, refreshToken }) : { ok: false, status: 503, message: 'The sign-in service returned no session.' };
+	const login = { email, userId, refreshToken };
+	let started = { ok: false, status: 503, message: 'The sign-in service returned no session.' };
+	if (refreshToken) started = loginApprove ? await loginApprove.begin({ ...login, summary: approvalSummary(request, email), ip }) : await loginOtp.begin(login);
 	if (!started.ok) {
 		json(response, started.status, { message: started.message });
 		return;
 	}
-	json(response, 200, { mfa_required: 'email_otp' }, { 'set-cookie': ticketCookie(started.ticket) });
+	const body = loginApprove ? { mfa_required: 'email_approve', match: started.match } : { mfa_required: 'email_otp' };
+	json(response, 200, body, { 'set-cookie': ticketCookie(started.ticket) });
+}
+
+// What the approver is asked to recognise; only display-safe text is stored or mailed.
+function approvalSummary(request, email) {
+	const { occurredAt, mail } = loginAlertContext(request, email);
+	return { occurredAt, ipAddress: mail.ipAddress, location: mail.location, userAgent: mail.userAgent };
 }
 
 async function handleRecover(request, response) {
@@ -931,12 +959,23 @@ async function emailOtpAction(request, response, action, flow) {
 // Only the ticket's email goes to grobase: an `email` in this body is never read.
 async function handleMfaEmailVerify(request, response) {
 	await emailOtpAction(request, response, 'otpVerify', async (ticket, payload) => {
-		const result = await loginOtp.verify(ticket, payload.code);
-		const headers = {};
-		if (result.refreshToken) headers['set-cookie'] = [refreshCookie(result.refreshToken), clearTicketCookie()];
-		else if (result.clearTicket) headers['set-cookie'] = clearTicketCookie();
-		if (result.status === 200) scheduleLoginAlert(request, result.email, 'success');
-		json(response, result.status, result.body, headers);
+		respondWithTicketOutcome(request, response, await loginOtp.verify(ticket, payload.code));
+	});
+}
+
+// A correct code and an approved poll end here, so both answer with the same body and cookies.
+function respondWithTicketOutcome(request, response, result) {
+	const headers = {};
+	if (result.refreshToken) headers['set-cookie'] = [refreshCookie(result.refreshToken), clearTicketCookie()];
+	else if (result.clearTicket) headers['set-cookie'] = clearTicketCookie();
+	if (result.retryAfterSec) headers['retry-after'] = String(result.retryAfterSec);
+	if (result.status === 200) scheduleLoginAlert(request, result.email, 'success');
+	json(response, result.status, result.body, headers);
+}
+
+async function handleMfaEmailStatus(request, response) {
+	await emailOtpAction(request, response, 'otpStatus', async (ticket) => {
+		respondWithTicketOutcome(request, response, await loginApprove.status(ticket, clientIp(request)));
 	});
 }
 
@@ -963,6 +1002,7 @@ const routes = new Map([
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
 	...(config.loginEmailOtp ? [['POST /api/auth/mfa/email/verify', handleMfaEmailVerify], ['POST /api/auth/mfa/email/resend', handleMfaEmailResend]] : []),
+	...(loginApprove ? [['POST /api/auth/mfa/email/status', handleMfaEmailStatus], ...approveRoutes({ loginApprove, rateLimit, clientIp, readJson, json })] : []),
 	['POST /api/newsletter/subscribe', handleNewsletterSubscribe],
 	['POST /api/newsletter/confirm', handleNewsletterConfirm],
 	['POST /api/newsletter/unsubscribe', handleNewsletterUnsubscribe],

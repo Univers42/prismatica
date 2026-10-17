@@ -1,0 +1,19 @@
+Sign-in request
+
+Someone entered the password of the Prismatica account {{email}} and is waiting for your approval.
+
+Time: {{occurredAt}}
+Browser and system: {{userAgent}}
+Network address: {{ipAddress}}
+Place: {{location}}
+
+Approve only if you are signing in right now and can see the 2-digit number on that screen. Never approve a sign-in you did not start.
+
+Review this sign-in:
+{{approveUrl}}
+
+The page asks you to type the number before anything is approved. The request expires in {{expiresIn}}.
+
+This was not you? Do not open the link; the request expires on its own. Consider changing your password.
+
+Prismatica - {{siteUrl}}
