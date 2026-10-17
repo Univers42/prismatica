@@ -45,6 +45,7 @@ function devContentSecurityPolicy() {
 		"object-src 'none'",
 		"frame-ancestors 'self'",
 		"form-action 'self'",
+		"frame-src https://challenges.cloudflare.com",
 		"img-src 'self' data: blob:",
 		"media-src 'self' data: blob:",
 		"worker-src 'self' blob:",
@@ -97,6 +98,10 @@ export default defineConfig({
 				// instead — the proxy sets `X-Frame-Options: DENY` and a real
 				// `Content-Security-Policy: frame-ancestors 'none'` response header.
 				"form-action 'self'",
+				// The Turnstile widget renders in an iframe from challenges.cloudflare.com. Without frame-src it falls back to
+				// default-src 'self', no token is minted, and every public signup fails "captcha failed"
+				// (b2b, 2026-10-17). Local dev never saw it: the localhost bypass skips the widget.
+				'frame-src https://challenges.cloudflare.com',
 				"img-src 'self'",
 				"media-src 'self'",
 				"worker-src 'self'",
