@@ -22,6 +22,7 @@ import { createGotrueApi } from './auth/gotrue-api.mjs';
 import { enforceStartupGuards } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
+import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
 import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
 import { classifyLoginFailure } from './auth/login-failure.mjs';
 import { escapeHtml, renderMessage } from './auth/mail-templates.mjs';
@@ -29,6 +30,7 @@ import { deriveClientIp } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer } from './auth/email-api-mailer.mjs';
+import { createOtpClient } from './auth/otp-client.mjs';
 import { createStore } from './auth/store.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
@@ -67,12 +69,16 @@ const config = {
 	loginLockoutThreshold: Number(process.env.AUTH_LOGIN_LOCKOUT_THRESHOLD ?? 10),
 	loginLockoutWindowSec: Number(process.env.AUTH_LOGIN_LOCKOUT_WINDOW_SEC ?? 900),
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
+	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
+	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12 };
+// otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20 };
+const RATE_WINDOWS_SEC = { otpResend: 3600 };
 const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
@@ -138,11 +144,12 @@ async function readJson(request) {
 
 async function rateLimit(ip, action) {
 	const limit = RATE_LIMITS[action] ?? 12;
+	const windowSec = RATE_WINDOWS_SEC[action] ?? RATE_WINDOW_SEC;
 	const key = `rl:${action}:${ip}`;
-	const count = await store.incrWithTtl(key, RATE_WINDOW_SEC);
+	const count = await store.incrWithTtl(key, windowSec);
 	if (count <= limit) return null;
 	const remainingMs = await store.pttl(key);
-	const baseRetry = remainingMs > 0 ? Math.ceil(remainingMs / 1000) : RATE_WINDOW_SEC;
+	const baseRetry = remainingMs > 0 ? Math.ceil(remainingMs / 1000) : windowSec;
 	return baseRetry + Math.min((count - limit) * 2, 30);
 }
 
@@ -464,6 +471,16 @@ const linkFlows = createLinkFlows({
 
 const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
 
+const loginOtp = createLoginOtp({
+	store,
+	otp: createOtpClient({ baseUrl: config.baasUrl, serviceKey: config.serviceKey }),
+	sessions: sessionFlows,
+	gotrue,
+	signingKey: config.linkSigningKey,
+	resendGapSec: config.loginOtpResendGapSec,
+	audit: flowAudit,
+});
+
 function linkTtlSec(type) {
 	return type === 'signup' ? config.linkTtls.verifySec : config.linkTtls.resetSec;
 }
@@ -627,6 +644,11 @@ async function handleLogin(request, response) {
 			json(response, 429, { message: 'Too many failed attempts for this account. Try again later or reset your password.' }, { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) });
 			return;
 		}
+		if (config.loginEmailOtp && !loginOtp.ready) {
+			console.error('[auth-gateway] login: AUTH_LOGIN_EMAIL_OTP is on but AUTH_LINK_SIGNING_KEY is unusable; the password was not checked');
+			json(response, 503, { message: 'Sign-in with an emailed code is not configured.' });
+			return;
+		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
 		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status, result.payload);
@@ -664,11 +686,27 @@ async function handleLogin(request, response) {
 		}
 		await store.del(failKey);
 		await store.del(lockKey);
+		if (config.loginEmailOtp) {
+			await handleLoginCodeStep(response, email, result.payload);
+			return;
+		}
 		scheduleLoginAlert(request, email, 'success');
 		const refreshToken = typeof result.payload.refresh_token === 'string' ? result.payload.refresh_token : '';
 		const headers = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
 		json(response, 200, sanitizeAuthPayload(result.payload), headers);
 	});
+}
+
+// The session exists in GoTrue but is withheld: no token, no refresh cookie, only the ticket cookie.
+async function handleLoginCodeStep(response, email, grant) {
+	const refreshToken = typeof grant.refresh_token === 'string' ? grant.refresh_token : '';
+	const userId = typeof grant.user?.id === 'string' ? grant.user.id : '';
+	const started = refreshToken ? await loginOtp.begin({ email, userId, refreshToken }) : { ok: false, status: 503, message: 'The sign-in service returned no session.' };
+	if (!started.ok) {
+		json(response, started.status, { message: started.message });
+		return;
+	}
+	json(response, 200, { mfa_required: 'email_otp' }, { 'set-cookie': ticketCookie(started.ticket) });
 }
 
 async function handleRecover(request, response) {
@@ -886,6 +924,34 @@ async function handleOsionosSession(request, response) {
 	json(response, result.status, body);
 }
 
+async function emailOtpAction(request, response, action, flow) {
+	const retryAfter = await rateLimit(clientIp(request), action);
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
+	await flow(ticketFrom(request.headers.cookie), await readJson(request));
+}
+
+// Only the ticket's email goes to grobase: an `email` in this body is never read.
+async function handleMfaEmailVerify(request, response) {
+	await emailOtpAction(request, response, 'otpVerify', async (ticket, payload) => {
+		const result = await loginOtp.verify(ticket, payload.code);
+		const headers = {};
+		if (result.refreshToken) headers['set-cookie'] = [refreshCookie(result.refreshToken), clearTicketCookie()];
+		else if (result.clearTicket) headers['set-cookie'] = clearTicketCookie();
+		if (result.status === 200) scheduleLoginAlert(request, result.email, 'success');
+		json(response, result.status, result.body, headers);
+	});
+}
+
+async function handleMfaEmailResend(request, response) {
+	await emailOtpAction(request, response, 'otpResend', async (ticket) => {
+		const result = await loginOtp.resend(ticket);
+		json(response, result.status, result.body, result.retryAfterSec ? { 'retry-after': String(result.retryAfterSec) } : {});
+	});
+}
+
 function handleMfaHook(response) {
 	json(response, 501, { message: 'MFA hook reserved. Wire this endpoint to TOTP or WebAuthn provider integration before enabling in production.' });
 }
@@ -901,6 +967,7 @@ const routes = new Map([
 	['POST /api/auth/refresh', handleRefresh],
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
+	...(config.loginEmailOtp ? [['POST /api/auth/mfa/email/verify', handleMfaEmailVerify], ['POST /api/auth/mfa/email/resend', handleMfaEmailResend]] : []),
 	['POST /api/newsletter/subscribe', handleNewsletterSubscribe],
 	['POST /api/newsletter/confirm', handleNewsletterConfirm],
 	['POST /api/newsletter/unsubscribe', handleNewsletterUnsubscribe],
