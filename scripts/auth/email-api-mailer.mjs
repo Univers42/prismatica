@@ -40,6 +40,7 @@ export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = g
 		}
 	}
 
+	/** @param {{to: string, subject: string, html: string, text?: string, listUnsubscribe?: string}} message */
 	async function send({ to, subject, html, text, listUnsubscribe }) {
 		if (!baseUrl || !serviceKey) throw new Error('email service not configured');
 		const body = JSON.stringify({ to, subject, html, text, listUnsubscribe: withoutLineBreaks(listUnsubscribe) });

@@ -103,7 +103,7 @@ describe('Portal Script Module', () => {
 
 	it('shows the gateway message and a "Send a new link" button after 403 email_not_confirmed, and resends through the gateway', async () => {
 		const message = 'Confirm your email first \u2014 check your inbox, or send a new link.';
-		const fetchMock = vi.fn(async (url: string) => (String(url).endsWith('/login')
+		const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => (String(url).endsWith('/login')
 			? new Response(JSON.stringify({ error: 'email_not_confirmed', message }), { status: 403 })
 			: new Response(JSON.stringify({ message: 'ok' }), { status: 202 })));
 		vi.stubGlobal('fetch', fetchMock);
@@ -122,7 +122,7 @@ describe('Portal Script Module', () => {
 			resend?.click();
 			await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/resend-verification'))).toBe(true));
 			const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/resend-verification'));
-			expect(JSON.parse(String((call?.[1] as RequestInit).body))).toMatchObject({ email: 'ines@arlet.test' });
+			expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ email: 'ines@arlet.test' });
 		} finally {
 			vi.unstubAllGlobals();
 		}
