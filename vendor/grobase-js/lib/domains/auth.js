@@ -98,7 +98,7 @@ export class AuthClient {
     }
     async updateUser(input, accessToken) {
         return this.http.request(routes.auth.user, {
-            method: 'POST',
+            method: 'PUT',
             body: input,
             bearerToken: accessToken,
         });
@@ -118,7 +118,7 @@ export class AuthAdminClient {
         return this.request(routes.auth.adminUsers, 'POST', input);
     }
     async updateUser(id, input) {
-        return this.request(routes.auth.adminUser(id), 'PATCH', input);
+        return this.request(routes.auth.adminUser(id), 'PUT', input);
     }
     async generateLink(input) {
         return this.request(routes.auth.adminGenerateLink, 'POST', input);
