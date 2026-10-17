@@ -248,9 +248,19 @@ async function restRpc(name, body, authorization = config.anonKey) {
 	}
 }
 
-async function audit(eventType, _request, details = {}) {
+// The RPC has no ip/user-agent parameter and reads them from PostgREST request headers, which
+// the gateway's own call to Kong does not carry (the column stays empty on b2b), so the client
+// IP travels in details. Caveat: details.ip_address is not the ip_address column; PUB-1 must
+// read details until the RPC takes the parameter. Events audited without a request carry none.
+function requestAuditContext(request) {
+	if (!request) return {};
+	const userAgent = cleanText(request.headers?.['user-agent'], 256);
+	return { ip_address: clientIp(request), ...(userAgent ? { user_agent: userAgent } : {}) };
+}
+
+async function audit(eventType, request, details = {}) {
 	if (!serviceBaas || !config.serviceKey) return;
-	await serviceBaas.rpc('auth_record_audit_event', { event_type: eventType, email: details.email ?? null, details: { ...details, request_id: randomUUID() } }, { apiKey: config.serviceKey, bearerToken: config.serviceKey }).catch((error) => {
+	await serviceBaas.rpc('auth_record_audit_event', { event_type: eventType, email: details.email ?? null, details: { ...requestAuditContext(request), ...details, request_id: randomUUID() } }, { apiKey: config.serviceKey, bearerToken: config.serviceKey }).catch((error) => {
 		console.warn(`[auth-gateway] audit event "${eventType}" was not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
 	});
 }
