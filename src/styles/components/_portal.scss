@@ -300,15 +300,22 @@ dialog.portal[data-auth-mode='login'] .portal-auth-switch {
 }
 
 .portal-login,
-.portal-login-code {
+.portal-login-code,
+.portal-login-approve {
 	display: grid;
 	gap: 0.9rem;
 	width: 100%;
 }
 
 .portal-login[hidden],
-.portal-login-code[hidden] {
+.portal-login-code[hidden],
+.portal-login-approve[hidden] {
 	display: none;
+}
+
+.portal-approve-number {
+	font-size: 1.6em;
+	letter-spacing: 0.1em;
 }
 
 .field-row,

@@ -10,6 +10,7 @@ import { readStorage } from '../lib/storage';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, loginCodeMarkup, showLoginCodeStep } from './portal-login-code';
+import { bindLoginApproveStep, loginApproveMarkup, showLoginApproveStep } from './portal-login-approve';
 
 export type PortalMode = 'start' | 'connect';
 
@@ -262,6 +263,7 @@ function createPortalMarkup(mode: PortalMode): string {
 						</div>
 					</form>
 					${loginCodeMarkup()}
+					${loginApproveMarkup()}
 				</div>
 			</section>
 		</dialog>
@@ -769,6 +771,10 @@ async function processPortalLogin(portal: HTMLElement, elements: PortalFormEleme
 		});
 		return;
 	}
+	if (authenticated.mfaRequired === 'email_approve') {
+		showLoginApproveStep(portal, elements.form, authenticated.match);
+		return;
+	}
 	if (authenticated.mfaRequired === 'email_otp') {
 		showLoginCodeStep(portal, elements.form);
 		return;
@@ -961,6 +967,12 @@ export function openPortal(mode: PortalMode): void {
 	});
 
 	bindLoginCodeStep(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
+	});
+
+	bindLoginApproveStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),

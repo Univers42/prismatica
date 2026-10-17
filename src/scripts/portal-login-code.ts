@@ -30,7 +30,7 @@ type CodeStepHooks = {
 	onSession: (accessToken: string | undefined) => Promise<void>;
 };
 
-function say(error: HTMLElement, text: string): void {
+export function say(error: HTMLElement, text: string): void {
 	error.textContent = text;
 	error.toggleAttribute('hidden', text === '');
 }

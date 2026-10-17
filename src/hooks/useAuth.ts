@@ -49,6 +49,9 @@ export type AuthResult = {
 	message: string;
 	code?: string;
 	mfaRequired?: string;
+	/** The 2-digit number the waiting browser shows while the sign-in is approved elsewhere. */
+	match?: number;
+	pending?: boolean;
 	accessToken?: string;
 	expiresIn?: number;
 };
@@ -153,6 +156,8 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 		message,
 		code: typeof payload.error === 'string' ? payload.error : undefined,
 		mfaRequired: typeof payload.mfa_required === 'string' ? payload.mfa_required : undefined,
+		match: typeof payload.match === 'number' ? payload.match : undefined,
+		pending: payload.pending === true ? true : undefined,
 		accessToken: typeof payload.access_token === 'string' ? payload.access_token : undefined,
 		expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : undefined,
 	};
@@ -242,6 +247,9 @@ export function useAuth(options: AuthClientOptions = {}) {
 				return { ok: false, status: 422, message: 'Enter the 6-digit code from your email.' };
 			}
 			return parseAuthResponse(await postOnce('/mfa/email/verify', { code }));
+		},
+		async pollLoginApproval(): Promise<AuthResult> {
+			return parseAuthResponse(await postOnce('/mfa/email/status', {}));
 		},
 		async resendLoginCode(): Promise<AuthResult> {
 			return parseAuthResponse(await postOnce('/mfa/email/resend', {}));
