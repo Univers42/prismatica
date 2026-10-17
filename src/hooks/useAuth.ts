@@ -48,6 +48,7 @@ export type AuthResult = {
 	status: number;
 	message: string;
 	code?: string;
+	mfaRequired?: string;
 	accessToken?: string;
 	expiresIn?: number;
 };
@@ -151,6 +152,7 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 		status: response.status,
 		message,
 		code: typeof payload.error === 'string' ? payload.error : undefined,
+		mfaRequired: typeof payload.mfa_required === 'string' ? payload.mfa_required : undefined,
 		accessToken: typeof payload.access_token === 'string' ? payload.access_token : undefined,
 		expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : undefined,
 	};
@@ -203,6 +205,14 @@ export function useAuth(options: AuthClientOptions = {}) {
 		body: JSON.stringify(body),
 	}, maxRetries);
 
+	// The login-code routes answer 429 for "too many codes" and "locked": waiting and retrying cannot help.
+	const postOnce = async (path: string, body: Record<string, unknown>): Promise<Response> => fetchWithBackoff(`${gatewayUrl}${path}`, {
+		method: 'POST',
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(body),
+	}, 0);
+
 	return {
 		validateEmail,
 		validatePassword,
@@ -226,6 +236,15 @@ export function useAuth(options: AuthClientOptions = {}) {
 				return { ok: false, status: 422, message: error };
 			}
 			return parseAuthResponse(await post('/login', request));
+		},
+		async verifyLoginCode(code: string): Promise<AuthResult> {
+			if (!/^\d{6}$/.test(code)) {
+				return { ok: false, status: 422, message: 'Enter the 6-digit code from your email.' };
+			}
+			return parseAuthResponse(await postOnce('/mfa/email/verify', { code }));
+		},
+		async resendLoginCode(): Promise<AuthResult> {
+			return parseAuthResponse(await postOnce('/mfa/email/resend', {}));
 		},
 		async register(request: RegisterRequest): Promise<AuthResult> {
 			const error = registrationValidationMessage(request);

@@ -9,6 +9,7 @@ import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient } from '../lib/baas-client';
+import { bindLoginCodeStep, loginCodeMarkup, showLoginCodeStep } from './portal-login-code';
 
 export type PortalMode = 'start' | 'connect';
 
@@ -260,6 +261,7 @@ function createPortalMarkup(mode: PortalMode): string {
 							</button>
 						</div>
 					</form>
+					${loginCodeMarkup()}
 				</div>
 			</section>
 		</dialog>
@@ -718,7 +720,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 	announce('Registration failed. Check the form and try again.');
 }
 
-async function processPortalLogin(elements: PortalFormElements, turnstileToken: string): Promise<void> {
+async function processPortalLogin(portal: HTMLElement, elements: PortalFormElements, turnstileToken: string): Promise<void> {
 	const authenticated = await authClient.signIn({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken });
 	const message = humanAuthMessage(authenticated.message);
 	if (!authenticated.ok) {
@@ -767,12 +769,21 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 		});
 		return;
 	}
-	if (authenticated.accessToken) {
-		setAccessToken(authenticated.accessToken);
-		await syncStoredConsents(authenticated.accessToken, elements.email.value.trim());
+	if (authenticated.mfaRequired === 'email_otp') {
+		showLoginCodeStep(portal, elements.form);
+		return;
 	}
-	const osionosBridge = authenticated.accessToken
-		? await authClient.osionosSession(authenticated.accessToken).catch(() => null)
+	await completePortalLogin(authenticated.accessToken, elements.email.value.trim());
+}
+
+// The hand-off after a session exists, whether the password alone or the emailed code produced it.
+async function completePortalLogin(sessionToken: string | undefined, email: string): Promise<void> {
+	if (sessionToken) {
+		setAccessToken(sessionToken);
+		await syncStoredConsents(sessionToken, email);
+	}
+	const osionosBridge = sessionToken
+		? await authClient.osionosSession(sessionToken).catch(() => null)
 		: null;
 	if (osionosBridge?.ok && osionosBridge.redirectUrl) {
 		const redirectUrl = osionosBridge.redirectUrl;
@@ -811,7 +822,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 	setPortalSubmitBusy(elements.submitButton, true, isRegister);
 	try {
 		if (isRegister) await processPortalRegistration(elements, turnstileToken);
-		else await processPortalLogin(elements, turnstileToken);
+		else await processPortalLogin(portal, elements, turnstileToken);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Authentication failed.';
 		elements.error.textContent = humanAuthMessage(message);
@@ -947,6 +958,12 @@ export function openPortal(mode: PortalMode): void {
 	elements.form.addEventListener('submit', (event) => {
 		event.preventDefault();
 		void (portal.dataset.portalMode === 'recovery' ? submitPortalRecovery(portal, elements) : submitPortalLogin(portal, elements));
+	});
+
+	bindLoginCodeStep(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
 
 	elements.resendVerification?.addEventListener('click', () => {

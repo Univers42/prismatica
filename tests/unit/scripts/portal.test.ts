@@ -128,3 +128,123 @@ describe('Portal Script Module', () => {
 		}
 	});
 });
+
+describe('Portal login code step', () => {
+	afterEach(() => {
+		closePortal();
+		document.body.innerHTML = '';
+		vi.unstubAllGlobals();
+	});
+
+	function gateway(routes: Record<string, () => Response>) {
+		const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+			const route = Object.keys(routes).find((suffix) => String(url).endsWith(suffix));
+			return route ? routes[route]() : new Response('{}', { status: 200 });
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		return fetchMock;
+	}
+
+	const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
+
+	async function signInIntoCodeStep() {
+		openPortal('connect');
+		document.querySelector<HTMLInputElement>('#portal-email')!.value = 'ines@arlet.test';
+		document.querySelector<HTMLInputElement>('#portal-password')!.value = 'Abcdefgh12!';
+		document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(document.querySelector<HTMLElement>('form.portal-login-code')?.hidden).toBe(false));
+	}
+
+	const codeForm = () => document.querySelector<HTMLFormElement>('form.portal-login-code')!;
+	const codeInput = () => document.querySelector<HTMLInputElement>('#portal-login-code')!;
+	const codeError = () => document.querySelector<HTMLElement>('[data-login-code-error]')!;
+
+	it('ships the code step hidden, as an accessible one-time-code field', () => {
+		openPortal('connect');
+		expect(codeForm().hidden).toBe(true);
+		const input = codeInput();
+		expect(input.getAttribute('inputmode')).toBe('numeric');
+		expect(input.getAttribute('autocomplete')).toBe('one-time-code');
+		expect(input.getAttribute('pattern')).toBe(String.raw`\d{6}`);
+		expect(input.maxLength).toBe(6);
+		expect(codeForm().querySelector('label[for="portal-login-code"]')?.textContent).toBeTruthy();
+		expect(codeError().getAttribute('aria-live')).toBe('polite');
+		expect(codeForm().querySelector('[data-login-code-resend]')?.textContent).toBe('Resend code');
+		expect(codeForm().querySelector('[data-login-code-cancel]')?.textContent).toBe('Cancel');
+	});
+
+	it('swaps the password form for the code step when login answers mfa_required, with no token kept', async () => {
+		gateway({ '/login': () => json(200, { mfa_required: 'email_otp' }) });
+		await signInIntoCodeStep();
+		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(true);
+	});
+
+	it('posts the code to the verify route and continues with the session it returns', async () => {
+		// The bridge answers an untrusted redirect on purpose: the hand-off is reached and stops there.
+		vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const fetchMock = gateway({
+			'/login': () => json(200, { mfa_required: 'email_otp' }),
+			'/mfa/email/verify': () => json(200, { access_token: 'at-1', expires_in: 3600 }),
+			'/osionos-session': () => json(200, { redirectUrl: 'https://evil.example/x' }),
+		});
+		await signInIntoCodeStep();
+		codeInput().value = '123456';
+		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/osionos-session'))).toBe(true));
+		const verify = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/mfa/email/verify'));
+		expect(JSON.parse(String(verify?.[1]?.body))).toEqual({ code: '123456' });
+		expect((verify?.[1] as RequestInit).credentials).toBe('include');
+		const bridge = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/osionos-session'));
+		expect((bridge?.[1]?.headers as Record<string, string>).Authorization).toBe('Bearer at-1');
+	});
+
+	it('refuses a malformed code in the browser without calling the gateway', async () => {
+		const fetchMock = gateway({ '/login': () => json(200, { mfa_required: 'email_otp' }) });
+		await signInIntoCodeStep();
+		codeInput().value = '12ab';
+		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(codeError().hidden).toBe(false));
+		expect(codeError().textContent).toMatch(/6-digit/);
+		expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/mfa/email/verify'))).toBe(false);
+	});
+
+	it('keeps the step open on a wrong code and shows the gateway message in the live region', async () => {
+		gateway({
+			'/login': () => json(200, { mfa_required: 'email_otp' }),
+			'/mfa/email/verify': () => json(401, { error: 'otp_invalid', message: 'That code is not right.' }),
+		});
+		await signInIntoCodeStep();
+		codeInput().value = '000000';
+		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(codeError().textContent).toBe('That code is not right.'));
+		expect(codeForm().hidden).toBe(false);
+	});
+
+	it('returns to the password form with the message when the code expired', async () => {
+		gateway({
+			'/login': () => json(200, { mfa_required: 'email_otp' }),
+			'/mfa/email/verify': () => json(410, { error: 'otp_expired', message: 'The code expired. Sign in again.' }),
+		});
+		await signInIntoCodeStep();
+		codeInput().value = '999999';
+		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(codeForm().hidden).toBe(true));
+		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(false);
+		expect(document.querySelector('form.portal-login .portal-form-error')?.textContent).toBe('The code expired. Sign in again.');
+	});
+
+	it('resends through the gateway and says so; Cancel returns to the password form', async () => {
+		const fetchMock = gateway({
+			'/login': () => json(200, { mfa_required: 'email_otp' }),
+			'/mfa/email/resend': () => json(200, { sent: true }),
+		});
+		await signInIntoCodeStep();
+		codeForm().querySelector<HTMLButtonElement>('[data-login-code-resend]')?.click();
+		await vi.waitFor(() => expect(codeError().textContent).toBe('A new code is on its way.'));
+		expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/mfa/email/resend'))).toBe(true);
+		codeForm().querySelector<HTMLButtonElement>('[data-login-code-cancel]')?.click();
+		expect(codeForm().hidden).toBe(true);
+		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(false);
+		expect(codeInput().value).toBe('');
+	});
+});

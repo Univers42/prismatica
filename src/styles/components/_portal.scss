@@ -299,10 +299,16 @@ dialog.portal[data-auth-mode='login'] .portal-auth-switch {
 	outline-offset: 2px;
 }
 
-.portal-login {
+.portal-login,
+.portal-login-code {
 	display: grid;
 	gap: 0.9rem;
 	width: 100%;
+}
+
+.portal-login[hidden],
+.portal-login-code[hidden] {
+	display: none;
 }
 
 .field-row,
