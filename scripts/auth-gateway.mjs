@@ -19,7 +19,7 @@ import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { createAccountMail, REGISTER_ACCEPTED } from './auth/account-mail.mjs';
 import { createGotrueApi } from './auth/gotrue-api.mjs';
-import { enforceStartupGuards } from './auth/guards.mjs';
+import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
 import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
@@ -32,6 +32,7 @@ import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
+import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { createStore } from './auth/store.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
@@ -390,7 +391,8 @@ function cleanText(value, maxLength) {
 	return String(value ?? '').trim().slice(0, maxLength);
 }
 
-const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey });
+const mailDailyCap = createMailDailyCap({ store, cap: resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl)) });
+const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, dailyCap: mailDailyCap });
 
 function mailConfigured() {
 	return Boolean(config.serviceKey && config.baasUrl);

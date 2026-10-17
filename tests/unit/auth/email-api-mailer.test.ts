@@ -94,4 +94,25 @@ describe('createEmailApiMailer', () => {
 		await expect(createEmailApiMailer({ baseUrl: 'http://k', serviceKey: '', fetch: fetchImpl }).send(message)).rejects.toThrow('not configured');
 		expect(calls).toHaveLength(0);
 	});
+
+	it('refuses the cap+1-th message like a 429 from the email service, without calling it', async () => {
+		let taken = 0;
+		const dailyCap = { take: vi.fn(async () => ++taken <= 2) };
+		const { calls, fetchImpl } = sequence(200);
+		const capped = createEmailApiMailer({ baseUrl: 'http://kong:8000', serviceKey: KEY, fetch: fetchImpl, dailyCap });
+		await capped.send(message);
+		await capped.send(message);
+		await expect(capped.send(message)).rejects.toMatchObject({ message: 'email service answered HTTP 429', status: 429 });
+		expect(calls).toHaveLength(2);
+	});
+
+	it('spends one cap slot per message, not one per 429 retry', async () => {
+		vi.useFakeTimers();
+		const dailyCap = { take: vi.fn(async () => true) };
+		const { fetchImpl } = sequence({ status: 429, headers: { 'retry-after': '1' } }, 200);
+		const pending = createEmailApiMailer({ baseUrl: 'http://kong:8000', serviceKey: KEY, fetch: fetchImpl, dailyCap }).send(message);
+		await vi.advanceTimersByTimeAsync(1_100);
+		await pending;
+		expect(dailyCap.take).toHaveBeenCalledTimes(1);
+	});
 });

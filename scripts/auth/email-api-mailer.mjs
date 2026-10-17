@@ -9,6 +9,7 @@
  * Caveat: Kong rate-limits this route at 10/min and 200/h per client IP, and behind a Funnel
  * every caller shares one IP, hence one bucket. A burst beyond it is retried once (Retry-After,
  * capped at 10 s) and then lost to the caller; the mail queue does not re-enqueue it.
+ * An optional `dailyCap` (mail-daily-cap.mjs) refuses the send, as a 429 would, once the day's ceiling is spent.
  * `timeoutMs` (8 s) is a guess at "emailsvc is down"; a slower healthy send reads as a failure.
  */
 
@@ -24,7 +25,8 @@ function withoutLineBreaks(value) {
 	return typeof value === 'string' && value !== '' && !/[\r\n]/.test(value) ? value : undefined;
 }
 
-export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = 8_000 }) {
+/** @param {{baseUrl: string, serviceKey: string, fetch?: typeof fetch, timeoutMs?: number, dailyCap?: {take: () => Promise<boolean>}}} options */
+export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = 8_000, dailyCap }) {
 	const url = `${String(baseUrl ?? '').replace(/\/+$/, '')}/email/v1/send`;
 
 	async function post(body) {
@@ -44,6 +46,8 @@ export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = g
 	async function send({ to, subject, html, text, listUnsubscribe }) {
 		if (!baseUrl || !serviceKey) throw new Error('email service not configured');
 		const body = JSON.stringify({ to, subject, html, text, listUnsubscribe: withoutLineBreaks(listUnsubscribe) });
+		// Taken once per message, before the 429 retry, so a retry does not spend a second slot.
+		if (dailyCap && !(await dailyCap.take())) throw Object.assign(new Error('email service answered HTTP 429'), { status: 429 });
 		let response = await post(body);
 		if (response.status === 429) {
 			await new Promise((done) => setTimeout(done, retryWaitMs(response)));
