@@ -891,6 +891,9 @@ export function closePortal(): void {
 
 export function openPortal(mode: PortalMode): void {
 	closePortal();
+	// closePortal leaves the closed dialog in the DOM; queryElement('.portal') would then bind this
+	// open's listeners to that stale copy and every reopen would stack one more submit handler.
+	document.querySelectorAll('.portal').forEach((stale) => stale.remove());
 	portalPreviousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 	insertTrustedHTML(document.body, 'beforeend', createPortalMarkup(mode));
 	const portal = queryElement('.portal', isHtmlElement);
@@ -905,6 +908,8 @@ export function openPortal(mode: PortalMode): void {
 
 	if (portal instanceof HTMLDialogElement) {
 		portal.addEventListener('close', () => {
+			// A removed dialog still fires 'close' later; it must not undo the portal opened since.
+			if (!portal.isConnected) return;
 			document.body.classList.remove('portal-open');
 			portalPreviousFocus?.focus({ preventScroll: true });
 			portalPreviousFocus = null;
