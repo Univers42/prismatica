@@ -629,7 +629,13 @@ async function handleLogin(request, response) {
 		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
-		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status);
+		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status, result.payload);
+		if (failure === 'unconfirmed') {
+			// GoTrue only says this after a correct password: no lockout count, no failed-login alert.
+			await audit('login_email_unconfirmed', request, { email });
+			json(response, 403, { error: 'email_not_confirmed', message: 'Confirm your email first — check your inbox, or send a new link.' });
+			return;
+		}
 		if (failure === 'rate-limited') {
 			json(response, 429, { message: 'Too many sign-in attempts reached the auth service. Wait a minute and try again.' });
 			return;

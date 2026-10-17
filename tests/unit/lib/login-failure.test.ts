@@ -16,4 +16,24 @@ describe('classifyLoginFailure', () => {
 			expect(classifyLoginFailure(status)).toBe('upstream');
 		}
 	});
+
+	it('tells an unconfirmed email apart by GoTrue error_code, which is only sent after a correct password', () => {
+		expect(classifyLoginFailure(400, { error_code: 'email_not_confirmed', msg: 'Email not confirmed' })).toBe('unconfirmed');
+		expect(classifyLoginFailure(400, { error_code: 'invalid_credentials', msg: 'Invalid login credentials' })).toBe('credentials');
+	});
+
+	it('falls back to the message when error_code is absent', () => {
+		expect(classifyLoginFailure(400, { msg: 'Email not confirmed' })).toBe('unconfirmed');
+		expect(classifyLoginFailure(400, { message: 'email not confirmed' })).toBe('unconfirmed');
+	});
+
+	it('ignores an unconfirmed marker on a status that is not a password-grant answer', () => {
+		expect(classifyLoginFailure(502, { error_code: 'email_not_confirmed' })).toBe('upstream');
+		expect(classifyLoginFailure(429, { error_code: 'email_not_confirmed' })).toBe('rate-limited');
+	});
+
+	it('copes with a missing or non-object body', () => {
+		expect(classifyLoginFailure(400)).toBe('credentials');
+		expect(classifyLoginFailure(400, null as never)).toBe('credentials');
+	});
 });

@@ -43,6 +43,11 @@ function fakeKong() {
 				response.writeHead(status, { 'content-type': 'application/json' });
 				response.end(JSON.stringify(payload));
 			};
+			if (path.startsWith('/auth/v1/token?grant_type=password')) {
+				const email = JSON.parse(body).email as string;
+				if (email.startsWith('unconfirmed')) return send(400, { code: 400, error_code: 'email_not_confirmed', msg: 'Email not confirmed' });
+				return send(400, { code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' });
+			}
 			if (path === '/email/v1/send') {
 				const mail = JSON.parse(body);
 				if (String(mail.to).startsWith('burst')) return send(502, { error: 'send_failed' });
@@ -91,6 +96,8 @@ beforeAll(async () => {
 			TURNSTILE_BYPASS_LOCAL: 'true',
 			AUTH_LINK_SIGNING_KEY: KEY,
 			AUTH_EMAIL_DOMAIN_ALLOWLIST: 'arlet.test',
+			// Low so the lockout is reachable inside the gateway's 8-logins-per-IP rate limit.
+			AUTH_LOGIN_LOCKOUT_THRESHOLD: '2',
 		},
 	});
 	gateway.stdout?.on('data', (chunk) => (output += chunk));
@@ -145,5 +152,22 @@ describe('auth-gateway.mjs as a process', () => {
 		await until(() => (output.match(/queued "recovery" failed: email service answered HTTP 502/g) ?? []).length === 5);
 		expect((await call('/api/auth/health')).status).toBe(200);
 		expect(gateway.exitCode).toBeNull();
+	});
+
+	it('answers 403 email_not_confirmed after a correct password and never counts it toward the lockout', async () => {
+		const login = (email: string) => call('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password: 'Right-Pass-1!', turnstileToken: 'localhost-turnstile-token' }) });
+		for (let attempt = 0; attempt < 3; attempt += 1) {
+			expect(await login('unconfirmed@arlet.test')).toMatchObject({
+				status: 403,
+				body: { error: 'email_not_confirmed', message: 'Confirm your email first \u2014 check your inbox, or send a new link.' },
+			});
+		}
+	});
+
+	it('keeps a wrong password at 401 and still locks that account out after the threshold', async () => {
+		const login = (email: string) => call('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password: 'Wrong-Pass-1!', turnstileToken: 'localhost-turnstile-token' }) });
+		expect((await login('wrong@arlet.test')).status).toBe(401);
+		expect((await login('wrong@arlet.test')).status).toBe(401);
+		expect((await login('wrong@arlet.test')).status).toBe(429);
 	});
 });
