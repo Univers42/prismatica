@@ -38,7 +38,7 @@ export function isLoginCode(value) {
 	return typeof value === 'string' && CODE.test(value);
 }
 
-const ticketId = (ticket) => createHash('sha256').update(ticket).digest('hex');
+export const ticketId = (ticket) => createHash('sha256').update(ticket).digest('hex');
 
 function seal(key, aad, plaintext) {
 	const iv = randomBytes(12);
@@ -61,21 +61,34 @@ function unseal(key, aad, sealed) {
 }
 
 /**
- * @param {{store: object, otp: {request: Function, verify: Function}, sessions: {logout: Function}, gotrue: {refresh: Function}, signingKey: string, resendGapSec?: number, audit: Function}} deps
+ * `mailCap` (set only with AUTH_LOGIN_APPROVE_LINK) is asked before every resend and answers whether
+ * this account may be mailed again; absent, a resend is gated by the ticket's own caps only.
+ * @param {{store: object, otp: {request: Function, verify: Function}, sessions: {logout: Function}, gotrue: {refresh: Function}, signingKey: string, resendGapSec?: number, audit: Function, mailCap?: (email: string) => Promise<boolean>}} deps
  */
-export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resendGapSec = 30, audit }) {
+export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resendGapSec = 30, audit, mailCap }) {
 	const key = signingKey ? Buffer.from(hkdfSync('sha256', signingKey, '', INFO, 32)) : null;
 
-	async function load(ticket) {
-		const id = ticketId(ticket);
+	async function loadById(id) {
 		const raw = await store.get(`otp:ticket:${id}`);
 		if (raw === null) return null;
 		try {
 			const record = JSON.parse(raw);
-			return { id, email: record.email, userId: record.userId, sealed: record.rt };
+			return { id, email: record.email, userId: record.userId, sealed: record.rt, match: record.match, summary: record.summary };
 		} catch {
 			return null;
 		}
+	}
+
+	const load = (ticket) => loadById(ticketId(ticket));
+
+	async function park({ email, userId, refreshToken, extra = {} }) {
+		const ticket = randomBytes(32).toString('base64url');
+		const id = ticketId(ticket);
+		// Caveat: the session lives here, encrypted, for up to TICKET_TTL_SEC; in Redis it survives a
+		// gateway restart, in the memory store it does not (the user signs in again, and the
+		// orphaned GoTrue session expires with its refresh token).
+		await store.set(`otp:ticket:${id}`, JSON.stringify({ email, userId, rt: seal(key, id, refreshToken), ...extra }), TICKET_TTL_SEC);
+		return { ticket, id };
 	}
 
 	async function discard(ticketRecord) {
@@ -85,16 +98,21 @@ export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resen
 	}
 
 	async function forget(id) {
-		await Promise.all([`otp:ticket:${id}`, `otp:wrong:${id}`, `otp:resends:${id}`, `otp:gap:${id}`].map((name) => store.del(name)));
+		await Promise.all([`otp:ticket:${id}`, `otp:wrong:${id}`, `otp:resends:${id}`, `otp:gap:${id}`, `otp:approved:${id}`, `otp:poll:${id}`].map((name) => store.del(name)));
 	}
 
-	async function revoke(ticketRecord, auditEvent) {
+	async function revoke(ticketRecord, auditEvent, auditDetails = {}) {
 		await discard(ticketRecord);
 		await forget(ticketRecord.id);
-		audit(auditEvent, { email: ticketRecord.email });
+		audit(auditEvent, { email: ticketRecord.email, ...auditDetails });
 	}
 
+	// The claim is never forgotten (it expires with the ticket's TTL): the code path and the approval
+	// path can both reach here with one loaded record, and only the first may redeem the refresh token.
 	async function release(record) {
+		if ((await store.incrWithTtl(`otp:release:${record.id}`, TICKET_TTL_SEC)) !== 1) {
+			return { status: 401, body: { error: 'otp_ticket_invalid', message: 'Sign in again.' }, clearTicket: true };
+		}
 		const refreshToken = unseal(key, record.id, record.sealed);
 		const refreshed = refreshToken ? await gotrue.refresh(refreshToken) : { ok: false };
 		await forget(record.id);
@@ -106,18 +124,18 @@ export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resen
 
 	return {
 		ready: key !== null,
+		park,
+		find: load,
+		findById: loadById,
+		revoke,
+		release,
 
 		/**
 		 * Park the session behind a ticket and mail the code.
 		 * @returns {Promise<{ok: true, ticket: string} | {ok: false, status: 429|503, message: string}>}
 		 */
 		async begin({ email, userId, refreshToken }) {
-			const ticket = randomBytes(32).toString('base64url');
-			const id = ticketId(ticket);
-			// Caveat: the session lives here, encrypted, for up to TICKET_TTL_SEC; in Redis it survives a
-			// gateway restart, in the memory store it does not (the user signs in again, and the
-			// orphaned GoTrue session expires with its refresh token).
-			await store.set(`otp:ticket:${id}`, JSON.stringify({ email, userId, rt: seal(key, id, refreshToken) }), TICKET_TTL_SEC);
+			const { ticket, id } = await park({ email, userId, refreshToken });
 			const outcome = await otp.request(email);
 			if (outcome !== 'sent') {
 				await sessions.logout(refreshToken);
@@ -160,6 +178,10 @@ export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resen
 				return { status: 429, body: { error: 'otp_resend_wait', message: 'Wait a moment before asking for another code.' }, retryAfterSec: resendGapSec };
 			}
 			if ((await store.incrWithTtl(`otp:resends:${record.id}`, TICKET_TTL_SEC)) > MAX_RESENDS) {
+				return { status: 429, body: { error: 'otp_resend_limit', message: 'No more codes can be sent for this sign-in. Sign in again.' } };
+			}
+			if (mailCap && !(await mailCap(record.email))) {
+				audit('login_approve_capped', { email: record.email, via: 'resend' });
 				return { status: 429, body: { error: 'otp_resend_limit', message: 'No more codes can be sent for this sign-in. Sign in again.' } };
 			}
 			const outcome = await otp.request(record.email);

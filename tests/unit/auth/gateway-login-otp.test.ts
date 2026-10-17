@@ -2,138 +2,19 @@
 // The real scripts/auth-gateway.mjs as two child processes (AUTH_LOGIN_EMAIL_OTP unset and
 // 'true') against one in-process fake Kong: GoTrue + grobase /v1/auth/otp/*. Proves the flag-off
 // login is untouched and the flag-on flow end to end.
-import { spawn, type ChildProcess } from 'node:child_process';
-import http from 'node:http';
-import net from 'node:net';
-import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-
-const ROOT = resolve(__dirname, '../../..');
-const KEY = 'gateway-login-otp-test-key-0123456789abcdef';
-const RIGHT = '123456';
-
-type Hit = { method: string; path: string; body: string; apikey?: string };
-const hits: Hit[] = [];
-const otp = { requestStatus: 200 };
-let kongPort = 0;
-const servers: { close: () => void }[] = [];
-const gateways: ChildProcess[] = [];
-
-function listen(server: net.Server): Promise<number> {
-	return new Promise((done) => server.listen(0, '127.0.0.1', () => done((server.address() as net.AddressInfo).port)));
-}
-
-async function freePort() {
-	const probe = net.createServer();
-	const port = await listen(probe);
-	await new Promise((done) => probe.close(done));
-	return port;
-}
-
-function proofFor(email: string) {
-	return `h.${Buffer.from(JSON.stringify({ otp: email, aud: 'otp-proof' })).toString('base64url')}.s`;
-}
-
-function fakeKong() {
-	return http.createServer((request, response) => {
-		let body = '';
-		request.on('data', (chunk) => (body += chunk));
-		request.on('end', () => {
-			const path = request.url ?? '';
-			hits.push({ method: request.method ?? '', path, body, apikey: request.headers.apikey as string | undefined });
-			const send = (status: number, payload: unknown) => {
-				response.writeHead(status, { 'content-type': 'application/json' });
-				response.end(JSON.stringify(payload));
-			};
-			const parsed = body ? JSON.parse(body) : {};
-			if (path.startsWith('/auth/v1/token?grant_type=password')) {
-				return send(200, { access_token: 'at-0', refresh_token: 'rt-0', token_type: 'bearer', expires_in: 3600, user: { id: 'u1', email: parsed.email } });
-			}
-			if (path.startsWith('/auth/v1/token?grant_type=refresh_token')) return send(200, { access_token: 'at-1', refresh_token: 'rt-2', token_type: 'bearer', expires_in: 3600, user: { id: 'u1' } });
-			if (path.startsWith('/auth/v1/logout')) return send(204, {});
-			if (path === '/v1/auth/otp/request') return send(otp.requestStatus, otp.requestStatus === 200 ? { sent: true } : { error: 'x' });
-			if (path === '/v1/auth/otp/verify') {
-				if (parsed.code === RIGHT) return send(200, { verified: true, proof: proofFor(parsed.email) });
-				if (parsed.code === '999999') return send(410, { error: 'expired' });
-				if (parsed.code === '888888') return send(429, { error: 'too_many_attempts' });
-				return send(401, { error: 'invalid_code' });
-			}
-			if (path === '/email/v1/send' || path.startsWith('/rest/v1/') || path.startsWith('/auth/v1/')) return send(200, path.startsWith('/rest/v1/') ? [] : {});
-			return send(200, {});
-		});
-	});
-}
-
-type Gateway = { base: string; logs: () => string };
-
-async function startGateway(extraEnv: Record<string, string>): Promise<Gateway> {
-	const port = await freePort();
-	let output = '';
-	const child = spawn(process.execPath, ['scripts/auth-gateway.mjs'], {
-		cwd: ROOT,
-		env: {
-			PATH: process.env.PATH,
-			AUTH_GATEWAY_PORT: String(port),
-			PUBLIC_BAAS_URL: `http://127.0.0.1:${kongPort}`,
-			PUBLIC_BAAS_ANON_KEY: 'anon',
-			SERVICE_ROLE_KEY: 'service',
-			PUBLIC_SITE_URL: 'https://localhost:4322',
-			AUTH_REQUIRE_EMAIL_VERIFICATION: 'true',
-			TURNSTILE_BYPASS_LOCAL: 'true',
-			AUTH_LINK_SIGNING_KEY: KEY,
-			AUTH_EMAIL_DOMAIN_ALLOWLIST: 'arlet.test',
-			AUTH_TRUSTED_PROXY_HOPS: '1',
-			...extraEnv,
-		},
-	});
-	gateways.push(child);
-	child.stdout?.on('data', (chunk) => (output += chunk));
-	child.stderr?.on('data', (chunk) => (output += chunk));
-	const deadline = Date.now() + 10_000;
-	while (!output.includes('Auth gateway listening')) {
-		if (Date.now() > deadline) throw new Error('gateway did not start');
-		await new Promise((done) => setTimeout(done, 20));
-	}
-	return { base: `http://127.0.0.1:${port}`, logs: () => output };
-}
-
-let ipCounter = 0;
-function nextIp() {
-	ipCounter += 1;
-	return `10.9.${Math.floor(ipCounter / 250)}.${ipCounter % 250}`;
-}
-
-async function call(gateway: Gateway, path: string, init: { body?: unknown; cookie?: string; ip?: string } = {}) {
-	const response = await fetch(`${gateway.base}${path}`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json', 'x-forwarded-for': init.ip ?? nextIp(), ...(init.cookie ? { cookie: init.cookie } : {}) },
-		body: JSON.stringify(init.body ?? {}),
-	});
-	const text = await response.text();
-	return { status: response.status, text, body: text ? JSON.parse(text) : {}, cookies: response.headers.getSetCookie() };
-}
-
-const loginBody = (email = 'ok@arlet.test') => ({ email, password: 'Right-Pass-1!', turnstileToken: 'localhost-turnstile-token' });
-const cookieNames = (cookies: string[]) => cookies.map((cookie) => cookie.split('=')[0]);
-const ticketCookie = (cookies: string[]) => cookies.find((cookie) => cookie.startsWith('prismatica_mfa=')) ?? '';
-const ticketPair = (cookies: string[]) => ticketCookie(cookies).split(';')[0];
-const hitsTo = (path: string) => hits.filter((hit) => hit.path === path || hit.path.startsWith(`${path}?`));
+import { call, cookieNames, hits, hitsTo, loginBody, RIGHT, startFakeKong, startGateway, stopAll, ticketCookie, ticketPair, upstream, type Gateway } from './gateway-harness';
 
 let off: Gateway;
 let on: Gateway;
 
 beforeAll(async () => {
-	const kong = fakeKong();
-	kongPort = await listen(kong);
-	servers.push(kong);
+	await startFakeKong();
 	off = await startGateway({});
 	on = await startGateway({ AUTH_LOGIN_EMAIL_OTP: 'true', AUTH_LOGIN_OTP_RESEND_GAP_SEC: '1' });
 }, 30_000);
 
-afterAll(() => {
-	for (const child of gateways) child.kill();
-	for (const server of servers) server.close();
-});
+afterAll(stopAll);
 
 describe('AUTH_LOGIN_EMAIL_OTP off (the default)', () => {
 	it('answers a correct login exactly as before: 200, the session body, only the refresh cookie, no otp call', async () => {
@@ -159,7 +40,7 @@ describe('AUTH_LOGIN_EMAIL_OTP on', () => {
 	const resend = (cookie: string, ip?: string) => call(on, '/api/auth/mfa/email/resend', { body: {}, cookie, ip });
 
 	it('happy path: login withholds the session, verify releases it, the ticket is single-use', async () => {
-		otp.requestStatus = 200;
+		upstream.otpRequestStatus = 200;
 		hits.length = 0;
 		const login = await call(on, '/api/auth/login', { body: loginBody() });
 		expect(login.status).toBe(200);
@@ -253,8 +134,8 @@ describe('AUTH_LOGIN_EMAIL_OTP on', () => {
 	});
 
 	it('revokes the session and answers 503 when grobase cannot send the code, 429 when it rate-limits', async () => {
-		for (const [upstream, expected] of [[502, 503], [429, 429]] as const) {
-			otp.requestStatus = upstream;
+		for (const [status, expected] of [[502, 503], [429, 429]] as const) {
+			upstream.otpRequestStatus = status;
 			hits.length = 0;
 			const result = await call(on, '/api/auth/login', { body: loginBody() });
 			expect(result.status).toBe(expected);
@@ -264,7 +145,7 @@ describe('AUTH_LOGIN_EMAIL_OTP on', () => {
 			expect(result.cookies.some((c) => c.startsWith('prismatica_refresh='))).toBe(false);
 			expect(hitsTo('/auth/v1/logout')).toHaveLength(1);
 		}
-		otp.requestStatus = 200;
+		upstream.otpRequestStatus = 200;
 	});
 
 	it('resend: 429 inside the gap, then 3 allowed, then the 4th is 429', async () => {
