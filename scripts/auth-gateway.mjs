@@ -28,12 +28,11 @@ import { escapeHtml, renderMessage } from './auth/mail-templates.mjs';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
-import { hasSmtpConfig, smtpConfigFromEnv } from './auth/smtp-config.mjs';
-import { createSmtpMailer } from './auth/smtp-mailer.mjs';
+import { createEmailApiMailer } from './auth/email-api-mailer.mjs';
 import { createStore } from './auth/store.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
-for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
+for (const file of ['.env.local', '.env', '../../.env.local']) {
 	const path = resolve(process.cwd(), file);
 	if (!existsSync(path)) continue;
 	for (const rawLine of readFileSync(path, 'utf8').split(/\r?\n/)) {
@@ -55,7 +54,6 @@ const config = {
 	turnstileBypassLocal: process.env.TURNSTILE_BYPASS_LOCAL === 'true',
 	demoInsecure: process.env.AUTH_DEMO_INSECURE === 'true',
 	siteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4322',
-	smtp: smtpConfigFromEnv(process.env),
 	linkTtls: linkTtls(process.env),
 	mailQueueMax: Number(process.env.AUTH_MAIL_QUEUE_MAX ?? 500),
 	emailDomainAllowlist: process.env.AUTH_EMAIL_DOMAIN_ALLOWLIST ?? process.env.EMAIL_DOMAIN_ALLOWLIST ?? '',
@@ -156,21 +154,10 @@ function csvValues(value) {
 	return String(value ?? '').split(',').map((entry) => entry.trim().toLowerCase()).filter(Boolean);
 }
 
-function isLocalSmtpHost() {
-	const host = config.smtp.host.toLowerCase().replace(/^\[|\]$/g, '');
-	return host === 'mailpit' || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === 'host.docker.internal' || host.endsWith('.local');
-}
-
+// Only AUTH_EMAIL_DOMAIN_ALLOWLIST exempts a domain from the MX check; local test domains
+// (mini-baas.local, example.test, localhost) are listed there, nothing is derived from a sender.
 function allowedEmailDomains() {
-	const domains = new Set(csvValues(config.emailDomainAllowlist));
-	const senderDomain = emailDomain(config.smtp.fromAddress);
-	if (senderDomain) domains.add(senderDomain);
-	if (isLocalSmtpHost()) {
-		domains.add('mini-baas.local');
-		domains.add('example.test');
-		domains.add('localhost');
-	}
-	return domains;
+	return new Set(csvValues(config.emailDomainAllowlist));
 }
 
 function isAllowedEmailDomain(email) {
@@ -331,21 +318,21 @@ async function shouldSendSignInNotice(email, outcome) {
 }
 
 async function sendLoginSecurityNotification(email, outcome, context) {
-	if (!hasSmtpConfig(config.smtp)) {
-		console.warn(`[auth-gateway] login security alert skipped for ${email}: SMTP is not fully configured.`);
-		await audit('login_alert_skipped', null, { email, reason: 'smtp_not_configured' });
+	if (!mailConfigured()) {
+		console.warn(`[auth-gateway] login security alert skipped for ${email}: the email service is not configured.`);
+		await audit('login_alert_skipped', null, { email, reason: 'mail_not_configured' });
 		return;
 	}
 	if (!(await shouldSendSignInNotice(email, outcome))) {
 		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
-	await sendSmtpMail({
+	await sendMail({
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
 		html: renderEmailTemplate('login-alert.html', context),
 	});
-	console.info(`[auth-gateway] login security alert accepted by SMTP for ${email} from ${context.ipAddress}.`);
+	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
 }
 
@@ -361,8 +348,8 @@ function scheduleLoginAlert(request, email, outcome) {
 }
 
 async function sendAccountCreatedNotification(request, email) {
-	if (!hasSmtpConfig(config.smtp)) return;
-	await sendSmtpMail({
+	if (!mailConfigured()) return;
+	await sendMail({
 		to: email,
 		subject: 'Your Prismatica account is ready',
 		html: renderEmailTemplate('account-created.html', { Email: email, SiteURL: siteBaseUrl() }),
@@ -371,7 +358,7 @@ async function sendAccountCreatedNotification(request, email) {
 }
 
 async function sendNewsletterConfirm(request, email, token) {
-	await sendSmtpMail({
+	await sendMail({
 		to: email,
 		subject: 'Confirm your Prismatica newsletter subscription',
 		html: renderEmailTemplate('newsletter-confirm.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
@@ -380,7 +367,7 @@ async function sendNewsletterConfirm(request, email, token) {
 }
 
 async function sendNewsletterWelcome(request, email, token) {
-	await sendSmtpMail({
+	await sendMail({
 		to: email,
 		subject: 'Welcome to the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-welcome.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
@@ -389,7 +376,7 @@ async function sendNewsletterWelcome(request, email, token) {
 }
 
 async function sendNewsletterUnsubscribe(request, email) {
-	await sendSmtpMail({
+	await sendMail({
 		to: email,
 		subject: 'You are unsubscribed from the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-unsubscribe.html', { Email: email, SiteURL: siteBaseUrl() }),
@@ -401,11 +388,15 @@ function cleanText(value, maxLength) {
 	return String(value ?? '').trim().slice(0, maxLength);
 }
 
-const smtpMailer = createSmtpMailer(config.smtp);
+const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey });
 
-function sendSmtpMail(message) {
-	if (!hasSmtpConfig(config.smtp)) return Promise.reject(Object.assign(new Error('SMTP is not configured.'), { status: 503 }));
-	return smtpMailer.send(message);
+function mailConfigured() {
+	return Boolean(config.serviceKey && config.baasUrl);
+}
+
+function sendMail(message) {
+	if (!mailConfigured()) return Promise.reject(Object.assign(new Error('The email service is not configured.'), { status: 503 }));
+	return emailMailer.send(message);
 }
 
 // Flows report through this; it never rejects, so a fire-and-forget call cannot leak.
@@ -442,7 +433,7 @@ const accountMail = createAccountMail({
 	store,
 	queue: mailQueue,
 	gotrue,
-	mailer: { send: sendSmtpMail },
+	mailer: { send: sendMail },
 	render: (name, vars) => renderMessage(emailTemplateDir, name, vars),
 	links: {
 		configured: !config.linkSigningKeyProblem,
@@ -606,7 +597,7 @@ async function handleRegister(request, response) {
 			json(response, 422, { message: 'Use an email domain that can receive mail.' });
 			return;
 		}
-		if (!config.serviceKey || (config.requireEmailVerification && !hasSmtpConfig(config.smtp))) {
+		if (!config.serviceKey || (config.requireEmailVerification && !mailConfigured())) {
 			json(response, 503, { message: 'Email verification is not configured.' });
 			return;
 		}
@@ -782,7 +773,7 @@ async function handleNewsletterConfirm(request, response) {
 		return;
 	}
 	const email = typeof result.payload?.email === 'string' ? result.payload.email : '';
-	if (EMAIL_REGEX.test(email) && hasSmtpConfig()) {
+	if (EMAIL_REGEX.test(email) && mailConfigured()) {
 		await sendNewsletterWelcome(request, email, token).catch(async (error) => {
 			console.error(`[auth-gateway] newsletter welcome failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 			await audit('newsletter_welcome_email_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
@@ -804,7 +795,7 @@ async function handleNewsletterUnsubscribe(request, response) {
 		return;
 	}
 	const email = typeof result.payload?.email === 'string' ? result.payload.email : '';
-	if (EMAIL_REGEX.test(email) && hasSmtpConfig()) {
+	if (EMAIL_REGEX.test(email) && mailConfigured()) {
 		await sendNewsletterUnsubscribe(request, email).catch(async (error) => {
 			console.error(`[auth-gateway] newsletter unsubscribe email failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 			await audit('newsletter_unsubscribe_email_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
