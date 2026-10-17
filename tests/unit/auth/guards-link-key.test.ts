@@ -10,6 +10,7 @@ const secureProd = {
 	trustedProxyHops: 2,
 	serviceKey: 'service',
 	linkSigningKeyProblem: null,
+	signupAllowlist: '@prismatica.example',
 };
 
 describe('AUTH_LINK_SIGNING_KEY at startup (C1)', () => {

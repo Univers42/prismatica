@@ -23,6 +23,8 @@
 // if so, REFUSE TO BOOT when any anti-abuse control is disabled. Local dev
 // (localhost / *.local / RFC1918 / non-https) is unaffected.
 
+import { parseSignupAllowlist } from './signup-allowlist.mjs';
+
 export function isProductionOrigin(siteUrl) {
 	let url;
 	try {
@@ -78,6 +80,11 @@ export function collectStartupViolations(config) {
 	}
 	if (!config.serviceKey) {
 		violations.push('SERVICE_ROLE_KEY is missing — privileged auth operations cannot run in production.');
+	}
+	// Fail closed and not relaxed by demoInsecure: an empty list on a public origin is open signup,
+	// and every signup sends mail from the shared mailbox (verdict SGN-1).
+	if (parseSignupAllowlist(config.signupAllowlist).isEmpty) {
+		violations.push('AUTH_SIGNUP_ALLOWLIST is empty on a public https origin — anyone could trigger signup mail. List the allowed addresses or domains.');
 	}
 	// Verification and reset links are signed with this key (verdict B, C1); without it
 	// no account e-mail can be sent, so production refuses to boot rather than degrade.

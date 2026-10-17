@@ -24,7 +24,7 @@ import "./premium";
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, announce, ensureButtonLabels, MOTION_KEY } from "./theme";
 import { bindConsentBanner } from "./consent";
 import { mountMascot, setMountedMascotMood, notifyWithMascot } from "./mascot";
-import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken } from "./portal";
+import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
 
 /** Renders subtle noise over paper containers for hand-drawn grain. */
 function renderPaperGrain(): void {
@@ -38,11 +38,11 @@ function renderPaperGrain(): void {
 	});
 }
 
-async function requestNewsletterSubscription(email: string): Promise<{ ok: boolean; message: string }> {
+async function requestNewsletterSubscription(email: string, turnstileToken: string): Promise<{ ok: boolean; message: string }> {
 	const response = await fetch('/api/newsletter/subscribe', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email }),
+		body: JSON.stringify({ email, turnstileToken }),
 	});
 	const data = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
 	if (!response.ok) {
@@ -122,6 +122,7 @@ function bindNewsletterSignup(): void {
 	queryElements('[data-newsletter-signup]', isHtmlElement).forEach((form) => {
 		if (!(form instanceof HTMLFormElement)) return;
 		bindEmailFieldValidation(form);
+		mountTurnstile(form);
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
 			const email = form.elements.namedItem('email');
@@ -148,7 +149,7 @@ function bindNewsletterSignup(): void {
 			status.textContent = 'Sending your newsletter request…';
 			setMountedMascotMood('listening', 1600);
 			try {
-				const response = await requestNewsletterSubscription(email.value);
+				const response = await requestNewsletterSubscription(email.value, readTurnstileToken(form));
 				if (response.ok) {
 					writeStorage(NEWSLETTER_INTENT_KEY, JSON.stringify({ email: email.value.trim(), pendingDoubleOptIn: true, policyVersion: POLICY_VERSION, savedAt: new Date().toISOString() }));
 					status.textContent = response.message;
