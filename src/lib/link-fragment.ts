@@ -25,6 +25,15 @@ export function takeLinkFragment(location: FragmentLocation, history: FragmentHi
 	return type === expectedType ? { token_hash, type, exp, sig } : null;
 }
 
+const APPROVAL_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+/** The sign-in approval token from `#t=<token>`; the fragment is removed from the address bar either way. */
+export function takeApprovalToken(location: FragmentLocation, history: FragmentHistory): string | null {
+	const token = new URLSearchParams(location.hash.replace(/^#/, '')).get('t') ?? '';
+	if (location.hash !== '') history.replaceState(null, '', `${location.pathname}${location.search}`);
+	return APPROVAL_TOKEN.test(token) ? token : null;
+}
+
 export type GatewayAnswer = { status: number; body: Record<string, unknown> };
 
 export async function postToGateway(fetchImpl: typeof fetch, gatewayUrl: string, path: string, payload: Record<string, unknown>): Promise<GatewayAnswer> {
