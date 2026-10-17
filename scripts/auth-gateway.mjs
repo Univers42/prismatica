@@ -25,7 +25,8 @@ import { createLinkFlows } from './auth/link-flows.mjs';
 import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
 import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
 import { classifyLoginFailure } from './auth/login-failure.mjs';
-import { escapeHtml, renderMessage } from './auth/mail-templates.mjs';
+import { escapeHtml, renderHtmlTemplate, renderMessage } from './auth/mail-templates.mjs';
+import { loginAlertMailFields } from './auth/request-display.mjs';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
@@ -282,11 +283,7 @@ function loginLocation(request, ipAddress) {
 }
 
 function renderEmailTemplate(fileName, variables) {
-	const html = readFileSync(resolve(emailTemplateDir, fileName), 'utf8');
-	return html.replaceAll(/{{\s*([\w.-]+)\s*}}/g, (_match, rawKey) => {
-		const key = String(rawKey).replace(/^\./, '');
-		return escapeHtml(variables[key] ?? variables[rawKey] ?? 'unknown');
-	});
+	return renderHtmlTemplate(emailTemplateDir, fileName, variables);
 }
 
 function siteBaseUrl() {
@@ -300,18 +297,16 @@ function loginAlertContext(request, email, outcome = 'success') {
 		timeStyle: 'long',
 		timeZone: 'UTC',
 	}).format(new Date());
+	const headers = request.headers;
+	const location = loginLocation(request, ipAddress);
 	return {
 		email,
 		ipAddress,
-		location: loginLocation(request, ipAddress),
-		method: outcome === 'success' ? 'Successful password sign-in through the Prismatica auth gateway' : 'Failed password sign-in attempt through the Prismatica auth gateway',
+		location,
 		outcome: outcome === 'success' ? 'Successful sign-in' : 'Failed sign-in attempt',
 		occurredAt: `${occurredAt} (UTC)`,
 		siteUrl: siteBaseUrl(),
-		userAgent: headerValue(request, 'user-agent', 'unknown device', 500),
-		origin: headerValue(request, 'origin', 'not sent', 240),
-		referer: headerValue(request, 'referer', 'not sent', 240),
-		forwardedFor: headerValue(request, 'x-forwarded-for', 'not sent', 240),
+		mail: loginAlertMailFields({ headers, ipAddress, location, outcome }),
 	};
 }
 
@@ -337,7 +332,7 @@ async function sendLoginSecurityNotification(email, outcome, context) {
 	await sendMail({
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
-		html: renderEmailTemplate('login-alert.html', context),
+		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
 	});
 	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
