@@ -250,6 +250,7 @@ function createPortalMarkup(mode: PortalMode): string {
 							<input type="hidden" name="turnstileToken" data-turnstile-token />
 						</div>
 						<output class="portal-form-error" aria-live="assertive" role="alert" hidden></output>
+						<button class="portal-link-action" type="button" data-resend-verification hidden>Send a new link</button>
 						<button class="button button--primary button--full" type="submit" data-auth-submit>
 							${quick ? 'Sign in' : 'Create workspace account'}
 						</button>
@@ -277,6 +278,7 @@ type PortalFormElements = {
 	turnstileToken: HTMLInputElement | null;
 	submitButton: HTMLButtonElement | null;
 	error: HTMLOutputElement;
+	resendVerification: HTMLButtonElement | null;
 };
 
 function portalFormElements(portal: HTMLElement): PortalFormElements | null {
@@ -292,6 +294,7 @@ function portalFormElements(portal: HTMLElement): PortalFormElements | null {
 	const turnstileToken = form.querySelector('[data-turnstile-token]');
 	const submitButton = form.querySelector('button[type="submit"]');
 	const error = form.querySelector('.portal-form-error');
+	const resendVerification = form.querySelector('[data-resend-verification]');
 
 	if (!(username instanceof HTMLInputElement) || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(error instanceof HTMLOutputElement)) {
 		return null;
@@ -308,6 +311,7 @@ function portalFormElements(portal: HTMLElement): PortalFormElements | null {
 		turnstileToken: turnstileToken instanceof HTMLInputElement ? turnstileToken : null,
 		submitButton: submitButton instanceof HTMLButtonElement ? submitButton : null,
 		error,
+		resendVerification: resendVerification instanceof HTMLButtonElement ? resendVerification : null,
 	};
 }
 
@@ -339,6 +343,7 @@ function portalRegistrationProfile(elements: PortalFormElements): RegisterProfil
 function clearPortalAuthErrors(elements: PortalFormElements): void {
 	elements.error.textContent = '';
 	elements.error.setAttribute('hidden', '');
+	elements.resendVerification?.setAttribute('hidden', '');
 	clearPortalFieldErrors(elements.email, elements.password, elements.confirmPassword, elements.username, elements.emailVerificationConsent, elements.termsConsent);
 }
 
@@ -588,6 +593,15 @@ function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFor
 	}
 }
 
+async function submitPortalResendVerification(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
+	const result = await authClient.resendVerification({ email: elements.email.value.trim(), turnstileToken: readTurnstileToken(portal) });
+	const succeeded = result.ok;
+	elements.error.textContent = succeeded ? 'A new confirmation link is on its way. Check your inbox.' : humanAuthMessage(result.message);
+	elements.error.removeAttribute('hidden');
+	if (succeeded) elements.resendVerification?.setAttribute('hidden', '');
+	notifyWithMascot({ kind: succeeded ? 'success' : 'error', title: succeeded ? 'Link sent' : 'Could not send a new link', message: elements.error.textContent });
+}
+
 async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
 	const email = elements.email;
 	clearPortalFieldErrors(email);
@@ -718,7 +732,10 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 			});
 			return;
 		}
-		if (messageMentions(message, 'email not confirmed', 'not confirmed', 'confirm your email')) {
+		if (authenticated.code === 'email_not_confirmed' || messageMentions(message, 'email not confirmed', 'not confirmed', 'confirm your email')) {
+			elements.error.textContent = message;
+			elements.error.removeAttribute('hidden');
+			elements.resendVerification?.removeAttribute('hidden');
 			notifyWithMascot({
 				kind: 'warning',
 				title: 'Email not confirmed',
@@ -930,6 +947,10 @@ export function openPortal(mode: PortalMode): void {
 	elements.form.addEventListener('submit', (event) => {
 		event.preventDefault();
 		void (portal.dataset.portalMode === 'recovery' ? submitPortalRecovery(portal, elements) : submitPortalLogin(portal, elements));
+	});
+
+	elements.resendVerification?.addEventListener('click', () => {
+		void submitPortalResendVerification(portal, elements);
 	});
 
 	[elements.email, elements.password, elements.username, elements.confirmPassword].forEach((f) => {

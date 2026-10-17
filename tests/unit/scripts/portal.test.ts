@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
 
 describe('Portal Script Module', () => {
@@ -99,5 +99,32 @@ describe('Portal Script Module', () => {
 		button?.click();
 		expect(input?.type).toBe('password');
 		expect(button?.getAttribute('aria-pressed')).toBe('false');
+	});
+
+	it('shows the gateway message and a "Send a new link" button after 403 email_not_confirmed, and resends through the gateway', async () => {
+		const message = 'Confirm your email first \u2014 check your inbox, or send a new link.';
+		const fetchMock = vi.fn(async (url: string) => (String(url).endsWith('/login')
+			? new Response(JSON.stringify({ error: 'email_not_confirmed', message }), { status: 403 })
+			: new Response(JSON.stringify({ message: 'ok' }), { status: 202 })));
+		vi.stubGlobal('fetch', fetchMock);
+		try {
+			openPortal('connect');
+			const email = document.querySelector<HTMLInputElement>('#portal-email');
+			const password = document.querySelector<HTMLInputElement>('#portal-password');
+			if (!email || !password) throw new Error('no fields');
+			email.value = 'ines@arlet.test';
+			password.value = 'Abcdefgh12!';
+			const resend = document.querySelector<HTMLButtonElement>('[data-resend-verification]');
+			expect(resend?.hidden).toBe(true);
+			document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
+			await vi.waitFor(() => expect(resend?.hidden).toBe(false));
+			expect(document.querySelector('.portal-form-error')?.textContent).toBe(message);
+			resend?.click();
+			await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/resend-verification'))).toBe(true));
+			const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/resend-verification'));
+			expect(JSON.parse(String((call?.[1] as RequestInit).body))).toMatchObject({ email: 'ines@arlet.test' });
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 });

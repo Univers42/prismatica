@@ -47,6 +47,7 @@ export type AuthResult = {
 	ok: boolean;
 	status: number;
 	message: string;
+	code?: string;
 	accessToken?: string;
 	expiresIn?: number;
 };
@@ -149,6 +150,7 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 		ok: response.ok,
 		status: response.status,
 		message,
+		code: typeof payload.error === 'string' ? payload.error : undefined,
 		accessToken: typeof payload.access_token === 'string' ? payload.access_token : undefined,
 		expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : undefined,
 	};
@@ -240,6 +242,15 @@ export function useAuth(options: AuthClientOptions = {}) {
 				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
 			}
 			return parseAuthResponse(await post('/recover', request));
+		},
+		async resendVerification(request: RecoverRequest): Promise<AuthResult> {
+			if (!validateEmail(request.email)) {
+				return { ok: false, status: 422, message: 'Use a valid email address.' };
+			}
+			if (!request.turnstileToken) {
+				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
+			}
+			return parseAuthResponse(await post('/resend-verification', request));
 		},
 		async refresh(): Promise<AuthResult> {
 			return parseAuthResponse(await post('/refresh', {}));
