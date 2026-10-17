@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEmailApiMailer } from '../../../scripts/auth/email-api-mailer.mjs';
+import { createEmailApiMailer, DEFAULT_MAIL_TIMEOUT_MS, resolveMailTimeoutMs } from '../../../scripts/auth/email-api-mailer.mjs';
 
 const KEY = 'planted-service-key-DO-NOT-LEAK-0123456789';
 const message = { to: 'ines@arlet.test', subject: 'Hello', html: '<p>Hi</p>', text: 'Hi' };
@@ -70,11 +70,29 @@ describe('createEmailApiMailer', () => {
 		expect(calls).toHaveLength(2);
 	});
 
-	it('throws on a network failure and on a timeout', async () => {
+	it('reports a network failure as unreachable', async () => {
 		const down = sequence(new Error(`connect refused ${KEY}`));
 		await expect(mailer(down.fetchImpl).send(message)).rejects.toThrow('email service unreachable');
-		const hang = vi.fn<typeof fetch>((_url, init) => new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error(KEY)))));
-		await expect(mailer(hang).send(message)).rejects.toThrow('email service unreachable');
+	});
+
+	it('reports an aborted wait as timed out, not unreachable', async () => {
+		const hang = vi.fn<typeof fetch>((_url, init) => new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason))));
+		await expect(mailer(hang).send(message)).rejects.toThrow('email service timed out');
+	});
+
+	it('succeeds under the default timeout when emailsvc takes 9 s (Titan SMTP on b2b)', async () => {
+		vi.useFakeTimers();
+		const slow = vi.fn<typeof fetch>(() => new Promise((done) => setTimeout(() => done(new Response('{}', { status: 200 })), 9_000)));
+		const pending = createEmailApiMailer({ baseUrl: 'http://kong:8000', serviceKey: KEY, fetch: slow }).send(message);
+		await vi.advanceTimersByTimeAsync(9_100);
+		await expect(pending).resolves.toBeUndefined();
+	});
+
+	it('reads AUTH_MAIL_TIMEOUT_MS as a positive integer and falls back to 30 s otherwise', () => {
+		expect(DEFAULT_MAIL_TIMEOUT_MS).toBe(30_000);
+		expect(resolveMailTimeoutMs('45000')).toBe(45_000);
+		expect(resolveMailTimeoutMs(' 500 ')).toBe(500);
+		for (const bad of [undefined, '', '0', '-5', '1.5', '1e3', 'abc', '12s']) expect(resolveMailTimeoutMs(bad)).toBe(DEFAULT_MAIL_TIMEOUT_MS);
 	});
 
 	it('never lets the key reach an error message or any console line', async () => {

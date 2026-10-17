@@ -32,7 +32,7 @@ import { loginAlertMailFields } from './auth/request-display.mjs';
 import { deriveClientIp } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
-import { createEmailApiMailer } from './auth/email-api-mailer.mjs';
+import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
@@ -399,7 +399,7 @@ function cleanText(value, maxLength) {
 const signupAllowlist = parseSignupAllowlist(config.signupAllowlist);
 const signupAllowed = (email) => isSignupAllowed(signupAllowlist, email);
 const mailDailyCap = createMailDailyCap({ store, cap: resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl)) });
-const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, dailyCap: mailDailyCap });
+const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, timeoutMs: resolveMailTimeoutMs(process.env.AUTH_MAIL_TIMEOUT_MS), dailyCap: mailDailyCap });
 
 function mailConfigured() {
 	return Boolean(config.serviceKey && config.baasUrl);

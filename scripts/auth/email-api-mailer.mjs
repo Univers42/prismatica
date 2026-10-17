@@ -10,10 +10,18 @@
  * every caller shares one IP, hence one bucket. A burst beyond it is retried once (Retry-After,
  * capped at 10 s) and then lost to the caller; the mail queue does not re-enqueue it.
  * An optional `dailyCap` (mail-daily-cap.mjs) refuses the send, as a 429 would, once the day's ceiling is spent.
- * `timeoutMs` (8 s) is a guess at "emailsvc is down"; a slower healthy send reads as a failure.
+ * `timeoutMs` (30 s) is a guess at "emailsvc is down". Measured on b2b 2026-10-17: Titan's SMTP
+ * exchange makes emailsvc answer "sent" 9-13 s after the request, so a send that times out may
+ * still be delivered; the caller sees a failure for a mail that arrives.
  */
 
 const MAX_RETRY_WAIT_MS = 10_000;
+export const DEFAULT_MAIL_TIMEOUT_MS = 30_000;
+
+/** A positive integer of milliseconds, or the default for anything else (unset, 0, negative, "1e3", "abc"). */
+export function resolveMailTimeoutMs(raw) {
+	return /^[1-9]\d*$/.test(String(raw ?? '').trim()) ? Number(String(raw).trim()) : DEFAULT_MAIL_TIMEOUT_MS;
+}
 
 function retryWaitMs(response) {
 	const seconds = Number(response.headers.get('retry-after'));
@@ -26,7 +34,7 @@ function withoutLineBreaks(value) {
 }
 
 /** @param {{baseUrl: string, serviceKey: string, fetch?: typeof fetch, timeoutMs?: number, dailyCap?: {take: () => Promise<boolean>}}} options */
-export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = 8_000, dailyCap }) {
+export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_MAIL_TIMEOUT_MS, dailyCap }) {
 	const url = `${String(baseUrl ?? '').replace(/\/+$/, '')}/email/v1/send`;
 
 	async function post(body) {
@@ -37,8 +45,8 @@ export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = g
 				body,
 				signal: AbortSignal.timeout(timeoutMs),
 			});
-		} catch {
-			throw new Error('email service unreachable');
+		} catch (error) {
+			throw new Error(error instanceof Error && error.name === 'TimeoutError' ? 'email service timed out' : 'email service unreachable');
 		}
 	}
 
