@@ -50,6 +50,29 @@ export function isProductionOrigin(siteUrl) {
 
 const DUMMY_TURNSTILE_SECRET = /^[123]x0{20,}/;
 
+export const SIGNUP_OPEN_MAX_DAILY_MAIL = 50;
+export const SIGNUP_OPEN_MAX_REGISTER_PER_HOUR = 10;
+
+// AUTH_SIGNUP_OPEN replaces the allowlist with proof of address ownership: the only mail an
+// open form can cause goes to the address typed, so the controls below are what bound the damage.
+// A valid AUTH_LINK_SIGNING_KEY is also required, but that violation is raised for every public origin.
+// Caveat: this checks that each control is configured, not that it works; a Redis-less store
+// resets the daily cap on restart, and the register limit is per client IP (a /64 for IPv6).
+function signupOpenProblems(config) {
+	const problems = [];
+	if (config.demoInsecure === true) problems.push('AUTH_SIGNUP_OPEN cannot be combined with AUTH_DEMO_INSECURE=true — the demo relaxation removes the email proof it relies on.');
+	if (!config.requireEmailVerification) problems.push('AUTH_SIGNUP_OPEN requires AUTH_REQUIRE_EMAIL_VERIFICATION to be on — open signup is only safe when email proves ownership.');
+	const cap = Number(config.mailDailyCap);
+	if (!(cap > 0 && cap <= SIGNUP_OPEN_MAX_DAILY_MAIL)) {
+		problems.push(`AUTH_SIGNUP_OPEN requires AUTH_MAIL_DAILY_CAP to be set to ${SIGNUP_OPEN_MAX_DAILY_MAIL} or less (got ${config.mailDailyCap ?? 'unset'}).`);
+	}
+	const registerLimit = Number(config.registerHourlyLimit);
+	if (!(registerLimit > 0 && registerLimit <= SIGNUP_OPEN_MAX_REGISTER_PER_HOUR)) {
+		problems.push(`AUTH_SIGNUP_OPEN requires AUTH_REGISTER_RATE_LIMIT_PER_HOUR between 1 and ${SIGNUP_OPEN_MAX_REGISTER_PER_HOUR} (got ${config.registerHourlyLimit ?? 'unset'}).`);
+	}
+	return problems;
+}
+
 // Returns a list of human-readable violations. Empty list = safe to boot.
 // Only enforced when the site origin is a public https host.
 export function collectStartupViolations(config) {
@@ -72,7 +95,9 @@ export function collectStartupViolations(config) {
 			'AUTH_REQUIRE_EMAIL_VERIFICATION is false on a public https origin — accounts would be confirmed without email verification. Enable it in production.',
 		);
 	}
-	if (!demoInsecure && !config.turnstileSecret) {
+	// AUTH_TURNSTILE_OPTIONAL: the osionos bridge's login proxy sends a fixed token, so a deploy
+	// without a secret must still boot. TURNSTILE_BYPASS_LOCAL above is not relaxed by it.
+	if (!demoInsecure && !config.turnstileSecret && config.turnstileOptional !== true) {
 		violations.push('TURNSTILE_SECRET_KEY is missing — Turnstile cannot be verified in production.');
 	}
 	// Cloudflare's published test secrets (1x/2x/3x + zeros) always pass or always fail, so a copy
@@ -93,7 +118,8 @@ export function collectStartupViolations(config) {
 	}
 	// Fail closed and not relaxed by demoInsecure: an empty list on a public origin is open signup,
 	// and every signup sends mail from the shared mailbox (verdict SGN-1).
-	if (parseSignupAllowlist(config.signupAllowlist).isEmpty) {
+	if (config.signupOpen === true) violations.push(...signupOpenProblems(config));
+	else if (parseSignupAllowlist(config.signupAllowlist).isEmpty) {
 		violations.push('AUTH_SIGNUP_ALLOWLIST is empty on a public https origin — anyone could trigger signup mail. List the allowed addresses or domains.');
 	}
 	// Verification and reset links are signed with this key (verdict B, C1); without it
