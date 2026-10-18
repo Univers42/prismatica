@@ -51,8 +51,8 @@ export function isProductionOrigin(siteUrl) {
 
 const DUMMY_TURNSTILE_SECRET = /^[123]x0{20,}/;
 
-export const SIGNUP_OPEN_MAX_DAILY_MAIL = 50;
-export const SIGNUP_OPEN_MAX_REGISTER_PER_HOUR = 10;
+const SIGNUP_OPEN_MAX_DAILY_MAIL = 50;
+const SIGNUP_OPEN_MAX_REGISTER_PER_HOUR = 10;
 
 // AUTH_SIGNUP_OPEN replaces the allowlist with proof of address ownership: the only mail an
 // open form can cause goes to the address typed, so the controls below are what bound the damage.
@@ -68,7 +68,7 @@ function signupOpenProblems(config) {
 		problems.push(`AUTH_SIGNUP_OPEN requires AUTH_MAIL_DAILY_CAP to be set to ${SIGNUP_OPEN_MAX_DAILY_MAIL} or less (got ${config.mailDailyCap ?? 'unset'}).`);
 	}
 	const registerLimit = Number(config.registerHourlyLimit);
-	if (!(registerLimit > 0 && registerLimit <= SIGNUP_OPEN_MAX_REGISTER_PER_HOUR)) {
+	if (!(Number.isInteger(registerLimit) && registerLimit > 0 && registerLimit <= SIGNUP_OPEN_MAX_REGISTER_PER_HOUR)) {
 		problems.push(`AUTH_SIGNUP_OPEN requires AUTH_REGISTER_RATE_LIMIT_PER_HOUR between 1 and ${SIGNUP_OPEN_MAX_REGISTER_PER_HOUR} (got ${config.registerHourlyLimit ?? 'unset'}).`);
 	}
 	return problems;

@@ -23,7 +23,7 @@ describe('AUTH_SIGNUP_OPEN at startup', () => {
 	});
 
 	it.each([
-		['verification off', { requireEmailVerification: false }, /AUTH_REQUIRE_EMAIL_VERIFICATION/],
+		['verification off', { requireEmailVerification: false }, /AUTH_SIGNUP_OPEN requires AUTH_REQUIRE_EMAIL_VERIFICATION/],
 		['AUTH_DEMO_INSECURE', { demoInsecure: true }, /AUTH_DEMO_INSECURE/],
 		['an invalid link key', { linkSigningKeyProblem: 'AUTH_LINK_SIGNING_KEY is too short.' }, /AUTH_LINK_SIGNING_KEY/],
 		['a cap above 50', { mailDailyCap: 51 }, /AUTH_MAIL_DAILY_CAP/],
@@ -32,6 +32,7 @@ describe('AUTH_SIGNUP_OPEN at startup', () => {
 		['an unset cap', { mailDailyCap: undefined }, /AUTH_MAIL_DAILY_CAP/],
 		['the register limit off', { registerHourlyLimit: 0 }, /AUTH_REGISTER_RATE_LIMIT_PER_HOUR/],
 		['an unparsable register limit', { registerHourlyLimit: Number.NaN }, /AUTH_REGISTER_RATE_LIMIT_PER_HOUR/],
+		['a fractional register limit', { registerHourlyLimit: 0.5 }, /AUTH_REGISTER_RATE_LIMIT_PER_HOUR/],
 		['a register limit above 10 an hour', { registerHourlyLimit: 11 }, /AUTH_REGISTER_RATE_LIMIT_PER_HOUR/],
 	])('refuses %s, naming what is missing', (_label, override, pattern) => {
 		const violations = collectStartupViolations({ ...openProd, ...override });
