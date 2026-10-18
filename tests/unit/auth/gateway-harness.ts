@@ -5,7 +5,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { resolve } from 'node:path';
 
-const ROOT = resolve(__dirname, '../../..');
+export const ROOT = resolve(__dirname, '../../..');
 export const KEY = 'gateway-login-otp-test-key-0123456789abcdef';
 export const RIGHT = '123456';
 
@@ -13,7 +13,7 @@ export type Hit = { method: string; path: string; body: string; apikey?: string 
 export type Gateway = { base: string; logs: () => string };
 
 export const hits: Hit[] = [];
-export const upstream = { otpRequestStatus: 200, mailStatus: 200 };
+export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, existingEmails: [] as string[] };
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
 let kongPort = 0;
@@ -46,6 +46,7 @@ function fakeKong() {
 			};
 			const parsed = body ? JSON.parse(body) : {};
 			if (path.startsWith('/auth/v1/token?grant_type=password')) {
+				if (upstream.passwordStatus !== 200) return send(upstream.passwordStatus, { error: 'invalid_grant' });
 				return send(200, { access_token: 'at-0', refresh_token: 'rt-0', token_type: 'bearer', expires_in: 3600, user: { id: 'u1', email: parsed.email } });
 			}
 			if (path.startsWith('/auth/v1/token?grant_type=refresh_token')) return send(200, { access_token: 'at-1', refresh_token: 'rt-2', token_type: 'bearer', expires_in: 3600, user: { id: 'u1' } });
@@ -59,6 +60,10 @@ function fakeKong() {
 				return send(401, { error: 'invalid_code' });
 			}
 			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: 'd'.repeat(56) });
+			if (path.startsWith('/rest/v1/users') && request.method === 'GET') {
+				const taken = upstream.existingEmails.some((email) => decodeURIComponent(path).includes(`email=eq.${email}`));
+				return send(200, taken ? [{ id: 'p1' }] : []);
+			}
 			if (path.startsWith('/rest/v1/') || path.startsWith('/auth/v1/')) return send(200, path.startsWith('/rest/v1/') ? [] : {});
 			return send(200, {});
 		});
@@ -100,6 +105,25 @@ export async function startGateway(extraEnv: Record<string, string>): Promise<Ga
 		await new Promise((done) => setTimeout(done, 20));
 	}
 	return { base: `http://127.0.0.1:${port}`, logs: () => output };
+}
+
+// Starts the real gateway once and resolves on "listening" or on exit, so a refused boot shows its exit code.
+export function boot(env: Record<string, string>) {
+	return new Promise<{ code: number | null; output: string }>((done) => {
+		let output = '';
+		const child = spawn(process.execPath, ['scripts/auth-gateway.mjs'], { cwd: ROOT, env: { PATH: process.env.PATH, AUTH_GATEWAY_PORT: '0', ...env } });
+		const finish = (code: number | null) => {
+			child.kill();
+			done({ code, output });
+		};
+		const collect = (chunk: Buffer) => {
+			output += chunk;
+			if (output.includes('Auth gateway listening')) finish(null);
+		};
+		child.stdout?.on('data', collect);
+		child.stderr?.on('data', collect);
+		child.on('exit', finish);
+	});
 }
 
 export function stopAll() {

@@ -1,12 +1,9 @@
 // @vitest-environment node
 // The real scripts/auth-gateway.mjs with AUTH_SIGNUP_OPEN / AUTH_TURNSTILE_OPTIONAL: what boots,
 // what the register limit does, and that the newsletter stays shut.
-import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { call, hits, KEY, startFakeKong, startGateway, stopAll } from './gateway-harness';
+import { boot, call, hits, KEY, startFakeKong, startGateway, stopAll } from './gateway-harness';
 
-const ROOT = resolve(__dirname, '../../..');
 const PUBLIC_OK = {
 	PUBLIC_SITE_URL: 'https://prismatica.example',
 	SERVICE_ROLE_KEY: 'service',
@@ -17,24 +14,6 @@ const PUBLIC_OK = {
 	AUTH_MAIL_DAILY_CAP: '50',
 	AUTH_REGISTER_RATE_LIMIT_PER_HOUR: '10',
 };
-
-function boot(env: Record<string, string>) {
-	return new Promise<{ code: number | null; output: string }>((done) => {
-		let output = '';
-		const child = spawn(process.execPath, ['scripts/auth-gateway.mjs'], { cwd: ROOT, env: { PATH: process.env.PATH, AUTH_GATEWAY_PORT: '0', ...env } });
-		const finish = (code: number | null) => {
-			child.kill();
-			done({ code, output });
-		};
-		const collect = (chunk: Buffer) => {
-			output += chunk;
-			if (output.includes('Auth gateway listening')) finish(null);
-		};
-		child.stdout?.on('data', collect);
-		child.stderr?.on('data', collect);
-		child.on('exit', finish);
-	});
-}
 
 describe('boot with AUTH_SIGNUP_OPEN=true on a public https origin', () => {
 	it('starts with the full valid set and an empty allowlist', async () => {
