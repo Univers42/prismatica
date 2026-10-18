@@ -937,6 +937,8 @@ async function handleOsionosSession(request, response) {
 		subject,
 		email,
 		name: typeof metadata.username === 'string' ? metadata.username : email.split('@')[0],
+		// Signed with the rest so the bridge can trust it; a strict boolean, never the raw timestamp.
+		emailVerified: Boolean(user.email_confirmed_at),
 		jti: randomUUID(),
 	};
 	const timestamp = String(Date.now());
