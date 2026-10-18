@@ -27,6 +27,8 @@
 // hop count is immune to client-side XFF prepending (extra spoofed entries only
 // grow the left side, never shifting the trusted tail).
 
+import { isIPv6 } from 'node:net';
+
 export function normalizeIp(value) {
 	let ip = String(value ?? '').trim().toLowerCase();
 	if (!ip) return '';
@@ -72,4 +74,19 @@ export function deriveClientIp(request, options = {}) {
 	// upstream at worst — fail safe, never fail open.
 	if (index < 0) return chain[0];
 	return chain[index] ?? remote ?? 'unknown';
+}
+
+// The key a per-IP limit counts under. An IPv6 subscriber is handed a whole /64, so keying on
+// the full address lets one client rotate through 2^64 buckets and never be limited.
+// Caveat: a /64 can be shared (one ISP prefix, a campus), so those users share one allowance;
+// that over-throttles, never under-throttles. A malformed value is returned as it came.
+export function ipBucket(ip) {
+	const address = String(ip ?? '').split('%')[0].toLowerCase();
+	if (!isIPv6(address)) return String(ip ?? '');
+	const [head, tail] = address.split('::');
+	const headGroups = head ? head.split(':') : [];
+	const tailGroups = tail ? tail.split(':') : [];
+	const missing = address.includes('::') ? 8 - headGroups.length - tailGroups.length : 0;
+	const groups = [...headGroups, ...Array(missing).fill('0'), ...tailGroups];
+	return `${groups.slice(0, 4).map((group) => group.padStart(4, '0')).join(':')}::/64`;
 }
