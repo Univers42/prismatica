@@ -37,6 +37,7 @@ import { createOtpClient } from './auth/otp-client.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
+import { parseVerificationExempt, isVerificationExempt, withExemptSuppression } from './auth/verification-exempt.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
 for (const file of ['.env.local', '.env', '../../.env.local']) {
@@ -77,6 +78,7 @@ const config = {
 	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
 	signupAllowlist: process.env.AUTH_SIGNUP_ALLOWLIST ?? '',
 	signupOpen: process.env.AUTH_SIGNUP_OPEN === 'true',
+	verificationExempt: process.env.AUTH_VERIFICATION_EXEMPT ?? '',
 	turnstileOptional: process.env.AUTH_TURNSTILE_OPTIONAL === 'true',
 	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR ?? 10),
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
@@ -84,6 +86,10 @@ const config = {
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
+// Caveat: exempt means the gateway sends that address no mail and signs it unverified; baas
+// /auth/v1/recover and /otp still mail it through GoTrue's own SMTP, so whoever reads the inbox
+// owns the account. Never admin, nothing private in it; guards.mjs refuses a malformed list at boot.
+const verificationExempt = parseVerificationExempt(config.verificationExempt).addresses;
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
@@ -359,11 +365,12 @@ async function sendLoginSecurityNotification(email, outcome, context) {
 		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
-	await sendMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
 		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
 	});
+	if (!wasSent(sendResult)) return;
 	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
 }
@@ -381,12 +388,12 @@ function scheduleLoginAlert(request, email, outcome) {
 
 async function sendAccountCreatedNotification(request, email) {
 	if (!mailConfigured()) return;
-	await sendMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Your Prismatica account is ready',
 		html: renderEmailTemplate('account-created.html', { Email: email, SiteURL: siteBaseUrl() }),
 	});
-	await audit('account_created_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('account_created_email_sent', request, { email });
 }
 
 async function sendNewsletterConfirm(request, email, token) {
@@ -430,7 +437,7 @@ function mailConfigured() {
 	return Boolean(config.serviceKey && config.baasUrl);
 }
 
-function sendMail(message) {
+function sendThroughEmailService(message) {
 	if (!mailConfigured()) return Promise.reject(Object.assign(new Error('The email service is not configured.'), { status: 503 }));
 	return emailMailer.send(message);
 }
@@ -439,6 +446,10 @@ function sendMail(message) {
 function flowAudit(eventType, details) {
 	audit(eventType, null, details).catch(() => undefined);
 }
+
+// The one place a gateway mail can be withheld: every sender calls this, none calls the mailer.
+const sendMail = withExemptSuppression(verificationExempt, sendThroughEmailService, flowAudit);
+const wasSent = (sendResult) => sendResult?.suppressed !== true;
 
 let droppedJobs = 0;
 let lastDropReportMs = 0;
@@ -654,6 +665,17 @@ async function handleDevConfirmedRegistration(request, response, context) {
 	json(response, 200, { message: 'Development account created and confirmed. You can sign in now.' });
 }
 
+// An exempt address is never registered here (an admin creates it). The answer is a taken
+// address's, so the list is not readable from outside; a taken username answers 409 as it does for everyone.
+async function answerExemptRegistration(request, response, context) {
+	if (await localProfileExists('username', context.profile.username)) {
+		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
+		return;
+	}
+	await audit('signup_refused_exempt', request, { email: context.email });
+	json(response, 202, REGISTER_ACCEPTED);
+}
+
 async function handleRegister(request, response) {
 	await protectedAction(request, response, 'register', async (payload) => {
 		const context = registrationContext(payload);
@@ -667,6 +689,10 @@ async function handleRegister(request, response) {
 		}
 		if (!config.serviceKey || (config.requireEmailVerification && !mailConfigured())) {
 			json(response, 503, { message: 'Email verification is not configured.' });
+			return;
+		}
+		if (isVerificationExempt(verificationExempt, context.email)) {
+			await answerExemptRegistration(request, response, context);
 			return;
 		}
 		if (!config.requireEmailVerification || !context.profile.email_verification_consent) {
@@ -953,7 +979,8 @@ async function handleOsionosSession(request, response) {
 		email,
 		name: typeof metadata.username === 'string' ? metadata.username : email.split('@')[0],
 		// Signed with the rest so the bridge can trust it; a strict boolean, never the raw timestamp.
-		emailVerified: Boolean(user.email_confirmed_at),
+		// An exempt address was never proven by its inbox, so false is its true value.
+		emailVerified: Boolean(user.email_confirmed_at) && !isVerificationExempt(verificationExempt, email),
 		jti: randomUUID(),
 	};
 	const timestamp = String(Date.now());

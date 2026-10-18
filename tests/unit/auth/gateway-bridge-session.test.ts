@@ -10,6 +10,8 @@ type Seen = { headers: http.IncomingHttpHeaders; body: string };
 const bridgeCalls: Seen[] = [];
 let confirmedAt: string | null = null;
 let gateway: Gateway;
+let exemptGateway: Gateway;
+let userEmail = 'ines@arlet.test';
 
 function fakeBridge() {
 	return http.createServer((request, response) => {
@@ -27,7 +29,7 @@ function fakeBridge() {
 function userKong() {
 	return http.createServer((request, response) => {
 		response.writeHead(200, { 'content-type': 'application/json' });
-		response.end(JSON.stringify({ id: 'u1', email: 'ines@arlet.test', email_confirmed_at: confirmedAt, user_metadata: { username: 'ines' } }));
+		response.end(JSON.stringify({ id: 'u1', email: userEmail, email_confirmed_at: confirmedAt, user_metadata: { username: 'ines' } }));
 	});
 }
 
@@ -37,15 +39,17 @@ beforeAll(async () => {
 	const kong = userKong();
 	const [bridgePort, kongPort] = [await listen(bridge), await listen(kong)];
 	servers.push(bridge, kong);
-	gateway = await startGateway({ PUBLIC_BAAS_URL: `http://127.0.0.1:${kongPort}`, OSIONOS_BRIDGE_URL: `http://127.0.0.1:${bridgePort}/s`, OSIONOS_BRIDGE_SHARED_SECRET: SECRET });
+	const wiring = { PUBLIC_BAAS_URL: `http://127.0.0.1:${kongPort}`, OSIONOS_BRIDGE_URL: `http://127.0.0.1:${bridgePort}/s`, OSIONOS_BRIDGE_SHARED_SECRET: SECRET };
+	gateway = await startGateway(wiring);
+	exemptGateway = await startGateway({ ...wiring, AUTH_VERIFICATION_EXEMPT: 'dylan@gmail.com' });
 }, 30_000);
 
 afterAll(stopAll);
 
-async function signedPayload(confirmed: string | null) {
+async function signedPayload(confirmed: string | null, target = gateway) {
 	confirmedAt = confirmed;
 	bridgeCalls.length = 0;
-	const result = await call(gateway, '/api/auth/osionos-session', { headers: { authorization: 'Bearer at' } });
+	const result = await call(target, '/api/auth/osionos-session', { headers: { authorization: 'Bearer at' } });
 	expect(result.status).toBe(200);
 	const seen = bridgeCalls[0];
 	return { seen, payload: JSON.parse(seen.body) };
@@ -69,3 +73,12 @@ describe('POST /api/auth/osionos-session', () => {
 	});
 });
 
+describe('POST /api/auth/osionos-session for a verification-exempt address', () => {
+	it('signs emailVerified false though the account is confirmed, and true for a confirmed address off the list', async () => {
+		userEmail = 'dylan@gmail.com';
+		expect((await signedPayload('2026-10-18T10:00:00Z', exemptGateway)).payload.emailVerified).toBe(false);
+		expect((await signedPayload('2026-10-18T10:00:00Z', gateway)).payload.emailVerified).toBe(true);
+		userEmail = 'ines@arlet.test';
+		expect((await signedPayload('2026-10-18T10:00:00Z', exemptGateway)).payload.emailVerified).toBe(true);
+	});
+});

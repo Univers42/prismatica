@@ -24,6 +24,7 @@
 // (localhost / *.local / RFC1918 / non-https) is unaffected.
 
 import { parseSignupAllowlist } from './signup-allowlist.mjs';
+import { parseVerificationExempt } from './verification-exempt.mjs';
 
 export function isProductionOrigin(siteUrl) {
 	let url;
@@ -74,9 +75,10 @@ function signupOpenProblems(config) {
 }
 
 // Returns a list of human-readable violations. Empty list = safe to boot.
-// Only enforced when the site origin is a public https host.
+// Only enforced when the site origin is a public https host (the exempt-list checks apply everywhere).
 export function collectStartupViolations(config) {
-	const violations = [];
+	// A malformed exempt list is a verification bypass wherever it boots, so this runs on every origin.
+	const violations = parseVerificationExempt(config.verificationExempt, config).problems;
 	if (!isProductionOrigin(config.siteUrl)) return violations;
 
 	// AUTH_DEMO_INSECURE=true relaxes ONLY the anti-abuse controls (Turnstile,
