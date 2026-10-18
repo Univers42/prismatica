@@ -29,13 +29,13 @@ import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './
 import { classifyLoginFailure } from './auth/login-failure.mjs';
 import { escapeHtml, renderHtmlTemplate, renderMessage } from './auth/mail-templates.mjs';
 import { loginAlertMailFields } from './auth/request-display.mjs';
-import { deriveClientIp } from './auth/net-ip.mjs';
+import { deriveClientIp, ipBucket } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
-import { isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
+import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
@@ -76,16 +76,25 @@ const config = {
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
 	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
 	signupAllowlist: process.env.AUTH_SIGNUP_ALLOWLIST ?? '',
+	signupOpen: process.env.AUTH_SIGNUP_OPEN === 'true',
+	turnstileOptional: process.env.AUTH_TURNSTILE_OPTIONAL === 'true',
+	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR ?? 10),
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
+config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
 // otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
 const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
 const RATE_WINDOWS_SEC = { otpResend: 3600 };
+// Open signup swaps the per-minute register allowance for an hourly one: a mail cannon needs volume.
+if (config.signupOpen && config.registerHourlyLimit > 0) {
+	RATE_LIMITS.register = config.registerHourlyLimit;
+	RATE_WINDOWS_SEC.register = 3600;
+}
 const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
@@ -152,7 +161,7 @@ async function readJson(request) {
 async function rateLimit(ip, action) {
 	const limit = RATE_LIMITS[action] ?? 12;
 	const windowSec = RATE_WINDOWS_SEC[action] ?? RATE_WINDOW_SEC;
-	const key = `rl:${action}:${ip}`;
+	const key = `rl:${action}:${ipBucket(ip)}`;
 	const count = await store.incrWithTtl(key, windowSec);
 	if (count <= limit) return null;
 	const remainingMs = await store.pttl(key);
@@ -192,9 +201,14 @@ async function hasDeliverableEmailDomain(email) {
 	return valid;
 }
 
+// AUTH_TURNSTILE_OPTIONAL: the osionos bridge's login proxy sends a fixed token, so with no secret
+// every app sign-in would be a 403. With a secret set it changes nothing.
+// Caveat: with no secret and the flag on, there is no CAPTCHA at all; the per-IP limits and the
+// e-mail proof are the only anti-abuse controls left.
 async function verifyTurnstile(token, ip) {
 	if (config.turnstileBypassLocal && (!token || token === 'localhost-turnstile-token')) return true;
-	if (!config.turnstileSecret || !token) return false;
+	if (!config.turnstileSecret) return config.turnstileOptional;
+	if (!token) return false;
 	const form = new URLSearchParams({ secret: config.turnstileSecret, response: token, remoteip: ip });
 	const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
 	const payload = await response.json().catch(() => ({}));
@@ -408,7 +422,8 @@ function cleanText(value, maxLength) {
 
 const signupAllowlist = parseSignupAllowlist(config.signupAllowlist);
 const signupAllowed = (email) => isSignupAllowed(signupAllowlist, email);
-const mailDailyCap = createMailDailyCap({ store, cap: resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl)) });
+const newsletterAllowed = (email) => isNewsletterAllowed(signupAllowlist, email, config.signupOpen);
+const mailDailyCap = createMailDailyCap({ store, cap: config.mailDailyCap });
 const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, timeoutMs: resolveMailTimeoutMs(process.env.AUTH_MAIL_TIMEOUT_MS), dailyCap: mailDailyCap });
 
 function mailConfigured() {
@@ -824,7 +839,7 @@ async function handleNewsletterSubscribe(request, response) {
 			return;
 		}
 		// Same 200 and body as a sent confirmation, so the answer is no oracle for the list (SGN-3).
-		if (!signupAllowed(email)) {
+		if (!newsletterAllowed(email)) {
 			await audit('signup_refused_allowlist', request, { email, source: 'newsletter' });
 			json(response, 200, { message: `Check ${escapeHtml(email)} to confirm your subscription.` });
 			return;

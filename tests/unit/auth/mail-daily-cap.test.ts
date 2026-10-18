@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 import { createMailDailyCap, resolveMailDailyCap } from '../../../scripts/auth/mail-daily-cap.mjs';
+import { createEmailApiMailer } from '../../../scripts/auth/email-api-mailer.mjs';
 import { memoryStore } from './fakes';
 
 describe('resolveMailDailyCap', () => {
@@ -42,5 +43,17 @@ describe('createMailDailyCap', () => {
 	it('never refuses with a cap of 0', async () => {
 		const gate = createMailDailyCap({ store: memoryStore(), cap: 0 });
 		for (let index = 0; index < 5; index += 1) expect(await gate.take()).toBe(true);
+	});
+});
+
+describe('the 51st account mail of the day at AUTH_MAIL_DAILY_CAP=50', () => {
+	it('is refused like a 429 and never reaches the email service', async () => {
+		const cap = createMailDailyCap({ store: memoryStore(), cap: resolveMailDailyCap('50', true), logger: { warn: vi.fn() } });
+		const fetchImpl = vi.fn(async () => new Response('{}', { status: 200 }));
+		const mailer = createEmailApiMailer({ baseUrl: 'http://kong:8000', serviceKey: 'k', fetch: fetchImpl, dailyCap: cap });
+		const message = { to: 'a@arlet.test', subject: 's', html: '<p>x</p>' };
+		for (let sent = 0; sent < 50; sent += 1) await mailer.send(message);
+		await expect(mailer.send(message)).rejects.toMatchObject({ status: 429 });
+		expect(fetchImpl).toHaveBeenCalledTimes(50);
 	});
 });

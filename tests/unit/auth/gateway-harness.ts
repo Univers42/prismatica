@@ -58,6 +58,7 @@ function fakeKong() {
 				if (parsed.code === '888888') return send(429, { error: 'too_many_attempts' });
 				return send(401, { error: 'invalid_code' });
 			}
+			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: 'd'.repeat(56) });
 			if (path.startsWith('/rest/v1/') || path.startsWith('/auth/v1/')) return send(200, path.startsWith('/rest/v1/') ? [] : {});
 			return send(200, {});
 		});

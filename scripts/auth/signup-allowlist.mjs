@@ -43,3 +43,11 @@ export function isSignupAllowed(allowlist, email) {
 	const at = address.lastIndexOf('@');
 	return allowlist.addresses.has(address) || (at > 0 && allowlist.domains.has(address.slice(at + 1)));
 }
+
+// AUTH_SIGNUP_OPEN opens /register only, because an account mail goes to the address that typed
+// it and is bounded by the daily cap. A newsletter confirmation is a mail to a third party the
+// form cannot prove, so with no list it stays shut instead of falling back to "everyone".
+export function isNewsletterAllowed(allowlist, email, signupOpen) {
+	if (signupOpen && allowlist.isEmpty) return false;
+	return isSignupAllowed(allowlist, email);
+}
