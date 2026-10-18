@@ -80,7 +80,7 @@ const config = {
 	signupOpen: process.env.AUTH_SIGNUP_OPEN === 'true',
 	verificationExempt: process.env.AUTH_VERIFICATION_EXEMPT ?? '',
 	turnstileOptional: process.env.AUTH_TURNSTILE_OPTIONAL === 'true',
-	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR ?? 10),
+	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR || 10),
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
 };
@@ -397,30 +397,30 @@ async function sendAccountCreatedNotification(request, email) {
 }
 
 async function sendNewsletterConfirm(request, email, token) {
-	await sendMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Confirm your Prismatica newsletter subscription',
 		html: renderEmailTemplate('newsletter-confirm.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
 	});
-	await audit('newsletter_confirmation_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_confirmation_email_sent', request, { email });
 }
 
 async function sendNewsletterWelcome(request, email, token) {
-	await sendMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Welcome to the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-welcome.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
 	});
-	await audit('newsletter_welcome_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_welcome_email_sent', request, { email });
 }
 
 async function sendNewsletterUnsubscribe(request, email) {
-	await sendMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'You are unsubscribed from the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-unsubscribe.html', { Email: email, SiteURL: siteBaseUrl() }),
 	});
-	await audit('newsletter_unsubscribe_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_unsubscribe_email_sent', request, { email });
 }
 
 function cleanText(value, maxLength) {
@@ -495,7 +495,8 @@ const accountMail = createAccountMail({
 	},
 	isDeliverable: hasDeliverableEmailDomain,
 	audit: flowAudit,
-	newsletterOptIn: (email) => requestNewsletterOptIn(null, email),
+	// Open signup proves an address for the account only; the newsletter keeps its own allowlist rule.
+	newsletterOptIn: (email) => (newsletterAllowed(email) ? requestNewsletterOptIn(null, email) : undefined),
 	signupAllowed,
 });
 
@@ -667,12 +668,13 @@ async function handleDevConfirmedRegistration(request, response, context) {
 
 // An exempt address is never registered here (an admin creates it). The answer is a taken
 // address's, so the list is not readable from outside; a taken username answers 409 as it does for everyone.
-async function answerExemptRegistration(request, response, context) {
+async function answerExemptRegistration(response, context) {
 	if (await localProfileExists('username', context.profile.username)) {
 		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
 		return;
 	}
-	await audit('signup_refused_exempt', request, { email: context.email });
+	// Not awaited: an audit round trip would make this answer slower than a taken address's.
+	flowAudit('signup_refused_exempt', { email: context.email });
 	json(response, 202, REGISTER_ACCEPTED);
 }
 
@@ -692,7 +694,7 @@ async function handleRegister(request, response) {
 			return;
 		}
 		if (isVerificationExempt(verificationExempt, context.email)) {
-			await answerExemptRegistration(request, response, context);
+			await answerExemptRegistration(response, context);
 			return;
 		}
 		if (!config.requireEmailVerification || !context.profile.email_verification_consent) {

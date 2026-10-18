@@ -15,10 +15,12 @@ const audits = (event: string, address: string) =>
 const generateLinks = () => hitsTo('/auth/v1/admin/generate_link').length;
 
 let gateway: Gateway;
+let listed: Gateway;
 
 beforeAll(async () => {
 	await startFakeKong();
 	gateway = await startGateway({ AUTH_VERIFICATION_EXEMPT: EXEMPT, AUTH_EMAIL_DOMAIN_ALLOWLIST: DOMAINS });
+	listed = await startGateway({ AUTH_VERIFICATION_EXEMPT: EXEMPT, AUTH_EMAIL_DOMAIN_ALLOWLIST: DOMAINS, AUTH_SIGNUP_ALLOWLIST: `${EXEMPT},news@arlet.test` });
 }, 30_000);
 
 afterAll(stopAll);
@@ -104,11 +106,47 @@ describe('POST /api/auth/register with an exempt address', () => {
 		expect(audits('signup_refused_exempt', EXEMPT)).toBe(1);
 	});
 
+	it('does not wait for the audit write, so its latency is not a way to read the list', async () => {
+		upstream.auditDelayMs = 600;
+		try {
+			const started = Date.now();
+			const exempt = await register(EXEMPT, 'exempt_slow');
+			expect(exempt.status).toBe(202);
+			expect(Date.now() - started).toBeLessThan(300);
+			await settle();
+			await new Promise((done) => setTimeout(done, 300));
+			expect(audits('signup_refused_exempt', EXEMPT)).toBe(1);
+		} finally {
+			upstream.auditDelayMs = 0;
+		}
+	});
+
 	it('still lets a fresh non-exempt address through to a link and a mail', async () => {
 		expect((await register('fresh@arlet.test', 'fresh_user')).status).toBe(202);
 		await settle();
 		expect(generateLinks()).toBe(1);
 		expect(mailsTo('fresh@arlet.test')).toBe(1);
+	});
+});
+
+describe('POST /api/newsletter/subscribe', () => {
+	const subscribe = async (email: string) => {
+		const result = await call(listed, '/api/newsletter/subscribe', { body: { email, ...turnstile } });
+		await settle();
+		return result;
+	};
+
+	it('mails an exempt subscriber nothing and does not audit a confirmation as sent', async () => {
+		expect((await subscribe(EXEMPT)).status).toBe(200);
+		expect(mailsTo(EXEMPT)).toBe(0);
+		expect(audits('mail_suppressed_exempt', EXEMPT)).toBe(1);
+		expect(audits('newsletter_confirmation_email_sent', EXEMPT)).toBe(0);
+	});
+
+	it('still mails and audits a listed non-exempt subscriber', async () => {
+		expect((await subscribe('news@arlet.test')).status).toBe(200);
+		expect(mailsTo('news@arlet.test')).toBe(1);
+		expect(audits('newsletter_confirmation_email_sent', 'news@arlet.test')).toBe(1);
 	});
 });
 

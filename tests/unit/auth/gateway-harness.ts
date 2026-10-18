@@ -13,7 +13,7 @@ export type Hit = { method: string; path: string; body: string; apikey?: string 
 export type Gateway = { base: string; logs: () => string };
 
 export const hits: Hit[] = [];
-export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, existingEmails: [] as string[] };
+export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, auditDelayMs: 0, existingEmails: [] as string[] };
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
 let kongPort = 0;
@@ -40,10 +40,12 @@ function fakeKong() {
 		request.on('end', () => {
 			const path = request.url ?? '';
 			hits.push({ method: request.method ?? '', path, body, apikey: request.headers.apikey as string | undefined });
-			const send = (status: number, payload: unknown) => {
+			const reply = (status: number, payload: unknown) => {
 				response.writeHead(status, { 'content-type': 'application/json' });
 				response.end(JSON.stringify(payload));
 			};
+			// A slow audit write stands in for the database round trip the gateway must not wait on.
+			const send = path.includes('auth_record_audit_event') && upstream.auditDelayMs > 0 ? (status: number, payload: unknown) => setTimeout(() => reply(status, payload), upstream.auditDelayMs) : reply;
 			const parsed = body ? JSON.parse(body) : {};
 			if (path.startsWith('/auth/v1/token?grant_type=password')) {
 				if (upstream.passwordStatus !== 200) return send(upstream.passwordStatus, { error: 'invalid_grant' });

@@ -22,8 +22,14 @@ describe('boot with AUTH_SIGNUP_OPEN=true on a public https origin', () => {
 		expect(result.output).toContain('Auth gateway listening');
 	}, 15_000);
 
+	it('treats an empty AUTH_REGISTER_RATE_LIMIT_PER_HOUR as unset, which is the default 10', async () => {
+		const result = await boot({ ...PUBLIC_OK, AUTH_REGISTER_RATE_LIMIT_PER_HOUR: '' });
+		expect(result.output).toContain('Auth gateway listening');
+	}, 15_000);
+
 	it.each([
-		['verification off', { AUTH_REQUIRE_EMAIL_VERIFICATION: 'false' }, 'AUTH_REQUIRE_EMAIL_VERIFICATION'],
+		['verification off', { AUTH_REQUIRE_EMAIL_VERIFICATION: 'false' }, 'AUTH_SIGNUP_OPEN requires AUTH_REQUIRE_EMAIL_VERIFICATION'],
+		['a fractional register limit', { AUTH_REGISTER_RATE_LIMIT_PER_HOUR: '0.5' }, 'AUTH_REGISTER_RATE_LIMIT_PER_HOUR'],
 		['AUTH_DEMO_INSECURE', { AUTH_DEMO_INSECURE: 'true' }, 'AUTH_DEMO_INSECURE'],
 		['an invalid link key', { AUTH_LINK_SIGNING_KEY: 'short' }, 'AUTH_LINK_SIGNING_KEY'],
 		['a cap above 50', { AUTH_MAIL_DAILY_CAP: '51' }, 'AUTH_MAIL_DAILY_CAP'],
@@ -89,6 +95,26 @@ describe('POST /api/auth/register with signup open', () => {
 		v6.push((await attempt('2001:db8:5:6:aaaa:bbbb:cccc:dddd', 20)).status);
 		expect(v6).toEqual([202, 202, 202, 429, 429]);
 		expect((await attempt('2001:db8:5:7::1', 21)).status).toBe(202);
+	});
+});
+
+describe('POST /api/auth/register with newsletter consent', () => {
+	const withConsent = (gateway: typeof open, email: string, username: string) =>
+		call(gateway, '/api/auth/register', { body: { ...registration(email, username, 'localhost-turnstile-token'), profile: { ...registration(email, username).profile, newsletterConsent: true } } });
+	const mailSubjects = (address: string) => hits.filter((hit) => hit.path === '/email/v1/send' && hit.body.includes(address)).map((hit) => JSON.parse(hit.body).subject as string);
+	const newsletterMails = (address: string) => mailSubjects(address).filter((subject) => /newsletter/i.test(subject)).length;
+
+	it('opens no newsletter subscription on an open gateway: the verification mail only', async () => {
+		expect((await withConsent(open, 'consent@arlet.test', 'consent_o')).status).toBe(202);
+		await settle();
+		expect(mailSubjects('consent@arlet.test')).toHaveLength(1);
+		expect(newsletterMails('consent@arlet.test')).toBe(0);
+	});
+
+	it('still sends the confirmation to an address the allowlist names', async () => {
+		expect((await withConsent(closed, 'ines@arlet.test', 'ines_consent')).status).toBe(202);
+		await settle();
+		expect(newsletterMails('ines@arlet.test')).toBeGreaterThan(0);
 	});
 });
 
