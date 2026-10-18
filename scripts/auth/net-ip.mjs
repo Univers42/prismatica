@@ -32,8 +32,10 @@ import { isIPv6 } from 'node:net';
 export function normalizeIp(value) {
 	let ip = String(value ?? '').trim().toLowerCase();
 	if (!ip) return '';
-	// IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) -> 127.0.0.1
-	if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+	// [2001:db8::1] is how a URL or a proxy writes an IPv6 host; the bucket must not see it as another client.
+	if (ip.startsWith('[') && ip.endsWith(']')) ip = ip.slice(1, -1);
+	// IPv4-mapped IPv6 (::ffff:127.0.0.1, or the long 0:0:0:0:0:ffff:127.0.0.1) -> 127.0.0.1
+	ip = ip.replace(/^(?:::|(?:0{1,4}:){5})ffff:(?=\d+\.\d+\.\d+\.\d+$)/, '');
 	// strip a trailing :port from bare IPv4 (1.2.3.4:5678 -> 1.2.3.4); leave IPv6 alone
 	if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) ip = ip.slice(0, ip.lastIndexOf(':'));
 	return ip;
@@ -80,9 +82,10 @@ export function deriveClientIp(request, options = {}) {
 // the full address lets one client rotate through 2^64 buckets and never be limited.
 // Caveat: a /64 can be shared (one ISP prefix, a campus), so those users share one allowance;
 // that over-throttles, never under-throttles. A malformed value is returned as it came.
+// Caveat: only the dotted IPv4-mapped spellings are folded; the hex spelling (::ffff:102:304) keeps its own /64 bucket.
 export function ipBucket(ip) {
-	const address = String(ip ?? '').split('%')[0].toLowerCase();
-	if (!isIPv6(address)) return String(ip ?? '');
+	const address = normalizeIp(String(ip ?? '').split('%')[0]);
+	if (!isIPv6(address)) return address || String(ip ?? '');
 	const [head, tail] = address.split('::');
 	const headGroups = head ? head.split(':') : [];
 	const tailGroups = tail ? tail.split(':') : [];

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { ipBucket } from '../../../scripts/auth/net-ip.mjs';
+import { ipBucket, normalizeIp } from '../../../scripts/auth/net-ip.mjs';
 
 describe('ipBucket', () => {
 	it('keeps an IPv4 address and the unknown marker as they are', () => {
@@ -24,5 +24,24 @@ describe('ipBucket', () => {
 	it('drops an IPv6 zone id and leaves a malformed value alone', () => {
 		expect(ipBucket('fe80::1%eth0')).toBe(ipBucket('fe80::2'));
 		expect(ipBucket('not an ip')).toBe('not an ip');
+	});
+
+	it('keys a bracketed IPv6 like the bare one', () => {
+		expect(ipBucket('[2001:db8::1]')).toBe(ipBucket('2001:db8::2'));
+	});
+
+	it('keys every spelling of an IPv4-mapped address as the IPv4 address', () => {
+		expect(ipBucket('::ffff:1.2.3.4')).toBe('1.2.3.4');
+		expect(ipBucket('0:0:0:0:0:ffff:1.2.3.4')).toBe('1.2.3.4');
+		expect(ipBucket('[::ffff:1.2.3.4]')).toBe('1.2.3.4');
+		expect(ipBucket('::ffff:5.6.7.8')).not.toBe(ipBucket('::ffff:1.2.3.4'));
+	});
+});
+
+describe('normalizeIp', () => {
+	it('strips brackets and maps the long mapped form to IPv4', () => {
+		expect(normalizeIp('[2001:db8::1]')).toBe('2001:db8::1');
+		expect(normalizeIp('0:0:0:0:0:ffff:1.2.3.4')).toBe('1.2.3.4');
+		expect(normalizeIp('::FFFF:1.2.3.4')).toBe('1.2.3.4');
 	});
 });
