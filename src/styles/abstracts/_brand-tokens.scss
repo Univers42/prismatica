@@ -99,14 +99,18 @@
 	--brand-lens-rule: var(--brand-canvas-line);
 
 	// --- mascot ---
-	--brand-mascot-outline: var(--brand-canvas-text);
-	--brand-mascot-shell: color-mix(in srgb, var(--brand-palette-primary) 24%, var(--brand-canvas-surface));
-	--brand-mascot-tube: color-mix(in srgb, var(--brand-palette-secondary) 24%, var(--brand-canvas-surface));
-	--brand-mascot-lens: color-mix(in srgb, var(--brand-palette-secondary) 42%, var(--brand-canvas-bg));
-	--brand-mascot-rim: color-mix(in srgb, var(--brand-canvas-text) 72%, transparent);
+	// A light-bodied character with ink line work in every theme: only the shell,
+	// barrel and glass take the palette tint. Line, eye-white and pupil colours
+	// used to follow the canvas, which inverted the eyes on light themes and hid
+	// the mouth on dark ones.
+	--brand-mascot-outline: #1d1b26;
+	--brand-mascot-shell: color-mix(in srgb, var(--brand-palette-primary) 24%, #fff);
+	--brand-mascot-tube: color-mix(in srgb, var(--brand-palette-secondary) 24%, #fff);
+	--brand-mascot-lens: color-mix(in srgb, var(--brand-palette-secondary) 42%, #fff);
+	--brand-mascot-rim: #fff;
 	--brand-mascot-back: var(--brand-canvas-surface-2);
-	--brand-mascot-iris: var(--brand-canvas-bg);
-	--brand-mascot-mouth-fill: var(--brand-canvas-text);
+	--brand-mascot-iris: #1d1b26;
+	--brand-mascot-mouth-fill: #fff1ee;
 	--brand-mascot-cheek: color-mix(in srgb, var(--brand-palette-rose) 62%, transparent);
 	--brand-mascot-heart: var(--brand-palette-rose);
 	--brand-mascot-thought: var(--brand-thought-bg);
