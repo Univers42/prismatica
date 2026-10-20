@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-const SAFE_PUBLIC_ASSET_PATTERN = /^[-A-Za-z0-9._%() ]+\.(?:avif|gif|jpe?g|png|svg|webp)$/u;
+const SAFE_PUBLIC_ASSET_PATTERN = /^[-A-Za-z0-9._%() ]+\.(?:avif|gif|jpe?g|png|svg|webp|mp4|webm)$/u;
 const BLOCKED_PATH_PATTERN = /(?:^|[\\/])\.\.(?:[\\/]|$)|[\\/]|\0|^[a-z][a-z0-9+.-]*:/iu;
 
 /**

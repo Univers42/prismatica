@@ -1,0 +1,243 @@
+---
+// One slot for a product photo or video. Without a capture it renders a
+// wireframe "blueprint" at the media's final size; with one it renders the
+// <img>/<video>. The box size never changes between the two, so swapping a
+// placeholder for the real file is a one-line edit in src/data/media-shots.ts.
+// Children, when given, replace the blueprint as a drawn stand-in (AppSketch).
+import type { MediaShot } from '../../data/media-shots';
+import { resolveMediaSlot } from '../../lib/media-slot';
+
+type Props = {
+	shot: MediaShot;
+	frame?: 'browser' | 'phone' | 'none';
+	/** Above-the-fold slots load eagerly. */
+	eager?: boolean;
+	class?: string;
+};
+
+const { shot, frame = 'none', eager = false, class: className = '' } = Astro.props;
+const slot = resolveMediaSlot(shot, import.meta.env.BASE_URL);
+const kindLabel = shot.kind === 'video' ? 'Video' : 'Photo';
+const hasSketch = Astro.slots.has('default');
+const meta = [kindLabel, shot.durationSeconds ? `${shot.durationSeconds} s` : '', `${slot.width}×${slot.height}`].filter(Boolean).join(', ');
+---
+
+<div class:list={['media-slot', `media-slot--${frame}`, className]} data-media-slot={shot.id}>
+	{frame === 'browser' && (
+		<div class="media-slot__bar" aria-hidden="true"><span></span><span></span><span></span></div>
+	)}
+	<div class:list={['media-slot__screen', slot.ratioClass]}>
+		{slot.state === 'placeholder' && hasSketch && (
+			<div class="media-slot__sketch" role="img" aria-label={slot.label}><slot /></div>
+		)}
+		{slot.state === 'placeholder' && !hasSketch && (
+			<div class="media-slot__blueprint" role="img" aria-label={slot.label}>
+				<svg class="media-slot__cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+					<path d="M0 0L100 100M100 0L0 100" />
+				</svg>
+				<div class="media-slot__note" aria-hidden="true">
+					<span class:list={['media-slot__icon', `media-slot__icon--${shot.kind}`]}></span>
+					<span class="media-slot__label">{slot.label}</span>
+					<span class="media-slot__meta">{meta}</span>
+				</div>
+			</div>
+		)}
+		{slot.state === 'image' && (
+			<img
+				src={slot.src}
+				width={slot.width}
+				height={slot.height}
+				alt={slot.label}
+				loading={eager ? 'eager' : 'lazy'}
+				decoding="async"
+				fetchpriority={eager ? 'high' : 'auto'}
+			/>
+		)}
+		{slot.state === 'video' && (
+			<video
+				width={slot.width}
+				height={slot.height}
+				poster={slot.poster}
+				aria-label={slot.label}
+				muted
+				loop
+				playsinline
+				preload="none"
+				data-media-autoplay
+			>
+				<source src={slot.src} type={slot.type} />
+			</video>
+		)}
+	</div>
+</div>
+
+<script>
+	import { bindMediaAutoplay } from '../../scripts/media-autoplay';
+	bindMediaAutoplay(document);
+</script>
+
+<style is:global>
+	.media-slot {
+		--slot-line: color-mix(in srgb, var(--system-text-strong) 12%, transparent);
+		--slot-line-strong: color-mix(in srgb, var(--system-text-strong) 28%, transparent);
+		position: relative;
+		display: grid;
+		min-width: 0;
+		overflow: hidden;
+		border: 1px solid var(--system-border);
+		border-radius: var(--system-radius-md);
+		background: var(--system-surface);
+	}
+
+	.media-slot__screen {
+		position: relative;
+		overflow: hidden;
+		background: var(--system-surface-sunken);
+	}
+
+	.media-slot--r16x10 { aspect-ratio: 16 / 10; }
+	.media-slot--r16x9 { aspect-ratio: 16 / 9; }
+	.media-slot--r4x3 { aspect-ratio: 4 / 3; }
+	.media-slot--r1x1 { aspect-ratio: 1 / 1; }
+	.media-slot--r4x5 { aspect-ratio: 4 / 5; }
+	.media-slot--r9x16 { aspect-ratio: 9 / 16; }
+
+	.media-slot__screen > :is(img, video) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	/* Blueprint: a 24px grid, corner-to-corner diagonals, a centred note. */
+	.media-slot__blueprint {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		padding: clamp(0.75rem, 3vw, 1.25rem);
+		background-image:
+			linear-gradient(var(--slot-line) 1px, transparent 1px),
+			linear-gradient(90deg, var(--slot-line) 1px, transparent 1px);
+		background-size: 24px 24px;
+		background-position: -1px -1px;
+	}
+
+	.media-slot__blueprint::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--system-surface) 70%, transparent) 50%, transparent 65%);
+		transform: translateX(-100%);
+		animation: media-slot-sheen 3.2s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+		pointer-events: none;
+	}
+
+	.media-slot__cross {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		stroke: var(--slot-line-strong);
+		stroke-width: 1;
+		stroke-dasharray: 4 6;
+		vector-effect: non-scaling-stroke;
+		fill: none;
+	}
+
+	.media-slot__cross path { vector-effect: non-scaling-stroke; }
+
+	.media-slot__note {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		justify-items: center;
+		gap: 0.35rem;
+		max-width: min(32ch, 86%);
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--slot-line-strong);
+		border-radius: var(--system-radius-sm);
+		background: var(--system-surface);
+		text-align: center;
+	}
+
+	.media-slot__label {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.35;
+		color: var(--system-text-strong);
+	}
+
+	.media-slot__meta {
+		font-size: 0.75rem;
+		color: var(--system-text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.media-slot__icon {
+		position: relative;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--system-text-strong);
+	}
+
+	/* Play triangle for video, a horizon line for photos — pure CSS shapes. */
+	.media-slot__icon--video::before {
+		content: '';
+		position: absolute;
+		inset: 8px 8px 8px 11px;
+		background: var(--system-surface);
+		clip-path: polygon(0 0, 100% 50%, 0 100%);
+	}
+
+	.media-slot__icon--image {
+		border-radius: 6px;
+		background: transparent;
+		border: 1.5px solid var(--system-text-strong);
+	}
+
+	.media-slot__icon--image::before {
+		content: '';
+		position: absolute;
+		inset: auto 4px 4px;
+		height: 9px;
+		background: var(--system-text-strong);
+		clip-path: polygon(0 100%, 35% 20%, 60% 70%, 78% 45%, 100% 100%);
+	}
+
+	.media-slot__bar {
+		display: flex;
+		gap: 6px;
+		padding: 9px 12px;
+		border-bottom: 1px solid var(--system-border);
+		background: var(--system-surface);
+	}
+
+	.media-slot__bar span {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--slot-line-strong);
+	}
+
+	.media-slot--phone {
+		padding: 10px;
+		border: 1px solid var(--system-border-strong);
+		border-radius: 34px;
+		background: var(--system-surface-inverse);
+	}
+
+	.media-slot--phone .media-slot__screen { border-radius: 25px; }
+
+	@keyframes media-slot-sheen {
+		0%, 35% { transform: translateX(-100%); }
+		100% { transform: translateX(100%); }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.media-slot__blueprint::after { animation: none; display: none; }
+	}
+
+	:root.motion-paused .media-slot__blueprint::after { animation-play-state: paused; }
+</style>
