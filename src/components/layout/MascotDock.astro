@@ -30,52 +30,87 @@
 
 <script>
 	// Bundled (not is:inline) so it loads under a strict `script-src 'self'` CSP.
+	import { MASCOT_LINES, ASSISTANT_PROMPT_LINE, STUDIO_STEP_EVENT } from '../../data/mascot-lines';
+	import { observeReadingBand } from '../../lib/reading-band';
+	import { setMountedMascotMood } from '../../scripts/mascot';
+
 	(() => {
-		const dock = document.querySelector('[data-component="mascot-dock"]');
+		const dock = document.querySelector<HTMLElement>('[data-component="mascot-dock"]');
 		if (!dock) return;
 		const bubble = dock.querySelector('[data-mascot-bubble]');
 		const tipEl = dock.querySelector('[data-mascot-tip]');
 		const dismiss = dock.querySelector('[data-mascot-dismiss]');
 		const STORAGE_KEY = 'prismatica:mascot-tip-dismissed';
-		const tips = [
-			'Try it: open the page above and type /.',
-			'Mail, calendar and boards, linked on one page.',
-			'Self-host the whole workspace with one command.',
-			'GDPR exports are one endpoint away.',
-			'Toggle services live in the Backend section ↑',
-			'Postgres + PostgREST = your typed API.',
-		];
-		let cursor = 0;
-		const rotate = () => {
-			if (!tipEl) return;
-			cursor = (cursor + 1) % tips.length;
-			tipEl.textContent = tips[cursor];
-		};
-		const dismissed = (() => {
+		let dismissed = (() => {
 			try { return globalThis.localStorage?.getItem(STORAGE_KEY) === '1'; }
 			catch { return false; }
 		})();
 		if (dismissed && bubble) bubble.setAttribute('hidden', '');
 		dismiss?.addEventListener('click', () => {
+			dismissed = true;
 			bubble?.setAttribute('hidden', '');
 			try { globalThis.localStorage?.setItem(STORAGE_KEY, '1'); } catch {}
 		});
-		// The bubble speaks in turns, six seconds on and fourteen off, instead
-		// of sitting over the page's content the whole time; hover or focus
-		// keeps it open (CSS). It changes tip while out of sight.
-		const SPEAK_MS = 6000;
-		const TURN_MS = 20000;
-		const speak = () => {
+
+		// Speaks one line at a time: the tip is shown while `is-speaking` is on
+		// the dock (CSS), and exactly one hide timer arms it back off. Speech is
+		// driven by what is being read, not a fixed rotation timer.
+		// Caveat: 5 s per section line and 7 s for the assistant prompt are
+		// reading-pace guesses, not measured reading times.
+		const SECTION_MS = 5000;
+		const ASSISTANT_MS = 7000;
+		let hideTimer = 0;
+		const speak = (line: string, ms: number) => {
+			// Never wake the dismissed bubble: the reader opted out.
+			if (dismissed || !tipEl) return;
+			window.clearTimeout(hideTimer);
+			tipEl.textContent = line;
 			dock.classList.add('is-speaking');
-			window.setTimeout(() => {
-				dock.classList.remove('is-speaking');
-				window.setTimeout(rotate, 400);
-			}, SPEAK_MS);
+			hideTimer = window.setTimeout(() => dock.classList.remove('is-speaking'), ms);
 		};
-		window.setTimeout(() => {
-			speak();
-			window.setInterval(speak, TURN_MS);
-		}, 3000);
+
+		// One line per page section: when the section in the reading band
+		// changes, the dock says that section's line.
+		const lineBySection = new Map<Element, string>();
+		for (const { section, line } of MASCOT_LINES) {
+			const el = document.getElementById(section);
+			if (el) lineBySection.set(el, line);
+		}
+		if (lineBySection.size > 0) {
+			observeReadingBand(lineBySection.keys(), (active) => {
+				if (!active) return;
+				speak(lineBySection.get(active) ?? '', SECTION_MS);
+			});
+		}
+		// The studio story fires this when the reader reaches the assistant
+		// step: speak the prompt and let the mascot think.
+		document.addEventListener(STUDIO_STEP_EVENT, (event) => {
+			if ((event as CustomEvent).detail !== 'assistant') return;
+			speak(ASSISTANT_PROMPT_LINE, ASSISTANT_MS);
+			setMountedMascotMood('thinking', 1400);
+		});
+
+		// On phones the dock covers body text while scrolling down, so it
+		// tucks away; it returns on a scroll up (`.is-tucked` off) or once the
+		// reader stops for a beat.
+		// Caveat: the 1.2 s idle is a feel value, not a reading-time measure;
+		// jumpy inertial scrolling can flap tuck/untuck near its threshold.
+		const phone = window.matchMedia('(max-width: 640px)');
+		const IDLE_MS = 1200;
+		let lastY = window.scrollY;
+		let idleTimer = 0;
+		const untuck = () => dock.classList.remove('is-tucked');
+		window.addEventListener('scroll', () => {
+			const y = window.scrollY;
+			const dy = y - lastY;
+			lastY = y;
+			if (!phone.matches) return;
+			if (dy > 2) dock.classList.add('is-tucked');
+			else if (dy < -2) untuck();
+			window.clearTimeout(idleTimer);
+			idleTimer = window.setTimeout(untuck, IDLE_MS);
+		}, { passive: true });
+
 		// Quiet while the hero fills the screen: the bubble sat on the hero's copy.
 		const hero = document.getElementById('top');
 		if (hero && typeof IntersectionObserver !== 'undefined') {
@@ -133,6 +168,28 @@
 	}
 
 	.mascot-dock__bubble[hidden] { display: none; }
+
+	/* Phone tuck: while the reader scrolls down the dock slides out of the
+	   way; `.is-tucked` is toggled by the script. Reduced motion: it simply
+	   hides/shows, no slide. */
+	.mascot-dock.is-tucked {
+		translate: 0 140%;
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.mascot-dock {
+			transition:
+				translate 260ms var(--ease-premium),
+				opacity 200ms linear,
+				visibility 0s linear 260ms;
+		}
+		/* Showing again: no visibility delay, or the dock would pop invisible. */
+		.mascot-dock:not(.is-tucked) {
+			transition: translate 260ms var(--ease-premium), opacity 160ms linear, visibility 0s;
+		}
+	}
 
 	/* Out of the way while the hero fills the screen (.is-quiet). */
 	.mascot-dock:is(.is-speaking, :hover, :focus-within):not(.is-quiet) .mascot-dock__bubble {
@@ -215,6 +272,7 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.mascot-dock,
 		.mascot-dock__bubble,
 		.mascot-dock__anchor { animation: none; transition: none; }
 	}

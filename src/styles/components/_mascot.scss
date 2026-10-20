@@ -40,11 +40,11 @@
 	--brow-spread: 0px;
 	--brow-arch-left: 0;
 	--brow-arch-right: 0;
-	--brow-thickness: 3.1px;
+	--brow-thickness: 3px;
 	--lens-color: var(--mascot-lens);
-	--shell-color: var(--mascot-shell);
+	--shell-color: color-mix(in srgb, var(--brand-palette-primary) 22%, var(--system-surface));
 	--tube-color: var(--mascot-tube);
-	--iris-color: var(--mascot-iris);
+	--iris-color: var(--system-text-strong);
 	--iris-scale: 1;
 	--shine-opacity: 1;
 	--shine-scale: 1;
@@ -104,20 +104,28 @@
 	will-change: transform;
 }
 
+/* Scroll lean (set by src/lib/scroll-lean.ts): the character leans with the
+   page and squashes subtly at speed, pivoting on its feet. Gated so paused or
+   reduced-motion visitors keep the character upright. */
+@media (prefers-reduced-motion: no-preference) {
+	:root:not(.motion-paused) .svg-body-group {
+		transform-box: fill-box;
+		transform-origin: 50% 100%;
+		rotate: var(--scroll-lean, 0deg);
+		scale: 1 var(--scroll-squash, 1);
+	}
+}
+
 .svg-arm,
-.svg-detail,
-.svg-stitch,
-.svg-center-band,
-.svg-bridge,
-.svg-bridge-shadow {
+.svg-bridge {
 	fill: none;
-	stroke: var(--mascot-outline);
+	stroke: var(--system-text-strong);
 	stroke-linecap: round;
 	stroke-linejoin: round;
 }
 
 .svg-arm {
-	stroke-width: 4;
+	stroke-width: 3;
 	transform-box: fill-box;
 	transform-origin: bottom center;
 	transition: transform 240ms ease;
@@ -131,17 +139,11 @@
 	transform: rotate(calc(var(--wave-right) - var(--arm-droop)));
 }
 
-.svg-detail,
-.svg-stitch {
-	stroke-width: 1.4;
-	opacity: 0.62;
-}
-
 .svg-shell,
 .svg-back {
 	fill: var(--shell-color);
-	stroke: var(--mascot-outline);
-	stroke-width: 2.2;
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
 	opacity: 1;
 	transition: fill 220ms ease;
 }
@@ -151,69 +153,72 @@
 	transform: translate(var(--depth-x), var(--depth-y));
 }
 
-.svg-barrel {
+/* Lens rim ring: sits between the barrel edge and the glass. */
+.svg-frame {
+	fill: none;
+	stroke: var(--system-surface);
+	stroke-width: 3;
+	transition: stroke 300ms ease;
+}
+
+.svg-glass {
+	fill: url('#binocle-glass');
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
+
+	/* Transitioning the fill url doesn't repaint the gradient stops, so mood
+	   color shifts go through the stops below. */
+	transition: stroke 300ms ease;
+}
+
+.svg-glass-core {
+	stop-color: var(--lens-color);
+	transition: stop-color 300ms ease;
+}
+
+.svg-glass-edge {
+	/* Deeper tint of the shell colour, anchored to the strong-outline token. */
+	stop-color: color-mix(in srgb, var(--shell-color) 72%, var(--system-text-strong));
+	transition: stop-color 300ms ease;
+}
+
+.svg-cap {
 	fill: var(--tube-color);
-	stroke: var(--mascot-outline);
-	stroke-width: 2.1;
-	opacity: 1;
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
 	transition: fill 280ms ease;
 }
 
-.svg-frame {
-	fill: var(--shell-color);
-	stroke: var(--mascot-outline);
-	stroke-width: 3.5;
-	opacity: 1;
-	transition: fill 300ms var(--ease-out-sketch);
-}
-
-.svg-inner-rim {
-	fill: var(--lens-color);
-	stroke: var(--mascot-outline);
-	stroke-width: 2;
-	opacity: 1;
-	transition: fill 300ms var(--ease-out-sketch);
-}
-
-.svg-rim {
-	fill: var(--mascot-rim);
-	stroke: var(--mascot-outline);
-	stroke-width: 1.9;
-	opacity: 0.96;
-	transition: opacity 240ms ease, fill 280ms ease;
-}
-
-.svg-center-band {
-	stroke-width: 2.8;
+.svg-hinge {
+	fill: var(--system-text-strong);
+	stroke: none;
 }
 
 .svg-bridge {
-	stroke-width: 3.6;
-}
-
-.svg-bridge-shadow {
-	stroke-width: 1.2;
-	opacity: 0.42;
+	fill: var(--system-surface);
+	stroke-width: 3;
+	transition: fill 280ms ease;
 }
 
 .svg-brow {
 	fill: none;
-	stroke: var(--mascot-outline);
+	stroke: var(--system-text-strong);
 	stroke-width: var(--brow-thickness);
 	stroke-linecap: round;
 	transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), stroke-width 220ms ease;
 }
 
 .svg-brow.left {
-	transform-origin: 44px 20px;
+	transform-origin: 46px 9px;
 	transform: translate(calc(var(--brow-spread) * -1), var(--brow-y)) rotate(var(--brow-left)) scaleY(calc(1 + var(--brow-arch-left) * 0.18));
 }
 
 .svg-brow.right {
-	transform-origin: 140px 20px;
+	transform-origin: 138px 9px;
 	transform: translate(var(--brow-spread), var(--brow-y)) rotate(var(--brow-right)) scaleY(calc(1 + var(--brow-arch-right) * 0.18));
 }
 
+/* Dark iris inside the glass; the shine is the only bright point. */
 .svg-eye {
 	transform: translate3d(var(--look-x), var(--look-y), 42px) scaleY(var(--blink));
 	transform-box: fill-box;
@@ -250,6 +255,43 @@
 	transition: opacity 300ms ease, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.svg-lid {
+	/* A closed-lid curtain over the glass: driven by the same --blink var the
+	   eye group uses, so blink and lid stay in step. */
+	fill: var(--shell-color);
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
+	transform-box: fill-box;
+	transform-origin: top;
+	transform: scaleY(calc(1 - var(--blink)));
+	transition: transform 120ms ease-out;
+}
+
+/* Glint sweep across the lenses; the clip keeps it inside the glass. */
+.svg-glint-line {
+	fill: none;
+	stroke: var(--paper);
+	stroke-width: 3;
+	stroke-linecap: round;
+	opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.svg-glint-line {
+		animation: glint-sweep 7s linear infinite;
+	}
+}
+
+@keyframes glint-sweep {
+	from {
+		transform: translateX(-34px);
+	}
+
+	to {
+		transform: translateX(34px);
+	}
+}
+
 .svg-cheek {
 	fill: var(--mascot-cheek);
 	stroke: none;
@@ -272,7 +314,7 @@
 }
 
 .svg-mouth-pad {
-	fill: var(--mascot-mouth-fill);
+	fill: var(--shell-color);
 	stroke: none;
 	opacity: 0.94;
 }
@@ -287,8 +329,8 @@
 
 .svg-mouth {
 	fill: none;
-	stroke: var(--mascot-outline);
-	stroke-width: 4.2;
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
 	stroke-linecap: round;
 	stroke-linejoin: round;
 }
@@ -306,7 +348,7 @@
 
 .svg-mouth.open {
 	fill: var(--mascot-mouth-fill);
-	stroke-width: 3.4;
+	stroke-width: 3;
 	opacity: var(--mouth-open-opacity);
 	transform: translateY(var(--mouth-y)) scale(var(--mouth-open-scale-x), var(--mouth-open-scale-y));
 }
@@ -326,7 +368,7 @@
 
 .svg-mouth.flat {
 	opacity: var(--mouth-flat-opacity);
-	stroke-width: 3.2;
+	stroke-width: 3;
 }
 
 .svg-mouth.grimace {
@@ -338,7 +380,7 @@
 .svg-mouth.teeth,
 .svg-mouth.zip {
 	opacity: var(--mouth-teeth-opacity);
-	stroke-width: 2.7;
+	stroke-width: 3;
 }
 
 .svg-mouth.zip {
@@ -348,17 +390,17 @@
 .svg-mouth.ooh {
 	fill: var(--ink);
 	opacity: var(--mouth-ooh-opacity);
-	stroke-width: 2.4;
+	stroke-width: 3;
 }
 
 .svg-mouth.tremble {
 	opacity: var(--mouth-tremble-opacity);
-	stroke-width: 3.6;
+	stroke-width: 3;
 }
 
 .svg-mouth.smirk {
 	opacity: var(--mouth-smirk-opacity);
-	stroke-width: 4;
+	stroke-width: 3;
 }
 
 .svg-mouth.silly-open {
@@ -369,8 +411,8 @@
 
 .svg-mouth.silly-tongue {
 	fill: var(--mascot-cheek);
-	stroke: var(--mascot-outline);
-	stroke-width: 2.2;
+	stroke: var(--system-text-strong);
+	stroke-width: 3;
 	opacity: var(--mouth-silly-tongue-opacity);
 	transform-origin: 92px 100px;
 }
@@ -429,11 +471,11 @@
 
 .right-lens-hotspot {
 	position: absolute;
-	right: 9%;
-	top: 21%;
+	right: 4%;
+	top: 17%;
 	z-index: 5;
-	width: 40%;
-	height: 55%;
+	width: 41%;
+	height: 64%;
 	clip-path: ellipse(47% 44% at 50% 50%);
 	cursor: pointer;
 	transition: transform 120ms ease;
