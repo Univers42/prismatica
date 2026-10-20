@@ -17,7 +17,9 @@
 
 .swipe-stack {
 	display: block;
-	padding-block: clamp(0.5rem, 1.5vw, 1rem) clamp(1.5rem, 4vw, 3rem);
+
+	// No top padding: the first scene is the full-bleed hero, flush to the header.
+	padding-block: 0 clamp(1.5rem, 4vw, 3rem);
 	background: transparent;
 }
 

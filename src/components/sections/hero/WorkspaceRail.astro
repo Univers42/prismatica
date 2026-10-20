@@ -1,0 +1,190 @@
+---
+// The workspace window's sidebar: the six connected apps. Each entry is a real
+// control that drops its app into the page as a linked block. The hero sky
+// aims its beams at these tiles (scripts/hero-universe.ts).
+import AppGlyph from '../../ui/AppGlyph.astro';
+import { CONNECTED_APPS, type ConnectedAppId } from '../../../data/connected-apps';
+
+type Props = { current: ConnectedAppId };
+const { current } = Astro.props;
+---
+
+<div class="rail">
+	<p class="rail__workspace" aria-hidden="true"><span class="rail__badge">N</span>Northwind Studio</p>
+	<p class="rail__head" aria-hidden="true">Apps</p>
+	<ul class="rail__nodes" role="list" aria-label="Apps you can add to this page">
+		{CONNECTED_APPS.map((app) => (
+			<li>
+				<button type="button" class="rail__node" data-workspace-node={app.id} aria-pressed={app.id === current ? 'true' : 'false'}>
+					<span class="rail__tile"><AppGlyph name={app.id} /></span>
+					<span class="rail__name">{app.name}</span>
+				</button>
+			</li>
+		))}
+	</ul>
+	<p class="rail__sync" aria-hidden="true"><span class="rail__sync-dot"></span>All apps in sync</p>
+</div>
+
+<style is:global>
+	/* Sized in the window's logical px (HeroDevices zooms it); 44px rows keep
+	   each control at least 24px on the smallest usable screen. */
+	.rail {
+		display: grid;
+		grid-template-rows: auto auto 1fr auto;
+		gap: 4px;
+		padding: 14px 10px;
+		border-right: 1px solid var(--system-divider);
+		background: color-mix(in srgb, var(--system-surface-sunken) 70%, var(--system-surface));
+	}
+
+	.rail__workspace {
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		margin: 0 0 10px;
+		padding: 0 6px;
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--system-text-strong);
+		white-space: nowrap;
+	}
+
+	.rail__badge {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 7px;
+		background: var(--system-text-strong);
+		color: var(--system-surface);
+		font-size: 12px;
+	}
+
+	.rail__head {
+		margin: 0;
+		padding: 0 6px 4px;
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--system-text-muted);
+	}
+
+	.rail__nodes {
+		display: grid;
+		align-content: start;
+		gap: 2px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.rail__node {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		min-height: 44px;
+		padding: 0 8px;
+		border: 0;
+		border-radius: 10px;
+		background: none;
+		color: var(--system-text);
+		font: 500 14px/1.2 var(--system-font-sans);
+		text-align: left;
+		cursor: pointer;
+		transition: background-color 160ms ease, color 160ms ease;
+	}
+
+	.rail__node:hover { background: color-mix(in srgb, var(--system-text-strong) 6%, transparent); }
+
+	.rail__tile {
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		border: 1px solid var(--system-border);
+		border-radius: 8px;
+		background: var(--system-surface);
+		transition: transform 420ms var(--spring-pop), background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+	}
+
+	.rail__tile .app-glyph { width: 16px; height: 16px; }
+	.rail__node:active .rail__tile { transform: scale(0.9); }
+
+	.rail__node[aria-pressed='true'] {
+		background: var(--system-surface);
+		color: var(--system-text-strong);
+		box-shadow: 0 0 0 1px var(--system-border), 0 6px 14px -10px color-mix(in srgb, var(--system-text-strong) 50%, transparent);
+	}
+
+	.rail__node[aria-pressed='true'] .rail__tile {
+		border-color: var(--brand-palette-primary);
+		background: var(--brand-palette-primary);
+		color: #fff;
+	}
+
+	.rail__node:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 1px;
+	}
+
+	.rail__sync {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0;
+		padding: 0 8px;
+		font-size: 12px;
+		color: var(--system-text-muted);
+	}
+
+	.rail__sync-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--system-success-text);
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--system-success-text) 50%, transparent);
+		animation: rail-sync 2.4s ease-out infinite;
+	}
+
+	@keyframes rail-sync {
+		70%, 100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--system-success-text) 0%, transparent); }
+	}
+
+	.workspace.is-offscreen .rail__sync-dot,
+	:root.motion-paused .rail__sync-dot { animation-play-state: paused; }
+
+	/* Phone layout: the sidebar becomes a bottom tab bar, one tab per app. */
+	@container app (width < 720px) {
+		.rail {
+			grid-area: rail;
+			display: block;
+			padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+			border-top: 1px solid var(--system-divider);
+			border-right: 0;
+		}
+
+		.rail__workspace,
+		.rail__head,
+		.rail__sync { display: none; }
+
+		.rail__nodes { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; }
+
+		.rail__node {
+			flex-direction: column;
+			justify-content: center;
+			gap: 3px;
+			min-height: 50px;
+			padding: 4px 2px;
+			font-size: 11px;
+			text-align: center;
+		}
+
+		.rail__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.rail__node[aria-pressed='true'] { box-shadow: none; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rail__sync-dot { animation: none; }
+		.rail__tile { transition: none; }
+	}
+</style>

@@ -1,0 +1,136 @@
+---
+// The sky behind the hero: stars, the planet under the devices, and business
+// items from every app, drifting and linked, all drawn or placed by
+// scripts/hero-universe.ts. Decorative: the headline and the workspace demo
+// carry the meaning. Positions below are each chip's centre: a band above the
+// headline on phones and tablets, a ring around it from 1000px.
+import AppGlyph from '../../ui/AppGlyph.astro';
+import { UNIVERSE_NODES } from '../../../data/universe';
+---
+
+<div class="universe" data-universe aria-hidden="true">
+	<canvas class="universe__canvas" data-universe-canvas></canvas>
+	<div class="universe__field">
+		{UNIVERSE_NODES.map((node) => (
+			<span class:list={['uv-node', `uv-node--${node.id}`, { 'uv-node--wide': node.wideOnly }]} data-universe-node={node.id} data-app={node.app}>
+				{node.initials
+					? <span class="uv-node__mark uv-node__mark--person">{node.initials}</span>
+					: <span class="uv-node__mark"><AppGlyph name={node.app} /></span>}
+				{node.label}
+			</span>
+		))}
+	</div>
+</div>
+
+<script>
+	import { bindHeroUniverse } from '../../../scripts/hero-universe';
+	const root = document.querySelector<HTMLElement>('[data-universe]');
+	if (root) bindHeroUniverse(root);
+</script>
+
+<style is:global>
+	.universe {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.universe__canvas {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+
+	.universe__field {
+		position: absolute;
+		inset: 0 0 auto;
+		height: var(--sky-band);
+	}
+
+	.uv-node {
+		position: absolute;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.22rem 0.6rem 0.22rem 0.22rem;
+		border: 1px solid color-mix(in srgb, var(--sky-text) 14%, transparent);
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--sky-deep) 78%, var(--sky-text) 6%);
+		color: color-mix(in srgb, var(--sky-text) 86%, transparent);
+		font-size: 0.75rem;
+		white-space: nowrap;
+		transform: translate(-50%, -50%);
+		pointer-events: auto;
+		transition: border-color 260ms ease, background-color 260ms ease, box-shadow 260ms ease, color 260ms ease;
+	}
+
+	.uv-node:hover { border-color: color-mix(in srgb, var(--sky-text) 40%, transparent); color: var(--sky-text); }
+
+	.uv-node.is-lit {
+		border-color: var(--sky-signal);
+		background: color-mix(in srgb, var(--sky-signal) 22%, var(--sky-deep));
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--sky-signal) 14%, transparent), 0 0 28px color-mix(in srgb, var(--sky-signal) 45%, transparent);
+		color: var(--sky-text);
+	}
+
+	.uv-node__mark {
+		display: grid;
+		place-items: center;
+		width: 1.4rem;
+		height: 1.4rem;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--sky-text) 10%, transparent);
+		color: var(--sky-text);
+		outline: 2px solid transparent;
+	}
+
+	.uv-node__mark .app-glyph { width: 13px; height: 13px; }
+
+	.uv-node__mark--person {
+		background: var(--sky-signal);
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+
+	.uv-node--wide { display: none; }
+
+	/* Band layout (< 1000px): eight items above the headline, twelve from 640px. */
+	.uv-node--acme { left: 20%; top: 16%; }
+	.uv-node--quote { left: 64%; top: 13%; }
+	.uv-node--invoice { left: 35%; top: 37%; }
+	.uv-node--ines { left: 80%; top: 34%; }
+	.uv-node--launch { left: 21%; top: 58%; }
+	.uv-node--landing { left: 66%; top: 55%; }
+	.uv-node--plan { left: 40%; top: 79%; }
+	.uv-node--flow { left: 80%; top: 76%; }
+	.uv-node--pricing { left: 42%; top: 15%; }
+	.uv-node--kickoff { left: 11%; top: 40%; }
+	.uv-node--contract { left: 88%; top: 52%; }
+	.uv-node--northwind { left: 13%; top: 80%; }
+
+	@media (min-width: 640px) {
+		.uv-node { gap: 0.45rem; padding: 0.3rem 0.75rem 0.3rem 0.3rem; font-size: 0.8125rem; }
+		.uv-node__mark { width: 1.65rem; height: 1.65rem; }
+		.uv-node__mark .app-glyph { width: 15px; height: 15px; }
+		.uv-node--wide { display: inline-flex; }
+	}
+
+	/* Ring layout: six items in each gutter around the centred headline. */
+	@media (min-width: 1000px) {
+		.uv-node--acme { left: 12%; top: 18%; }
+		.uv-node--quote { left: 23%; top: 6%; }
+		.uv-node--ines { left: 7%; top: 38%; }
+		.uv-node--invoice { left: 17%; top: 54%; }
+		.uv-node--pricing { left: 8%; top: 72%; }
+		.uv-node--northwind { left: 19%; top: 90%; }
+		.uv-node--landing { left: 78%; top: 6%; }
+		.uv-node--contract { left: 90%; top: 20%; }
+		.uv-node--launch { left: 83%; top: 38%; }
+		.uv-node--kickoff { left: 93%; top: 55%; }
+		.uv-node--plan { left: 81%; top: 72%; }
+		.uv-node--flow { left: 91%; top: 90%; }
+	}
+</style>

@@ -1,0 +1,225 @@
+---
+// The slash command line and its app menu. State (open, filtered, typed text)
+// is driven by scripts/hero-workspace.ts through the data-workspace-* hooks.
+import AppGlyph from '../../ui/AppGlyph.astro';
+import { CONNECTED_APPS, type ConnectedAppId } from '../../../data/connected-apps';
+
+type Props = { current: ConnectedAppId };
+const { current } = Astro.props;
+---
+
+<div class="workspace__command">
+	<button
+		type="button"
+		class="workspace__slash"
+		aria-label="Type / to add an app"
+		aria-expanded="false"
+		aria-controls="workspace-menu"
+		data-workspace-trigger
+	>
+		<span class="workspace__typed" data-workspace-typed></span>
+		<span class="workspace__caret" aria-hidden="true"></span>
+		<span class="workspace__placeholder" aria-hidden="true">Type / to add an app</span>
+	</button>
+
+	<div class="workspace__menu" id="workspace-menu" data-workspace-menu hidden>
+		<p class="workspace__menu-title" id="workspace-menu-title">Add an app</p>
+		<ul class="workspace__items" aria-labelledby="workspace-menu-title">
+			{CONNECTED_APPS.map((app) => (
+				<li>
+					<button
+						type="button"
+						class="workspace__item"
+						data-workspace-item={app.id}
+						data-command={app.command}
+						aria-pressed={app.id === current ? 'true' : 'false'}
+					>
+						<span class="workspace__item-icon"><AppGlyph name={app.id} /></span>
+						<span class="workspace__item-text">
+							<strong>{app.name}</strong>
+							<span>{app.hint}</span>
+						</span>
+						<kbd aria-hidden="true">/{app.command}</kbd>
+					</button>
+				</li>
+			))}
+		</ul>
+	</div>
+</div>
+
+<style is:global>
+	.workspace__command { position: relative; }
+
+	.workspace__slash {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		min-height: 44px;
+		padding: 0.5rem 0.75rem;
+		border: 1px dashed var(--system-border);
+		border-radius: var(--system-radius-sm);
+		background: transparent;
+		color: var(--system-text-muted);
+		font: inherit;
+		font-size: 0.9375rem;
+		text-align: left;
+		cursor: text;
+		transition: border-color 160ms ease, background-color 160ms ease;
+	}
+
+	.workspace__slash:hover { border-color: var(--system-border-strong); }
+
+	.workspace__slash[aria-expanded='true'] {
+		border-style: solid;
+		border-color: var(--system-border-strong);
+		background: var(--system-surface-sunken);
+	}
+
+	.workspace__slash:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+
+	.workspace__typed {
+		font-family: var(--system-font-mono);
+		color: var(--system-text-strong);
+	}
+
+	.workspace__caret {
+		width: 2px;
+		height: 1.2em;
+		margin-left: 1px;
+		background: var(--brand-palette-primary);
+		animation: workspace-caret 1.05s steps(1) infinite;
+	}
+
+	.workspace__placeholder { margin-left: 0.45rem; }
+	.workspace__typed:not(:empty) ~ .workspace__placeholder { display: none; }
+
+	.workspace__menu {
+		position: absolute;
+		z-index: 6;
+		top: calc(100% + 6px);
+		left: 0;
+		width: min(20rem, 100%);
+		padding: 0.35rem;
+		border: 1px solid var(--system-border);
+		border-radius: var(--system-radius-md);
+		background: var(--system-surface-raised, var(--system-surface));
+		box-shadow:
+			0 2px 6px -2px color-mix(in srgb, var(--system-text-strong) 18%, transparent),
+			0 22px 44px -18px color-mix(in srgb, var(--system-text-strong) 40%, transparent);
+		transform-origin: 1.5rem top;
+		animation: workspace-menu-pop 420ms var(--spring-pop) both;
+	}
+
+	.workspace__menu[hidden],
+	.workspace__items > li[hidden] { display: none; }
+
+	.workspace__menu-title {
+		margin: 0.3rem 0.55rem 0.4rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--system-text-muted);
+	}
+
+	.workspace__items {
+		display: grid;
+		gap: 1px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.workspace__item {
+		position: relative;
+		display: grid;
+		grid-template-columns: 2rem minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.65rem;
+		width: 100%;
+		min-height: 46px;
+		padding: 0.3rem 0.5rem;
+		border: 0;
+		border-radius: var(--system-radius-sm);
+		background: transparent;
+		color: var(--system-text-strong);
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.workspace__item:hover,
+	.workspace__item.is-active,
+	.workspace__item:focus-visible { background: var(--system-surface-sunken); }
+
+	.workspace__item:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: -2px;
+	}
+
+	.workspace__item.is-active::before,
+	.workspace__item[aria-pressed='true']::before {
+		content: '';
+		position: absolute;
+		inset: 8px auto 8px 0;
+		width: 2px;
+		border-radius: 2px;
+		background: var(--brand-palette-primary);
+	}
+
+	.workspace__item-icon {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border: 1px solid var(--system-divider);
+		border-radius: 7px;
+		background: var(--system-surface);
+	}
+
+	.workspace__item-icon .app-glyph { width: 17px; height: 17px; }
+
+	.workspace__item-text { display: grid; min-width: 0; line-height: 1.25; }
+	.workspace__item-text strong { font-size: 0.875rem; font-weight: 600; }
+
+	.workspace__item-text span {
+		overflow: hidden;
+		font-size: 0.75rem;
+		color: var(--system-text-muted);
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.workspace__item kbd {
+		font-family: var(--system-font-mono);
+		font-size: 0.6875rem;
+		color: var(--system-text-muted);
+	}
+
+	@keyframes workspace-caret { 50% { opacity: 0; } }
+
+	@keyframes workspace-menu-pop {
+		from { opacity: 0; transform: translateY(-6px) scale(0.94); }
+		to { opacity: 1; transform: none; }
+	}
+
+	/* Phone layout: the menu spans the page as a grid of app names, so all six
+	   fit above the tab bar. */
+	@container app (width < 720px) {
+		.workspace__menu { width: 100%; }
+		.workspace__items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+		.workspace__item { grid-template-columns: 1.75rem minmax(0, 1fr); gap: 0.4rem; min-height: 44px; padding: 0.25rem 0.4rem; }
+		.workspace__item-icon { width: 1.75rem; height: 1.75rem; }
+
+		.workspace__item-text span,
+		.workspace__item kbd { display: none; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.workspace__menu,
+		.workspace__caret { animation: none; }
+	}
+
+	:root.motion-paused .workspace__caret { animation: none; }
+</style>

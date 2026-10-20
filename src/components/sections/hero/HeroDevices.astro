@@ -1,0 +1,64 @@
+---
+// The same workspace on a laptop, a tablet and a phone, standing on the
+// planet's horizon. The laptop's lid opens as the scene scrolls into view
+// (CSS scroll-driven animation, styles/components/_devices*.scss) and closes
+// again on the way back up; its screen runs the live workspace demo. The
+// tablet and phone screens are MediaSlots, so real captures drop in from
+// src/data/media-shots.ts.
+import PrismaticaLogo from '../../brand/PrismaticaLogo.astro';
+import MediaSlot from '../../ui/MediaSlot.astro';
+import AppSketch from './AppSketch.astro';
+import HeroWorkspace from './HeroWorkspace.astro';
+import { MEDIA_SHOTS } from '../../../data/media-shots';
+import '../../../styles/components/_devices.scss';
+import '../../../styles/components/_devices-laptop.scss';
+---
+
+<div class="devices" data-devices>
+	<span class="devices__horizon" data-horizon aria-hidden="true"></span>
+
+	<div class="tablet">
+		<MediaSlot shot={MEDIA_SHOTS.tablet}><AppSketch name="board" /></MediaSlot>
+	</div>
+
+	<div class="laptop">
+		<div class="laptop__body">
+			<div class="laptop__deck" aria-hidden="true">
+				<span class="laptop__keys"></span>
+				<span class="laptop__pad"></span>
+				<span class="laptop__lip"></span>
+			</div>
+			<div class="laptop__lid">
+				<div class="laptop__face">
+					<div class="laptop__screen" data-laptop-screen>
+						<div class="laptop__app" data-laptop-app>
+							<HeroWorkspace />
+						</div>
+						<span class="laptop__notch" aria-hidden="true"></span>
+						<span class="laptop__glare" aria-hidden="true"></span>
+					</div>
+				</div>
+				<div class="laptop__back" aria-hidden="true">
+					<PrismaticaLogo class="laptop__logo" decorative />
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="phone">
+		<div class="phone__screen">
+			<p class="phone__status" aria-hidden="true"><span>9:41</span><span class="phone__island"></span><span class="phone__battery"></span></p>
+			<MediaSlot shot={MEDIA_SHOTS.mobile}><AppSketch name="mail" /></MediaSlot>
+			<span class="phone__home" aria-hidden="true"></span>
+		</div>
+	</div>
+</div>
+
+<script>
+	import { bindLaptopScreen, bindScrollScrub } from '../../../scripts/hero-devices';
+	const scene = document.querySelector<HTMLElement>('[data-devices]');
+	const screen = document.querySelector<HTMLElement>('[data-laptop-screen]');
+	const app = document.querySelector<HTMLElement>('[data-laptop-app]');
+	if (scene) bindScrollScrub(scene);
+	if (screen && app) bindLaptopScreen(screen, app);
+</script>
