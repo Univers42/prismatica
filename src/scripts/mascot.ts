@@ -65,11 +65,11 @@ const mascotState: MascotState = {
 	frame: undefined,
 };
 
+// Decorative: the button around it carries the name, and a titled SVG inside
+// a labelled button gives it text its label does not contain (WCAG 2.5.3).
 function mascotSvgMarkup(): string {
 	return `
-		<svg class="binocle__svg" viewBox="0 0 184 118" role="img" aria-labelledby="binocle-title binocle-desc">
-			<title id="binocle-title">Prismatica mascot</title>
-			<desc id="binocle-desc">Living binocular mascot with tracking pupils, expressive brows and an animated mouth.</desc>
+		<svg class="binocle__svg" viewBox="0 0 184 118" aria-hidden="true">
 			<defs>
 				<radialGradient id="binocle-glass" cx="0.35" cy="0.3" r="0.9">
 					<stop offset="0" class="svg-glass-core" />
