@@ -34,6 +34,9 @@
 @use 'sections/baas-status';
 @use 'layout/footer';
 @use 'components/portal';
+@use 'components/portal-dialog';
+@use 'components/portal-fields';
+@use 'components/portal-sky';
 @use 'utilities/animations';
 @use 'utilities/responsive';
 // Swiss / Vignelli theme (DEFAULT) — loaded last so its [data-theme='swiss']

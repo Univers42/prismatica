@@ -9,8 +9,9 @@ import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient } from '../lib/baas-client';
-import { bindLoginCodeStep, loginCodeMarkup, showLoginCodeStep } from './portal-login-code';
-import { bindLoginApproveStep, loginApproveMarkup, showLoginApproveStep } from './portal-login-approve';
+import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
+import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
+import { createPortalMarkup } from './portal-markup';
 
 export type PortalMode = 'start' | 'connect';
 
@@ -174,100 +175,6 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 			body: JSON.stringify({ email }),
 		}).catch(() => undefined);
 	}
-}
-
-function createPortalMarkup(mode: PortalMode): string {
-	const quick = mode === 'connect';
-	const requiresEmailVerification = authConfig.requireEmailVerification;
-	const registerNote = requiresEmailVerification
-		? 'Create an account with email verification before opening your workspace.'
-		: 'Create a local development account and open your workspace.';
-	return `
-		<dialog id="portal" class="portal portal--${quick ? 'quick' : 'start'}" aria-labelledby="portal-title">
-			<h2 id="portal-title" class="visually-hidden">Prismatica workspace portal</h2>
-			<button class="portal__close" type="button" aria-label="Close portal" data-close-portal>×</button>
-			<section class="portal__panel portal__panel--login" aria-label="Secure connection panel">
-				<div class="portal-login-area">
-					<div class="portal-brand portal-brand--auth" aria-hidden="true"><span class="portal-brand__mark">P</span><span>Prismatica</span></div>
-					<p class="portal-kicker">${quick ? 'Account connection' : 'Secure account'}</p>
-					<h2 aria-hidden="true" data-auth-title>${quick ? 'Open your workspace' : 'Create your workspace'}</h2>
-					<p class="portal-note" data-auth-note>${quick ? 'Sign in to connect Prismatica with the osionos app.' : registerNote}</p>
-					<div class="portal-auth-switch" role="group" aria-label="Authentication mode">
-						<button class="portal-auth-switch__button" type="button" data-auth-switch="register" aria-pressed="${quick ? 'false' : 'true'}">Create account</button>
-						<button class="portal-auth-switch__button" type="button" data-auth-switch="login" aria-pressed="${quick ? 'true' : 'false'}">Sign in</button>
-					</div>
-					<form class="portal-login" novalidate>
-						<div class="field-row portal-register-identity">
-							<div class="field field--half portal-register-only">
-								<label for="portal-username">Username <span aria-hidden="true">*</span></label>
-								<input id="portal-username" name="username" type="text" autocomplete="username" placeholder="prism-user" minlength="3" maxlength="32" required />
-								<p id="portal-username-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Choose a unique username.</p>
-							</div>
-							<div class="field field--half">
-								<label for="portal-email">Email <span aria-hidden="true">*</span></label>
-								<input id="portal-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
-								<p id="portal-email-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Work or personal email.</p>
-							</div>
-						</div>
-						<div class="field">
-							<label for="portal-password">Password <span aria-hidden="true">*</span></label>
-							<div class="input-with-button">
-								<input id="portal-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" minlength="8" required />
-								<button class="button button--ghost button--icon" type="button" data-password-toggle aria-label="Show password">
-									<span class="header-icon--toggle" aria-hidden="true">Show</span>
-								</button>
-							</div>
-							<p id="portal-password-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Min 8 chars with upper, lower, and digit.</p>
-							<div class="portal-register-only" data-password-strength-container></div>
-						</div>
-						<div class="field portal-register-only">
-							<label for="portal-confirm-password">Confirm password <span aria-hidden="true">*</span></label>
-							<div class="input-with-button">
-								<input id="portal-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="••••••••••••" minlength="8" required />
-								<button class="button button--ghost button--icon" type="button" data-password-toggle aria-label="Show password">
-									<span class="header-icon--toggle" aria-hidden="true">Show</span>
-								</button>
-							</div>
-							<p id="portal-confirm-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Passwords must match.</p>
-						</div>
-						<div class="field field--checkbox portal-register-only">
-							<label class="checkbox-label" for="portal-terms-consent">
-								<input id="portal-terms-consent" name="termsConsent" type="checkbox" required />
-								<span>I agree to the <a href="/legal/terms/" target="_blank" rel="noopener">Terms</a> and <a href="/legal/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a> <span aria-hidden="true">*</span></span>
-							</label>
-						</div>
-						<div class="field field--checkbox portal-register-only ${requiresEmailVerification ? '' : 'is-hidden'}">
-							<label class="checkbox-label" for="portal-email-verification-consent">
-								<input id="portal-email-verification-consent" name="emailVerificationConsent" type="checkbox" ${requiresEmailVerification ? 'checked required' : ''} />
-								<span>Send me an email verification link to activate my workspace <span aria-hidden="true">*</span></span>
-							</label>
-						</div>
-						<div class="field field--checkbox portal-register-only">
-							<label class="checkbox-label" for="portal-newsletter-consent">
-								<input id="portal-newsletter-consent" name="newsletterConsent" type="checkbox" />
-								<span>Keep me updated on Prismatica product updates (optional)</span>
-							</label>
-						</div>
-						<div class="portal-turnstile-wrapper" data-turnstile-slot>
-							<input type="hidden" name="turnstileToken" data-turnstile-token />
-						</div>
-						<output class="portal-form-error" aria-live="assertive" role="alert" hidden></output>
-						<button class="portal-link-action" type="button" data-resend-verification hidden>Send a new link</button>
-						<button class="button button--primary button--full" type="submit" data-auth-submit>
-							${quick ? 'Sign in' : 'Create workspace account'}
-						</button>
-						<div class="portal-alt-actions">
-							<button class="portal-link-action" type="button" data-portal-action="forgot-password">
-								Forgot password?
-							</button>
-						</div>
-					</form>
-					${loginCodeMarkup()}
-					${loginApproveMarkup()}
-				</div>
-			</section>
-		</dialog>
-	`;
 }
 
 type PortalFormElements = {
@@ -532,6 +439,14 @@ export function bindEmailFieldValidation(scope: ParentNode = document): void {
 	});
 }
 
+const STRENGTH_LABELS: Record<ReturnType<typeof checkPasswordStrength>['level'], string> = {
+	empty: 'Enter a strong password',
+	weak: 'Weak: add length, case, digits or a symbol',
+	fair: 'Fair: one more rule makes it good',
+	good: 'Good password',
+	strong: 'Strong password',
+};
+
 function renderPasswordStrength(root: ParentNode): void {
 	const container = root.querySelector('[data-password-strength-container]');
 	if (!container) return;
@@ -549,7 +464,7 @@ function renderPasswordStrength(root: ParentNode): void {
 	meter.append(bar);
 	const label = document.createElement('span');
 	label.className = 'password-meter__label';
-	label.textContent = strength.level || 'Enter a strong password';
+	label.textContent = STRENGTH_LABELS[strength.level];
 	container.replaceChildren(meter, label);
 }
 

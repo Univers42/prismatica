@@ -77,6 +77,28 @@ describe('Portal Script Module', () => {
 		expect(meter?.querySelector('.password-meter__label')?.textContent).not.toBe('');
 	});
 
+	it('names password strength in words, never the internal level id', () => {
+		openPortal('start');
+		const password = document.querySelector<HTMLInputElement>('#portal-password')!;
+		const label = () => document.querySelector('.password-meter__label')?.textContent ?? '';
+		password.value = 'x';
+		password.dispatchEvent(new Event('input'));
+		password.value = '';
+		password.dispatchEvent(new Event('input'));
+		expect(label()).toBe('Enter a strong password');
+		password.value = 'Abcdefgh12!x';
+		password.dispatchEvent(new Event('input'));
+		expect(['weak', 'fair', 'good', 'strong']).not.toContain(label());
+		expect(label()).toMatch(/password|Weak|Fair/);
+	});
+
+	it('labels the dialog with its visible, mode-aware title', () => {
+		openPortal('connect');
+		const title = document.getElementById(document.querySelector('#portal')?.getAttribute('aria-labelledby') ?? '');
+		expect(title?.textContent).toBe('Open your workspace');
+		expect(title?.getAttribute('aria-hidden')).toBeNull();
+	});
+
 	it('binds password toggle buttons to switch input type', () => {
 		document.body.innerHTML = `
 			<div class="field">

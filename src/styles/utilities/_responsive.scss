@@ -93,14 +93,6 @@
 	.character-grid {
 		grid-template-columns: 1fr;
 	}
-
-	.portal {
-		padding: 0.9rem;
-	}
-
-	.portal__panel {
-		padding: 1.15rem;
-	}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -148,11 +140,7 @@
 		font-size: 1.125rem;
 		padding: 0.875rem 1.125rem;
 	}
-	
-	.portal {
-		padding: 0.75rem;
-	}
-	
+
 	.powers-grid,
 	.character-grid {
 		gap: 1rem;

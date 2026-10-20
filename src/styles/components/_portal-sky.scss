@@ -1,0 +1,226 @@
+// Sign-in dialog: the card sizes and the night-sky side panel (the six apps
+// orbiting one account). The panel uses the hero's local sky colours,
+// declared on dialog.portal in _portal-dialog.scss.
+
+.portal__aside {
+	display: none;
+}
+
+.portal-orbit {
+	width: min(100%, 320px);
+	overflow: visible;
+}
+
+.portal-orbit__ring {
+	fill: none;
+	stroke: color-mix(in srgb, var(--portal-sky-text) 12%, transparent);
+}
+
+.portal-orbit__ring--far {
+	stroke-dasharray: 2 6;
+}
+
+.portal-orbit__wire {
+	stroke: color-mix(in srgb, var(--portal-sky-text) 20%, transparent);
+}
+
+.portal-orbit__flow {
+	fill: none;
+	stroke: var(--portal-signal);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-dasharray: 0.14 1;
+	stroke-dashoffset: 0.14;
+	animation: portal-flow 3.4s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.portal-orbit__flow--1 {
+	animation-delay: -0.6s;
+}
+
+.portal-orbit__flow--2 {
+	animation-delay: -1.9s;
+}
+
+.portal-orbit__flow--3 {
+	animation-delay: -1.2s;
+}
+
+.portal-orbit__flow--4 {
+	animation-delay: -2.7s;
+}
+
+.portal-orbit__flow--5 {
+	animation-delay: -0.3s;
+}
+
+.portal-orbit__node rect {
+	fill: var(--portal-sky-text);
+	filter: drop-shadow(0 6px 14px rgb(0 0 0 / 45%));
+}
+
+.portal-orbit__glyph {
+	fill: none;
+	stroke: var(--portal-sky-ink);
+	stroke-width: 1.9;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.portal-orbit__core {
+	fill: var(--portal-signal);
+}
+
+.portal-orbit__halo {
+	fill: none;
+	stroke: var(--portal-signal);
+	stroke-width: 1.5;
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: portal-halo 2.8s ease-out infinite;
+}
+
+.portal-orbit__logo {
+	color: var(--portal-sky-text);
+}
+
+.portal__aside-title {
+	margin: 0.5rem 0 0;
+	font-size: 1.5rem;
+	font-weight: 650;
+	letter-spacing: -0.02em;
+	color: var(--portal-sky-text);
+}
+
+.portal__aside-text {
+	max-width: 30ch;
+	margin: 0;
+	font-size: 0.95rem;
+	line-height: 1.5;
+	color: color-mix(in srgb, var(--portal-sky-text) 70%, transparent);
+}
+
+@keyframes portal-in {
+	from {
+		opacity: 0;
+		transform: translateY(18px) scale(0.985);
+	}
+}
+
+@keyframes portal-flow {
+	to {
+		stroke-dashoffset: -1;
+	}
+}
+
+@keyframes portal-halo {
+	from {
+		opacity: 0.8;
+		transform: scale(1);
+	}
+
+	to {
+		opacity: 0;
+		transform: scale(1.7);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.portal__frame,
+	.portal-orbit__flow,
+	.portal-orbit__halo {
+		animation: none;
+	}
+}
+
+:root.motion-paused .portal-orbit__flow,
+:root.motion-paused .portal-orbit__halo {
+	animation-play-state: paused;
+}
+
+// A centred card once there is room around it.
+@media (width >= 560px) {
+	dialog.portal[open] {
+		padding: 1.5rem;
+	}
+
+	.portal__frame {
+		width: min(30rem, 100%);
+		height: min(100%, 56rem);
+		border: 1px solid var(--system-dialog-border);
+		border-radius: 22px;
+		box-shadow: 0 40px 120px -30px rgb(0 0 0 / 60%);
+	}
+
+	.portal__bar {
+		position: static;
+		border-bottom: 0;
+		background: transparent;
+	}
+
+	.portal-login-area {
+		padding-inline: 2rem;
+	}
+}
+
+// Split: form on the left, the sky on the right; close floats over the sky.
+@media (width >= 900px) {
+	.portal__frame {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+		width: min(62rem, 100%);
+		height: min(100%, 48rem);
+	}
+
+	.portal__main {
+		position: static;
+	}
+
+	.portal__close {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		z-index: 3;
+		border-color: color-mix(in srgb, var(--portal-sky-text) 22%, transparent);
+		background: color-mix(in srgb, var(--portal-sky-text) 8%, transparent);
+		color: var(--portal-sky-text);
+
+		&:hover {
+			background: color-mix(in srgb, var(--portal-sky-text) 16%, transparent);
+		}
+	}
+
+	.portal-login-area {
+		padding: 0.75rem 2.75rem 2.5rem;
+	}
+
+	.portal__aside {
+		position: relative;
+		display: grid;
+		align-content: center;
+		justify-items: center;
+		gap: 0.75rem;
+		padding: 3rem 2.5rem;
+		overflow: hidden;
+		background:
+			radial-gradient(110% 70% at 50% 115%, color-mix(in srgb, var(--portal-signal) 40%, transparent), transparent 62%),
+			linear-gradient(180deg, var(--portal-sky-ink), var(--portal-sky-deep));
+		text-align: center;
+
+		// Two offset dot lattices read as a scattered star field.
+		&::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background-image:
+				radial-gradient(circle, rgb(255 255 255 / 55%) 0.8px, transparent 1.2px),
+				radial-gradient(circle, rgb(255 255 255 / 30%) 0.6px, transparent 1px);
+			background-position: 0 0, 37px 53px;
+			background-size: 113px 97px, 71px 83px;
+			pointer-events: none;
+		}
+
+		> * {
+			position: relative;
+		}
+	}
+}
