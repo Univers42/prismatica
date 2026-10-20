@@ -5,7 +5,7 @@ import CanvasWindowsIllustration from '../svg/CanvasWindowsIllustration.astro';
 
 <section class="section section--surface canvas-windows" id="canvas">
 	<div class="section__container canvas-windows__grid">
-		<header class="canvas-windows__copy" data-scroll-rise>
+		<header class="canvas-windows__copy" data-reveal="head">
 			<Eyebrow icon="✶">Workspace anatomy</Eyebrow>
 			<h2 class="section__title canvas-windows__title">One canvas, many windows.</h2>
 			<p class="section__lede canvas-windows__lede">
@@ -93,5 +93,42 @@ import CanvasWindowsIllustration from '../svg/CanvasWindowsIllustration.astro';
 		.canvas-windows__svg {
 			min-width: 0;
 		}
+	}
+
+	/* Once the figure has arrived (lib/scroll-reveal.ts), each note draws its
+	   arrow toward the window it describes, then its label settles in; the
+	   six notes follow each other. Arrows have pathLength="1", so one dash of
+	   length 1 covers any curve. Without JS the notes are simply there. */
+	@media (prefers-reduced-motion: no-preference) {
+		:root:not(.motion-paused) .canvas-windows__figure.reveal-prep .canvas-windows__note {
+			--note-at: calc(var(--reveal-delay, 0ms) + 360ms + var(--note-order, 0) * 160ms);
+
+			path {
+				stroke-dasharray: 1;
+				stroke-dashoffset: 1;
+				transition: stroke-dashoffset 640ms var(--ease-premium) var(--note-at);
+			}
+
+			path + path {
+				transition-duration: 220ms;
+				transition-delay: calc(var(--note-at) + 420ms);
+			}
+
+			text {
+				opacity: 0;
+				transition: opacity 480ms var(--ease-premium) calc(var(--note-at) + 260ms);
+			}
+		}
+
+		:root:not(.motion-paused) .canvas-windows__figure.is-revealed .canvas-windows__note {
+			path { stroke-dashoffset: 0; }
+			text { opacity: 1; }
+		}
+
+		.canvas-windows__note:nth-child(2 of .canvas-windows__note) { --note-order: 1; }
+		.canvas-windows__note:nth-child(3 of .canvas-windows__note) { --note-order: 2; }
+		.canvas-windows__note:nth-child(4 of .canvas-windows__note) { --note-order: 3; }
+		.canvas-windows__note:nth-child(5 of .canvas-windows__note) { --note-order: 4; }
+		.canvas-windows__note:nth-child(6 of .canvas-windows__note) { --note-order: 5; }
 	}
 </style>

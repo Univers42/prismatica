@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isThemeName, normalizeTheme, themeIcon, themeDisplayName } from '../../../src/lib/theme-config';
+import { isThemeName, normalizeTheme, themeDisplayName } from '../../../src/lib/theme-config';
 
 describe('theme-config', () => {
 	describe('isThemeName', () => {
@@ -32,13 +32,6 @@ describe('theme-config', () => {
 		it('returns null for unknown themes', () => {
 			expect(normalizeTheme('unknown')).toBeNull();
 			expect(normalizeTheme(null)).toBeNull();
-		});
-	});
-
-	describe('themeIcon', () => {
-		it('returns correct icons', () => {
-			expect(themeIcon('swiss')).toBe('▦');
-			expect(themeIcon('aurora')).toBe('✦');
 		});
 	});
 

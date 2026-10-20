@@ -198,10 +198,6 @@ function init(): void {
 }
 
 
-/** Scroll reveal helper */
-function initScrollReveal(): void {
-}
-
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */

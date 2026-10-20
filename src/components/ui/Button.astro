@@ -80,7 +80,14 @@ const classes = [
 			color 160ms var(--system-ease-standard),
 			border-color 160ms var(--system-ease-standard),
 			box-shadow 160ms var(--system-ease-standard),
-			transform 160ms var(--system-ease-standard);
+			transform 160ms var(--system-ease-standard),
+			scale 140ms var(--ease-premium);
+	}
+
+	/* Every variant answers a press the same way; `scale` composes with the
+	   hover lift's transform instead of replacing it. */
+	.ui-button:active:not([disabled], [aria-disabled='true']) {
+		scale: 0.97;
 	}
 
 	.ui-button:focus-visible {
@@ -127,7 +134,7 @@ const classes = [
 	}
 	.ui-button--primary:active:not([disabled]) {
 		background: var(--system-action-bg-active);
-		transform: translateY(0) scale(0.98);
+		transform: translateY(0);
 	}
 
 	.ui-button--secondary {
@@ -137,6 +144,7 @@ const classes = [
 	}
 	.ui-button--secondary:hover:not([disabled]) {
 		background: var(--system-action-secondary-bg-hover);
+		transform: translateY(-1px);
 	}
 
 	.ui-button--ghost {
@@ -152,8 +160,10 @@ const classes = [
 		.ui-button {
 			transition: none;
 		}
-		.ui-button:hover:not([disabled]) {
+		.ui-button:hover:not([disabled]),
+		.ui-button:active:not([disabled]) {
 			transform: none;
+			scale: none;
 		}
 	}
 </style>

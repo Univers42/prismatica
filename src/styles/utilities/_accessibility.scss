@@ -83,35 +83,7 @@ abbr[title],
 	cursor: help;
 }
 
-/* Scroll reveal: tasteful entry transitions for sections that opt in via
- * data-scroll-rise / data-scroll-grow / data-reveal. JS adds .is-revealed
- * when the element scrolls into view. Suppressed under reduced-motion. */
-.reveal-prep {
-	opacity: 0;
-	transform: translateY(26px);
-	transition:
-		opacity 640ms var(--ease-premium, cubic-bezier(0.16, 1, 0.3, 1)),
-		transform 640ms var(--ease-premium, cubic-bezier(0.16, 1, 0.3, 1));
-	will-change: opacity, transform;
-}
-
-.reveal-prep[data-scroll-grow] {
-	transform: translateY(20px) scale(0.965);
-}
-
-.reveal-prep.is-revealed {
-	opacity: 1;
-	transform: translateY(0) scale(1);
-}
-
 @media (prefers-reduced-motion: reduce) {
-	.reveal-prep,
-	.reveal-prep.is-revealed {
-		opacity: 1;
-		transform: none;
-		transition: none;
-	}
-
 	/*
 	 * Global kill-switch: neutralise every animation/transition for users who
 	 * request reduced motion. Without this, the animated mascot (_mascot.scss)

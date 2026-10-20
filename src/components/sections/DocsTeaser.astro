@@ -9,11 +9,21 @@ const links = [
 	{ href: '/docs/#backend/kong-api-gateway',              kind: 'postgrest' },
 	{ href: '/docs/#platform/gdpr-auth-security-migrations', kind: 'gdpr' },
 ];
+
+const codeSample = `import { createClient } from '@grobase/js';
+
+const baas = createClient({ url, anonKey });
+
+const { data, error } = await baas
+	.from('projects')
+	.select('id, name, owner:users(email)')
+	.eq('archived', false);`;
+const codeLines = codeSample.split('\n');
 ---
 
 <section class="section section--surface docs-teaser" id="docs">
 	<div class="section__container docs-teaser__grid">
-		<div data-scroll-rise>
+		<div data-reveal="head">
 			<Eyebrow>Built for engineers</Eyebrow>
 			<h2 class="section__title docs-teaser__title">Read the docs.<br/>Ship in an afternoon.</h2>
 			<p class="section__lede docs-teaser__lede">
@@ -25,14 +35,7 @@ const links = [
 		<div class="docs-teaser__panel" data-scroll-grow>
 			<Card variant="doc">
 				<div class="docs-teaser__codewrap">
-				<pre class="docs-teaser__code"><code>{`import { createClient } from '@grobase/js';
-
-const baas = createClient({ url, anonKey });
-
-const { data, error } = await baas
-	.from('projects')
-	.select('id, name, owner:users(email)')
-	.eq('archived', false);`}</code></pre>
+				<pre class="docs-teaser__code"><code>{codeLines.map((line, index) => (<>{index > 0 && '\n'}<span class="docs-teaser__line">{line}</span></>))}</code></pre>
 				<button type="button" class="docs-teaser__copy" data-copy-code aria-label="Copy code sample">
 					<svg class="docs-teaser__copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
 						<rect x="9" y="9" width="11" height="11" rx="2.5" />
@@ -154,6 +157,31 @@ const { data, error } = await baas
 		outline: 3px solid var(--system-focus-ring);
 		outline-offset: 2px;
 		border-radius: var(--system-radius-sm);
+	}
+
+	/* The sample types itself in once the panel has landed
+	   (lib/scroll-reveal.ts): each line wipes in left to right, in order. */
+	.docs-teaser__line { display: inline-block; }
+	@media (prefers-reduced-motion: no-preference) {
+		:root:not(.motion-paused) .docs-teaser__panel.reveal-prep .docs-teaser__line {
+			opacity: 0;
+			clip-path: inset(0 100% 0 0);
+			transition:
+				opacity 260ms linear,
+				clip-path 420ms var(--ease-premium);
+			transition-delay: calc(var(--reveal-delay, 0ms) + 380ms + var(--line, 0) * 110ms);
+		}
+		:root:not(.motion-paused) .docs-teaser__panel.is-revealed .docs-teaser__line {
+			opacity: 1;
+			clip-path: inset(0 -1ch 0 0);
+		}
+		.docs-teaser__line:nth-child(2) { --line: 1; }
+		.docs-teaser__line:nth-child(3) { --line: 2; }
+		.docs-teaser__line:nth-child(4) { --line: 3; }
+		.docs-teaser__line:nth-child(5) { --line: 4; }
+		.docs-teaser__line:nth-child(6) { --line: 5; }
+		.docs-teaser__line:nth-child(7) { --line: 6; }
+		.docs-teaser__line:nth-child(n + 8) { --line: 7; }
 	}
 </style>
 

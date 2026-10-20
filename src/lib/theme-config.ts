@@ -19,17 +19,6 @@ export function normalizeTheme(value: string | null): ThemeName | null {
 	return null;
 }
 
-export function themeIcon(theme: ThemeName): string {
-	const icons: Record<ThemeName, string> = {
-		swiss: '▦',
-		aurora: '✦',
-		solar: '☼',
-		ember: '◒',
-		forest: '◆',
-	};
-	return icons[theme];
-}
-
 export function themeDisplayName(theme: ThemeName): string {
 	const labels: Record<ThemeName, string> = {
 		swiss: 'Swiss',

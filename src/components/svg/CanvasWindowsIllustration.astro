@@ -3,7 +3,7 @@ type Props = {
 	class?: string;
 };
 ---
-<svg class="canvas-windows__svg {props.class}" viewBox="0 0 1100 640" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-labelledby="canvas-windows-title canvas-windows-desc">
+<svg class="canvas-windows__svg {props.class}" viewBox="-20 0 1180 640" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-labelledby="canvas-windows-title canvas-windows-desc">
 	<title id="canvas-windows-title">One Prismatica canvas with several product windows</title>
 	<desc id="canvas-windows-desc">A hand-drawn dashboard showing notes, charts, assistant context, Postgres rows, privacy panels, sharing controls, and code extensions.</desc>
 	<defs>
@@ -141,40 +141,52 @@ type Props = {
 		<line x1="812" y1="532" x2="880" y2="532" stroke-dasharray="3 3" />
 	</g>
 
-	<g stroke="var(--brand-palette-primary)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 100 130 Q 180 110 240 160" filter="url(#canvas-wobble-tight)" />
-		<path d="M 232 154 L 244 162 L 232 170" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-primary)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 100 130 Q 180 110 240 160" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 232 154 L 244 162 L 232 170" pathLength="1" />
+		</g>
+		<text x="36" y="116" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-primary)">drag anything in</text>
 	</g>
-	<text x="36" y="116" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-primary)">drag anything in</text>
 
-	<g stroke="var(--brand-palette-secondary)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 590 50 Q 620 80 640 130" filter="url(#canvas-wobble-tight)" />
-		<path d="M 634 122 L 642 134 L 650 124" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-secondary)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 590 50 Q 620 80 640 130" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 634 122 L 642 134 L 650 124" pathLength="1" />
+		</g>
+		<text x="450" y="42" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-secondary)">dashboards</text>
 	</g>
-	<text x="450" y="42" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-secondary)">dashboards</text>
 
-	<g stroke="var(--brand-palette-rose)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 1040 200 Q 1000 200 970 220" filter="url(#canvas-wobble-tight)" />
-		<path d="M 980 212 L 968 220 L 976 232" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-rose)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 1040 200 Q 1000 200 970 220" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 980 212 L 968 220 L 976 232" pathLength="1" />
+		</g>
+		<text x="990" y="180" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-rose)">auth context</text>
 	</g>
-	<text x="990" y="180" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-rose)">auth context</text>
 
-	<g stroke="var(--brand-palette-primary)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 70 460 Q 130 440 240 420" filter="url(#canvas-wobble-tight)" />
-		<path d="M 232 412 L 244 420 L 234 432" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-primary)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 70 460 Q 130 440 240 420" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 232 412 L 244 420 L 234 432" pathLength="1" />
+		</g>
+		<text x="22" y="490" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-primary)">local DB</text>
 	</g>
-	<text x="22" y="490" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-primary)">local DB</text>
 
-	<g stroke="var(--brand-palette-secondary)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 660 600 Q 660 580 660 440" filter="url(#canvas-wobble-tight)" />
-		<path d="M 654 448 L 660 438 L 668 448" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-secondary)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 660 600 Q 660 580 660 440" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 654 448 L 660 438 L 668 448" pathLength="1" />
+		</g>
+		<text x="540" y="618" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-secondary)">private / shared / public</text>
 	</g>
-	<text x="540" y="618" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-secondary)">private / shared / public</text>
 
-	<g stroke="var(--brand-palette-warm)" fill="none" stroke-width="1.8" stroke-linecap="round">
-		<path d="M 1050 470 Q 1000 480 970 470" filter="url(#canvas-wobble-tight)" />
-		<path d="M 980 462 L 968 470 L 978 482" />
+	<g class="canvas-windows__note">
+		<g stroke="var(--brand-palette-warm)" fill="none" stroke-width="1.8" stroke-linecap="round">
+			<path d="M 1050 470 Q 1000 480 970 470" filter="url(#canvas-wobble-tight)" pathLength="1" />
+			<path d="M 980 462 L 968 470 L 978 482" pathLength="1" />
+		</g>
+		<text x="998" y="510" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-warm)">fork & extend</text>
 	</g>
-	<text x="998" y="510" font-family="var(--brand-font-annotation)" font-size="22" fill="var(--brand-palette-warm)">fork & extend</text>
 	<ellipse cx="660" cy="234" rx="88" ry="42" stroke="var(--brand-palette-primary)" stroke-width="1.6" stroke-dasharray="4 5" fill="none" filter="url(#canvas-wobble-tight)" opacity="0.7" />
 </svg>

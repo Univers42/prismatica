@@ -60,7 +60,22 @@
 			bubble?.setAttribute('hidden', '');
 			try { globalThis.localStorage?.setItem(STORAGE_KEY, '1'); } catch {}
 		});
-		setInterval(rotate, 9000);
+		// The bubble speaks in turns, six seconds on and fourteen off, instead
+		// of sitting over the page's content the whole time; hover or focus
+		// keeps it open (CSS). It changes tip while out of sight.
+		const SPEAK_MS = 6000;
+		const TURN_MS = 20000;
+		const speak = () => {
+			dock.classList.add('is-speaking');
+			window.setTimeout(() => {
+				dock.classList.remove('is-speaking');
+				window.setTimeout(rotate, 400);
+			}, SPEAK_MS);
+		};
+		window.setTimeout(() => {
+			speak();
+			window.setInterval(speak, TURN_MS);
+		}, 3000);
 		// Quiet while the hero fills the screen: the bubble sat on the hero's copy.
 		const hero = document.getElementById('top');
 		if (hero && typeof IntersectionObserver !== 'undefined') {
@@ -105,12 +120,28 @@
 		line-height: 1.4;
 		color: var(--system-text);
 		pointer-events: auto;
-		animation: mascot-pop 320ms var(--system-ease-emphasized) both;
+		opacity: 0;
+		translate: 0 8px;
+		scale: 0.94;
+		transform-origin: 22px 100%;
+		visibility: hidden;
+		transition:
+			opacity 220ms linear,
+			translate 360ms var(--ease-premium),
+			scale 360ms var(--ease-premium),
+			visibility 0s linear 360ms;
 	}
 
 	.mascot-dock__bubble[hidden] { display: none; }
 
-	.mascot-dock.is-quiet .mascot-dock__bubble { visibility: hidden; }
+	/* Out of the way while the hero fills the screen (.is-quiet). */
+	.mascot-dock:is(.is-speaking, :hover, :focus-within):not(.is-quiet) .mascot-dock__bubble {
+		opacity: 1;
+		translate: none;
+		scale: none;
+		visibility: visible;
+		transition-delay: 0s;
+	}
 
 	/* On phones the bubble covered body text at every scroll position. */
 	@media (max-width: 640px) {
@@ -176,11 +207,6 @@
 		background: transparent;
 		border: 0;
 		cursor: pointer;
-	}
-
-	@keyframes mascot-pop {
-		from { opacity: 0; transform: translateY(8px) scale(0.92); }
-		to   { opacity: 1; transform: translateY(0)   scale(1); }
 	}
 
 	@media (max-width: 540px) {

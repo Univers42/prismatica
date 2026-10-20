@@ -6,25 +6,106 @@
 /*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
+/*   Updated: 2026/10/20 19:30:00 by dlesieur         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-// Scroll reveals are intentionally one-shot and transform-only. Avoid
-// scroll-linked timelines, filters, sticky pins, or per-frame scaling; those are
-// beautiful in demos and unpleasant on real laptops during long pages.
+// One-shot entrances below the hero, triggered by lib/scroll-reveal.ts, which
+// adds .reveal-prep (hidden) and later .is-revealed with a --reveal-delay so
+// elements that arrive together cascade. Section heads keep their block still
+// and bring their lines in turn: the rule draws, the title rises out of a
+// slot, the rest follows. Movement uses the individual translate and scale
+// properties so it composes with a component's own transform (hover lifts,
+// presses) instead of overwriting it. Everything here sits behind the pause
+// button: with .motion-paused the prep state never applies, so nothing hides.
 
-[data-scroll-grow],
-[data-scroll-rise] {
-	transform-origin: center center;
+:root {
+	--reveal-rise: 18px;
+	--reveal-duration: 680ms;
+	--reveal-line-gap: 90ms;
 }
 
-@media (prefers-reduced-motion: reduce) {
-	[data-scroll-grow],
-	[data-scroll-rise] {
-		animation: none !important;
-		opacity: 1 !important;
-		filter: none !important;
-		transform: none !important;
+@media (prefers-reduced-motion: no-preference) {
+	:root:not(.motion-paused) {
+		.reveal-prep {
+			opacity: 0;
+			translate: 0 var(--reveal-rise);
+			transition:
+				opacity var(--reveal-duration) var(--ease-premium) var(--reveal-delay, 0ms),
+				translate var(--reveal-duration) var(--ease-premium) var(--reveal-delay, 0ms),
+				scale var(--reveal-duration) var(--ease-premium) var(--reveal-delay, 0ms);
+		}
+
+		// Large surfaces (app windows, the diagram, pricing tiers) settle from
+		// slightly smaller as well, anchored at their top edge.
+		.reveal-prep[data-scroll-grow] {
+			translate: 0 calc(var(--reveal-rise) * 1.6);
+			scale: 0.97;
+			transform-origin: 50% 0;
+		}
+
+		.reveal-prep.is-revealed {
+			opacity: 1;
+			translate: none;
+			scale: none;
+		}
+
+		.reveal-prep:is(.section__head, [data-reveal='head']) {
+			opacity: 1;
+			translate: none;
+
+			> * {
+				--reveal-at: calc(var(--reveal-delay, 0ms) + var(--line-order, 0) * var(--reveal-line-gap));
+
+				opacity: 0;
+				translate: 0 0.5em;
+				transition:
+					opacity var(--reveal-duration) var(--ease-premium) var(--reveal-at),
+					translate var(--reveal-duration) var(--ease-premium) var(--reveal-at),
+					clip-path var(--reveal-duration) var(--ease-premium) var(--reveal-at);
+			}
+
+			> :nth-child(2) { --line-order: 1; }
+			> :nth-child(3) { --line-order: 2; }
+			> :nth-child(4) { --line-order: 3; }
+			> :nth-child(n + 5) { --line-order: 4; }
+
+			// The headline rises out of a slot: clipped from the top until it
+			// lands. The negative insets leave room for descenders and overhang.
+			> :is(.section__title, .final-cta__title) {
+				translate: 0 0.45em;
+				clip-path: inset(100% -0.1em -0.3em -0.1em);
+			}
+
+			.eyebrow::before {
+				scale: 0 1;
+				transform-origin: left;
+				transition: scale 900ms var(--ease-premium) var(--reveal-delay, 0ms);
+			}
+		}
+
+		.reveal-prep.is-revealed:is(.section__head, [data-reveal='head']) {
+			> * {
+				opacity: 1;
+				translate: none;
+			}
+
+			> :is(.section__title, .final-cta__title) {
+				clip-path: inset(-0.3em -0.1em -0.3em -0.1em);
+			}
+
+			.eyebrow::before {
+				scale: 1;
+			}
+		}
+	}
+}
+
+// Same-site page loads (home, legal pages, 404) cross-fade instead of flashing
+// blank, with the header held in place (view-transition-name in HeaderNew).
+// Browsers without cross-document view transitions load pages as before.
+@media (prefers-reduced-motion: no-preference) {
+	@view-transition {
+		navigation: auto;
 	}
 }

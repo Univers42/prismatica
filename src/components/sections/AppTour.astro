@@ -11,7 +11,7 @@ import { MEDIA_SHOTS } from '../../data/media-shots';
 
 <section class="section app-tour" id="apps" aria-labelledby="app-tour-title">
 	<div class="section__container">
-		<header class="app-tour__head">
+		<header class="app-tour__head" data-reveal="head">
 			<h2 class="section__title" id="app-tour-title">Six apps that already talk to each other.</h2>
 			<p class="section__lede">
 				Each one is a block you can drop into any page. They read the same data, so a client
@@ -19,7 +19,7 @@ import { MEDIA_SHOTS } from '../../data/media-shots';
 			</p>
 		</header>
 
-		<div class="app-tour__body" data-app-tour>
+		<div class="app-tour__body" data-app-tour data-scroll-grow>
 			<div class="app-tour__tabs" role="tablist" aria-label="Apps">
 				{CONNECTED_APPS.map((app, index) => (
 					<button
@@ -64,7 +64,7 @@ import { MEDIA_SHOTS } from '../../data/media-shots';
 			</div>
 		</div>
 
-		<div class="app-tour__pocket">
+		<div class="app-tour__pocket" data-scroll-rise>
 			<div class="app-tour__pocket-copy">
 				<h3 class="app-tour__pocket-title">Your workspace in your pocket.</h3>
 				<p>

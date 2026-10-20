@@ -98,4 +98,24 @@ const faqs = [
 		color: var(--system-text);
 		line-height: 1.6;
 	}
+
+	/* Answers glide open and shut instead of snapping. Needs ::details-content
+	   and interpolate-size; elsewhere the selector is unknown, the rule drops,
+	   and <details> toggles instantly as before. */
+	@media (prefers-reduced-motion: no-preference) {
+		.faq__details { interpolate-size: allow-keywords; }
+		.faq__details::details-content {
+			block-size: 0;
+			opacity: 0;
+			overflow-y: clip;
+			transition:
+				block-size 380ms var(--ease-premium),
+				opacity 260ms linear,
+				content-visibility 380ms allow-discrete;
+		}
+		.faq__details[open]::details-content {
+			block-size: auto;
+			opacity: 1;
+		}
+	}
 </style>

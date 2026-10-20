@@ -1,4 +1,5 @@
-import { type ThemeName, THEMES, normalizeTheme, themeDisplayName, themeIcon } from '../lib/theme-config';
+import { type ThemeName, THEMES, normalizeTheme, themeDisplayName } from '../lib/theme-config';
+import { motionAllowed } from '../lib/motion-preference';
 import { readStorage, writeStorage } from '../lib/storage';
 import { queryElements, queryElement, isButton, isHtmlElement } from '../lib/dom-utils';
 
@@ -20,10 +21,6 @@ function updateThemeButton(theme: ThemeName): void {
 	buttons.forEach((button) => {
 		button.setAttribute('aria-label', `Theme: ${themeLabel}. Switch to ${nextLabel} palette`);
 		button.title = `Switch to ${nextLabel} theme`;
-		const icon = button.querySelector('.header-icon--theme');
-		if (icon instanceof HTMLElement) {
-			icon.textContent = themeIcon(theme);
-		}
 	});
 	labels.forEach((label) => {
 		label.textContent = `Theme: ${themeLabel}`;
@@ -45,6 +42,11 @@ function cycleTheme(): void {
 	const nextTheme = THEMES[(index + 1) % THEMES.length] ?? 'aurora';
 	applyTheme(nextTheme);
 	announce(`${themeDisplayName(nextTheme)} theme enabled`);
+	if (motionAllowed()) {
+		document.querySelectorAll('.header-icon--theme').forEach((icon) => {
+			icon.animate([{ rotate: '0deg' }, { rotate: '180deg' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+		});
+	}
 }
 
 /** Updates visible and assistive motion button labels. */

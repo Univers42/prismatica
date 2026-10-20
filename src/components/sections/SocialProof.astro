@@ -56,6 +56,14 @@ const quotes = [
 		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 		gap: 1.5rem;
 	}
+	/* Equal-height cards with the author on the bottom line, whatever the quote length. */
+	.social-proof__grid > * > .ui-card {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		height: 100%;
+	}
+	.social-proof__author { margin-top: auto; }
 	.social-proof__quote {
 		margin: 0;
 		font-size: 1rem;

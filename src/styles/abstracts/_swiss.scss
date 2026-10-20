@@ -207,7 +207,7 @@
 	/* Section rhythm: a hairline top rule + baseline-multiple padding. */
 	.section {
 		border-top: 1px solid var(--system-divider);
-		padding-block: clamp(56px, 8vw, 120px);
+		padding-block: clamp(56px, 6.5vw, 96px);
 		background: var(--system-bg);
 	}
 	.section--hero { border-top: 0; }
@@ -242,7 +242,8 @@
 		color: var(--system-text);
 		text-decoration: none;
 	}
-	.header-new__link:hover,
+	.header-new__link:hover { color: var(--swiss-red-text); }
+
 	.footer-new__group a:hover,
 	.footer-new__social a:hover,
 	.footer-new__legal a:hover {
@@ -253,6 +254,22 @@
 
 	/* Retire decorative section gradient washes (they read as leftover aurora). */
 	.final-cta::before { display: none; }
+
+	/* The canvas section's head reads like every other one: flush left, no glow. */
+	.canvas-windows__copy {
+		justify-items: start;
+		max-width: none;
+		margin-inline: 0;
+		text-align: left;
+	}
+	.canvas-windows .canvas-windows__title {
+		font-size: clamp(2rem, 4.4vw, 3.4rem);
+		font-weight: 600;
+		line-height: 1.02;
+		text-shadow: none;
+	}
+	.canvas-windows__lede { text-align: left; }
+	.canvas-windows__figure::before { display: none; }
 }
 
 /* ==========================================================================

@@ -155,10 +155,17 @@ const tiers = [
 		list-style: none;
 		font-size: 0.92rem;
 	}
+	/* A drawn tick, not a ✓ glyph: the web font has none, and the fallback
+	   depends on the visitor's system fonts (a missing-glyph box on some). */
 	.pricing__features li::before {
-		content: '✓';
-		color: var(--system-success-text);
-		font-weight: 700;
-		margin-right: 0.5rem;
+		content: '';
+		display: inline-block;
+		width: 0.32em;
+		height: 0.62em;
+		margin: 0 0.75rem 0 0.2em;
+		border: solid var(--system-success-text);
+		border-width: 0 2px 2px 0;
+		rotate: 45deg;
+		translate: 0 -0.12em;
 	}
 </style>

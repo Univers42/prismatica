@@ -35,6 +35,6 @@ describe('CanvasWindowsIllustration SVG', () => {
 	});
 
 	it('has correct viewBox', () => {
-		expect(svgMarkup).toContain('viewBox="0 0 1100 640"');
+		expect(svgMarkup).toContain('viewBox="-20 0 1180 640"');
 	});
 });
