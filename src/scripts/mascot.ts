@@ -65,6 +65,16 @@ const mascotState: MascotState = {
 	frame: undefined,
 };
 
+const SHELL_LEFT = 'M15 34 C26 20, 51 16, 69 27 C80 34, 87 48, 86 62 C85 78, 73 90, 55 94 C34 98, 14 90, 7 75 C1 61, 4 45, 15 34Z';
+const SHELL_RIGHT = 'M115 27 C134 16, 158 20, 169 34 C180 49, 183 65, 177 78 C170 92, 150 98, 129 94 C111 90, 99 78, 98 62 C97 48, 104 34, 115 27Z';
+// Each barrel is the shell repeated and stepped back along --tube-x/y; the
+// SCSS loop over $tube-slices in _mascot.scss styles exactly this many.
+const TUBE_SLICES = 6;
+
+function tubeSlices(shell: string): string {
+	return Array.from({ length: TUBE_SLICES }, () => `<path class="svg-tube" d="${shell}" />`).join('');
+}
+
 // Decorative: the button around it carries the name, and a titled SVG inside
 // a labelled button gives it text its label does not contain (WCAG 2.5.3).
 function mascotSvgMarkup(): string {
@@ -73,9 +83,11 @@ function mascotSvgMarkup(): string {
 			<g class="svg-body-group">
 				<path class="svg-arm left" d="M49 31 C39 18, 25 18, 19 32" />
 				<path class="svg-arm right" d="M135 31 C147 18, 161 19, 166 33" />
+				<g class="svg-tube-stack">${tubeSlices(SHELL_LEFT)}</g>
+				<g class="svg-tube-stack">${tubeSlices(SHELL_RIGHT)}</g>
 				<g class="svg-volume">
-					<path class="svg-shell left" d="M15 34 C26 20, 51 16, 69 27 C80 34, 87 48, 86 62 C85 78, 73 90, 55 94 C34 98, 14 90, 7 75 C1 61, 4 45, 15 34Z" />
-					<path class="svg-shell right" d="M115 27 C134 16, 158 20, 169 34 C180 49, 183 65, 177 78 C170 92, 150 98, 129 94 C111 90, 99 78, 98 62 C97 48, 104 34, 115 27Z" />
+					<path class="svg-shell left" d="${SHELL_LEFT}" />
+					<path class="svg-shell right" d="${SHELL_RIGHT}" />
 				</g>
 				<path class="svg-barrel left" d="M20 39 C29 28, 47 25, 62 32 C50 29, 33 32, 24 43 C16 54, 16 67, 24 77 C12 69, 9 51, 20 39Z" />
 				<path class="svg-barrel right" d="M122 32 C136 25, 154 28, 164 39 C175 51, 172 69, 160 77 C168 67, 168 54, 160 43 C151 32, 134 29, 122 32Z" />
