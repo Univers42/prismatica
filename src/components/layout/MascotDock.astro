@@ -23,7 +23,7 @@
 			aria-label="Hide assistant tip"
 			data-mascot-dismiss
 		>×</button>
-		<p class="mascot-dock__tip" data-mascot-tip>Hey — need a backend in 5 minutes? Click me.</p>
+		<p class="mascot-dock__tip" data-mascot-tip>Try it: open the page above and type /.</p>
 	</div>
 	<div id="mascot-anchor" class="mascot-dock__anchor"></div>
 </aside>
@@ -38,8 +38,9 @@
 		const dismiss = dock.querySelector('[data-mascot-dismiss]');
 		const STORAGE_KEY = 'prismatica:mascot-tip-dismissed';
 		const tips = [
-			'Hey — need a backend in 5 minutes? Click me.',
-			'Self-host the whole stack with one command.',
+			'Try it: open the page above and type /.',
+			'Mail, calendar and boards, linked on one page.',
+			'Self-host the whole workspace with one command.',
 			'GDPR exports are one endpoint away.',
 			'Toggle services live in the Backend section ↑',
 			'Postgres + PostgREST = your typed API.',
@@ -60,6 +61,13 @@
 			try { globalThis.localStorage?.setItem(STORAGE_KEY, '1'); } catch {}
 		});
 		setInterval(rotate, 9000);
+		// Quiet while the hero fills the screen: the bubble sat on the hero's copy.
+		const hero = document.getElementById('top');
+		if (hero && typeof IntersectionObserver !== 'undefined') {
+			new IntersectionObserver(([entry]) => {
+				dock.classList.toggle('is-quiet', (entry?.intersectionRatio ?? 0) >= 0.5);
+			}, { threshold: [0, 0.5, 1] }).observe(hero);
+		}
 	})();
 </script>
 
@@ -81,6 +89,9 @@
 	/* When the portal dialog is open, hide the mascot to avoid double-CTA noise. */
 	body.dialog-open .mascot-dock { display: none; }
 
+	/* Same for the consent bar: on phones the mascot sat on top of "Accept all". */
+	body:has(.consent-banner:not([hidden])) .mascot-dock { display: none; }
+
 	.mascot-dock__bubble {
 		position: relative;
 		max-width: 240px;
@@ -98,6 +109,17 @@
 	}
 
 	.mascot-dock__bubble[hidden] { display: none; }
+
+	.mascot-dock.is-quiet .mascot-dock__bubble { visibility: hidden; }
+
+	/* On phones the bubble covered body text at every scroll position. */
+	@media (max-width: 640px) {
+		.mascot-dock {
+			transform: scale(0.7);
+			transform-origin: left bottom;
+		}
+		.mascot-dock__bubble { display: none; }
+	}
 
 	.mascot-dock__bubble::after {
 		content: '';

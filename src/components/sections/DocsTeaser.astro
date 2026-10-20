@@ -67,7 +67,7 @@ const { data, error } = await baas
 		align-items: center;
 	}
 	@media (max-width: 920px) {
-		.docs-teaser__grid { grid-template-columns: 1fr; }
+		.docs-teaser__grid { grid-template-columns: minmax(0, 1fr); }
 	}
 	.docs-teaser__title { text-align: left; }
 	.docs-teaser__lede {
@@ -75,7 +75,7 @@ const { data, error } = await baas
 		max-width: 50ch;
 		margin-bottom: 1.25rem;
 	}
-	.docs-teaser__codewrap { position: relative; }
+	.docs-teaser__codewrap { position: relative; min-width: 0; }
 	.docs-teaser__code {
 		margin: 0;
 		padding: 1rem;

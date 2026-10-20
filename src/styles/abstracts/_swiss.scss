@@ -231,8 +231,8 @@
 	}
 
 	/* Links: ink by default, red + underline on hover — no decorative games. */
-	a:not(.button):not(.header-cta) { color: var(--system-link); }
-	a:not(.button):not(.header-cta):hover { color: var(--system-link-hover); }
+	a:not(.button, .ui-button, .header-cta) { color: var(--system-link); }
+	a:not(.button, .ui-button, .header-cta):hover { color: var(--system-link-hover); }
 
 	/* Nav + footer links: calm ink, red accent only on hover. */
 	.header-new__link,
@@ -401,8 +401,30 @@
 	   the [hidden] attribute, so the toggle could never hide it. */
 	.consent-banner__preferences[hidden] { display: none !important; }
 
-	@media (max-width: 720px) {
-		.consent-banner__paper { grid-template-columns: 1fr; }
-		.consent-banner__paper #consent-description { display: none; }
+	/* Phones: a compact two-row bar (title, then Accept / Reject with Manage
+	   beneath) instead of a panel covering a quarter of the screen. */
+	@media (width <= 720px) {
+		.consent-banner__paper {
+			grid-template-columns: 1fr;
+			gap: 10px;
+			padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+		}
+
+		.consent-banner__paper #consent-description,
+		.consent-banner__paper .eyebrow { display: none; }
+
+		.consent-banner__actions {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 8px;
+		}
+
+		.consent-banner__actions .button {
+			min-height: 44px;
+			padding: 0.5rem 0.75rem;
+			font-size: 0.9375rem;
+		}
+
+		.consent-banner__actions [data-consent-manage] { grid-column: 1 / -1; }
 	}
 }
