@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { bindAppTour } from '../../../src/scripts/app-tour';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { bindTabs } from '../../../src/lib/tabs';
 
 const IDS = ['docs', 'board', 'mail'];
 
@@ -15,13 +15,13 @@ function mountTour(): HTMLElement {
 const tab = (id: string) => document.querySelector<HTMLButtonElement>(`[data-app-tab="${id}"]`)!;
 const panel = (id: string) => document.querySelector<HTMLElement>(`[data-app-panel="${id}"]`)!;
 
-describe('app tour tabs', () => {
+describe('tabs', () => {
 	afterEach(() => {
 		document.body.innerHTML = '';
 	});
 
 	it('shows the clicked app and keeps exactly one tab selected and tabbable', () => {
-		bindAppTour(mountTour());
+		bindTabs(mountTour(), 'app');
 		tab('board').click();
 		expect(panel('board').hidden).toBe(false);
 		expect(panel('docs').hidden).toBe(true);
@@ -30,7 +30,7 @@ describe('app tour tabs', () => {
 	});
 
 	it('moves with arrow keys, wrapping at both ends, and supports Home/End', () => {
-		bindAppTour(mountTour());
+		bindTabs(mountTour(), 'app');
 		tab('docs').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
 		expect(panel('mail').hidden).toBe(false);
 		expect(document.activeElement).toBe(tab('mail'));
@@ -47,6 +47,25 @@ describe('app tour tabs', () => {
 	it('refuses markup where tabs and panels do not pair up', () => {
 		const root = mountTour();
 		root.querySelector('[data-app-panel="mail"]')!.remove();
-		expect(bindAppTour(root)).toBeNull();
+		expect(bindTabs(root, 'app')).toBeNull();
+	});
+
+	it('reports each change with the previous index and selects by id without scrolling', () => {
+		const changes: [number, number][] = [];
+		const tabs = bindTabs(mountTour(), 'app', (index, previous) => changes.push([index, previous]))!;
+		const scroll = vi.spyOn(tab('mail'), 'scrollIntoView');
+		expect(tabs.ids).toEqual(IDS);
+		tabs.select('mail');
+		tabs.select('mail');
+		expect(changes).toEqual([[2, 0]]);
+		expect(tabs.selectedIndex()).toBe(2);
+		expect(panel('mail').hidden).toBe(false);
+		expect(scroll).not.toHaveBeenCalled();
+	});
+
+	it('ignores tabs of another set sharing the root', () => {
+		const root = mountTour();
+		root.insertAdjacentHTML('beforeend', '<button role="tab" data-other-tab="x"></button>');
+		expect(bindTabs(root, 'app')?.ids).toEqual(IDS);
 	});
 });

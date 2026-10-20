@@ -78,9 +78,9 @@ import { MEDIA_SHOTS } from '../../data/media-shots';
 </section>
 
 <script>
-	import { bindAppTour } from '../../scripts/app-tour';
+	import { bindTabs } from '../../lib/tabs';
 	const root = document.querySelector<HTMLElement>('[data-app-tour]');
-	if (root) bindAppTour(root);
+	if (root) bindTabs(root, 'app');
 </script>
 
 <style is:global>
