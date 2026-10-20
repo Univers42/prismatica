@@ -3,6 +3,7 @@ import Button from '../ui/Button.astro';
 import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
 
 const navItems = [
+	{ href: '#apps',      label: 'Apps' },
 	{ href: '#product',   label: 'Product' },
 	{ href: '#pricing',   label: 'Pricing' },
 	{ href: '/docs/',     label: 'Docs' },
@@ -234,13 +235,17 @@ const navItems = [
 		display: none;
 	}
 
+	/* Phones keep "Start free" in reach next to the menu; theme and sign-in move into the drawer. */
 	@media (max-width: 800px) {
+		.header-new__inner { gap: 0.6rem; }
 		.header-new__nav,
-		.header-new__actions {
+		.header-new__actions > :not([data-open-portal]) {
 			display: none;
 		}
+		.header-new__actions { margin-left: auto; }
 		.header-new__menu {
 			display: inline-flex;
+			flex: none;
 		}
 		.header-new__drawer:not([hidden]) {
 			display: grid;

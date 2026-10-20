@@ -1,0 +1,25 @@
+---
+// Stroke icons for the connected apps — same 24px grid, 1.75 stroke and
+// currentColor as FeatureIcon, so both sets read as one family.
+import type { ConnectedAppId } from '../../data/connected-apps';
+import { APP_GLYPH_PATHS } from '../../data/app-glyphs';
+
+type Props = { name: ConnectedAppId; class?: string };
+const { name, class: className = '' } = Astro.props;
+---
+
+<svg class:list={['app-glyph', className]} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+	{APP_GLYPH_PATHS[name].map((d) => <path d={d} />)}
+</svg>
+
+<style is:global>
+	.app-glyph {
+		width: 20px;
+		height: 20px;
+		flex: none;
+		stroke: currentColor;
+		stroke-width: 1.75;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+</style>

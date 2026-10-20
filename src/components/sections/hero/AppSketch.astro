@@ -1,0 +1,127 @@
+---
+// A drawn, to-scale stand-in for one app's screen, shown in a MediaSlot until
+// the real capture lands. Decorative: the slot around it carries the
+// accessible label. Sized in container units, so the same drawing fits the
+// hero's narrow page and the tour's wide panel.
+import type { ConnectedAppId } from '../../../data/connected-apps';
+import '../../../styles/components/_app-sketch.scss';
+import '../../../styles/components/_app-sketch-lists.scss';
+import '../../../styles/components/_app-sketch-canvas.scss';
+
+type Props = { name: ConnectedAppId };
+const { name } = Astro.props;
+
+type BoardCard = { text: string; tag?: string; moving?: boolean };
+const BOARD: { title: string; cards: BoardCard[] }[] = [
+	{ title: 'To do', cards: [{ text: 'Brief for Acme', tag: 'Client' }, { text: 'Q4 price list' }, { text: 'Pick the fonts' }] },
+	{ title: 'In progress', cards: [{ text: 'Landing copy', tag: 'Launch', moving: true }, { text: 'Contract review' }] },
+	{ title: 'Done', cards: [{ text: 'Kickoff call' }, { text: 'Invoice 204' }, { text: 'Domain setup' }] },
+];
+const DAYS = [['Mon', 21], ['Tue', 22], ['Wed', 23], ['Thu', 24], ['Fri', 25]] as const;
+const EVENTS = [
+	{ text: 'Kickoff', slot: 'a' },
+	{ text: 'Acme call', slot: 'b' },
+	{ text: 'Design sync', slot: 'c' },
+	{ text: 'Launch review', slot: 'd' },
+	{ text: 'Invoices', slot: 'e' },
+];
+const MAILS = [
+	{ from: 'Ines, Acme Co', subject: 'Revised quote for Q4', time: '9:41' },
+	{ from: 'Northwind', subject: 'Contract signed', time: '9:12' },
+	{ from: 'Halcyon', subject: 'Kickoff notes', time: 'Tue' },
+	{ from: 'Foundry', subject: 'Invoice 204', time: 'Mon' },
+];
+const ROWS = [
+	{ client: 'Acme Co', status: 'Active', due: 'Oct 24' },
+	{ client: 'Northwind', status: 'Lead', due: 'Oct 28' },
+	{ client: 'Halcyon', status: 'Active', due: 'Nov 2' },
+	{ client: 'Foundry', status: 'Paused', due: 'Nov 9' },
+];
+---
+
+<div class:list={['sk', `sk--${name}`]} aria-hidden="true">
+	{name === 'board' && BOARD.map((column) => (
+		<div class="sk-col">
+			<p class="sk-col__head">{column.title}<span>{column.cards.length}</span></p>
+			{column.cards.map((card) => (
+				<div class:list={['sk-card', { 'sk-card--moving': card.moving }]}>
+					<b>{card.text}</b>
+					<span class="sk-line"></span>
+					<span class="sk-card__foot">{card.tag && <span class="sk-tag">{card.tag}</span>}<span class="sk-av"></span></span>
+				</div>
+			))}
+		</div>
+	))}
+
+	{name === 'calendar' && (
+		<>
+			<div class="sk-cal__head">{DAYS.map(([day, date]) => <span>{day} <b>{date}</b></span>)}</div>
+			<div class="sk-cal__grid">
+				{EVENTS.map((event) => <span class:list={['sk-ev', `sk-ev--${event.slot}`]}>{event.text}</span>)}
+			</div>
+		</>
+	)}
+
+	{name === 'mail' && (
+		<>
+			<ul class="sk-mail__list">
+				{MAILS.map((mail, index) => (
+					<li class:list={['sk-mail__row', { 'is-open': index === 0 }]}>
+						<b>{mail.from}</b><span class="sk-mail__time">{mail.time}</span><span class="sk-mail__subject">{mail.subject}</span>
+					</li>
+				))}
+			</ul>
+			<div class="sk-mail__read">
+				<b class="sk-mail__title">Revised quote for Q4</b>
+				<span class="sk-mail__from"><span class="sk-av"></span>Ines, Acme Co</span>
+				<span class="sk-line"></span>
+				<span class="sk-line sk-line--short"></span>
+				<span class="sk-line"></span>
+				<span class="sk-action">Create task</span>
+			</div>
+		</>
+	)}
+
+	{name === 'database' && (
+		<>
+			<div class="sk-db__bar"><span class="sk-chip sk-chip--on">Status: Active</span><span class="sk-chip">Sort: Due</span></div>
+			<div class="sk-db__table">
+				<span class="sk-db__th">Client</span><span class="sk-db__th">Status</span><span class="sk-db__th">Owner</span><span class="sk-db__th">Due</span>
+				{ROWS.map((row) => (
+					<>
+						<b>{row.client}</b>
+						<span><span class:list={['sk-pill', `sk-pill--${row.status.toLowerCase()}`]}>{row.status}</span></span>
+						<span><span class="sk-av"></span></span>
+						<span>{row.due}</span>
+					</>
+				))}
+			</div>
+		</>
+	)}
+
+	{name === 'whiteboard' && (
+		<>
+			<svg class="sk-wb__links" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+				<path d="M32 29C37 29 33 55.5 38 55.5" />
+				<path d="M62 55.5C67 55.5 63 33 68 33" />
+			</svg>
+			<span class="sk-note sk-note--a">New lead</span>
+			<span class="sk-note sk-note--b">Quote sent</span>
+			<span class="sk-note sk-note--c">Signed</span>
+			<span class="sk-cursor">Ines</span>
+		</>
+	)}
+
+	{name === 'docs' && (
+		<>
+			<b class="sk-doc__title">Launch plan</b>
+			<p class="sk-doc__text">Ship the new site for <span class="sk-mention">@Acme Co</span> before <span class="sk-mention">Oct 24</span>.</p>
+			<ul class="sk-doc__todo">
+				<li class="is-done">Approve pricing</li>
+				<li class="is-done">Record the demo</li>
+				<li>Send the launch mail</li>
+			</ul>
+			<div class="sk-doc__embed"><span></span><span></span><span></span></div>
+		</>
+	)}
+</div>

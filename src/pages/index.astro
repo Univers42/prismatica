@@ -1,4 +1,5 @@
 ---
+import AppTour from '../components/sections/AppTour.astro';
 import BackendArchitecture from '../components/sections/BackendArchitecture.astro';
 import CanvasWindowsSection from '../components/sections/CanvasWindowsSection.astro';
 import DocsTeaser from '../components/sections/DocsTeaser.astro';
@@ -17,19 +18,20 @@ import ConsentBanner from '../components/gdpr/ConsentBanner.astro';
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout>
+<Layout title="Prismatica — All your business apps, connected in one space">
 	<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="global-announcer"></div>
 	<Notification />
 	<HeaderNew />
 	<main id="main-content" class="swipe-stack" data-swipe-stack>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew /><LogoStrip /></div></div></section>
-		<section class="swipe-stack__scene" id="product"><div class="swipe-stack__card"><FeatureTrio /></div></section>
+		<section class="swipe-stack__scene"><div class="swipe-stack__card"><AppTour /></div></section>
+		<section class="swipe-stack__scene"><div class="swipe-stack__card"><FeatureTrio /></div></section>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card"><CanvasWindowsSection /></div></section>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card"><BackendArchitecture /></div></section>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card"><SocialProof /></div></section>
-		<section class="swipe-stack__scene" id="pricing"><div class="swipe-stack__card"><Pricing /></div></section>
+		<section class="swipe-stack__scene"><div class="swipe-stack__card"><Pricing /></div></section>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card"><DocsTeaser /></div></section>
-		<section class="swipe-stack__scene" id="faq"><div class="swipe-stack__card"><FaqSection /></div></section>
+		<section class="swipe-stack__scene"><div class="swipe-stack__card"><FaqSection /></div></section>
 		<section class="swipe-stack__scene"><div class="swipe-stack__card"><FinalCta /></div></section>
 	</main>
 	<div class="swipe-stack__tail"><FooterNew /></div>
