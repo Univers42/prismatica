@@ -19,20 +19,22 @@
 
 :root,
 :root[data-theme='aurora'] {
-	// --- prototype palette: aurora ---
-	--brand-canvas-bg: #0a0a12;
-	--brand-canvas-bg-2: #0f0f1a;
-	--brand-canvas-surface: #15151f;
-	--brand-canvas-surface-2: #1c1c2a;
-	--brand-canvas-line: rgba(255, 255, 255, 0.08);
-	--brand-canvas-line-strong: rgba(255, 255, 255, 0.16);
-	--brand-canvas-text: #f0f0f5;
-	--brand-canvas-text-dim: #b9b7c9;
-	--brand-canvas-text-muted: #8a8a9a;
-	--brand-palette-primary: #a78bfa;
-	--brand-palette-secondary: #22d3ee;
-	--brand-palette-warm: #fbbf24;
-	--brand-palette-rose: #f472b6;
+	// --- palette: aurora (polar night: navy ground, violet + aurora green) ---
+	// Every text pair, input boundary and accent is checked against these grounds
+	// by tests/unit/lib/theme-contrast.test.ts.
+	--brand-canvas-bg: #0a0f1d;
+	--brand-canvas-bg-2: #0e1424;
+	--brand-canvas-surface: #131a2c;
+	--brand-canvas-surface-2: #1a2338;
+	--brand-canvas-line: rgba(200, 215, 255, 0.09);
+	--brand-canvas-line-strong: rgba(200, 215, 255, 0.18);
+	--brand-canvas-text: #edf1fa;
+	--brand-canvas-text-dim: #b7c1d8;
+	--brand-canvas-text-muted: #8e99b3;
+	--brand-palette-primary: #a99bff;
+	--brand-palette-secondary: #5fe3b3;
+	--brand-palette-warm: #f6c56b;
+	--brand-palette-rose: #ff8fa8;
 	--brand-glow-primary: color-mix(in srgb, var(--brand-palette-primary) 36%, transparent);
 	--brand-glow-secondary: color-mix(in srgb, var(--brand-palette-secondary) 32%, transparent);
 	--brand-glow-tertiary: color-mix(in srgb, var(--brand-palette-rose) 18%, transparent);

@@ -6,6 +6,12 @@
 **Standard:** WCAG 2.2 AA. Normal text ≥ 4.5:1 (SC 1.4.3), large text (≥ 18pt or 14pt bold) ≥ 3:1, non-text UI components and graphical objects ≥ 3:1 (SC 1.4.11).
 **Method:** sRGB relative luminance per WCAG formula. RGBA tokens are pre-composited against their declared backdrop before measuring.
 
+> **Current themes:** this audit records the pre-redesign light/dark/night tokens. The five shipped
+> themes (Swiss, Aurora, Solar, Ember, Forest) are checked on every test run by
+> [tests/unit/lib/theme-contrast.test.ts](../tests/unit/lib/theme-contrast.test.ts), which reads the
+> SCSS itself: text pairs ≥ 4.5:1, input borders, focus rings and accents ≥ 3:1. Decorative
+> hairlines (`--system-border`, `--system-divider`) are not checked.
+
 ## Severity legend
 
 - **P0** — fails AA at the role the token is used in today; visible regression risk if shipped.

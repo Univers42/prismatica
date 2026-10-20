@@ -10,30 +10,31 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-// Theme overrides: the four Prismatica palettes from the prototype.
-// Aurora is the default in the base token files. These selectors only override
-// palette values; components continue to consume --brand-* and --system-*.
+// Theme overrides. Aurora's palette is the base in the token files and Swiss
+// lives in abstracts/_swiss.scss. Each theme is one ground, one accent and a
+// quieter second colour; tests/unit/lib/theme-contrast.test.ts checks every
+// text pair, input boundary and accent against its grounds.
 
 :root[data-theme='solar'] {
-	--brand-canvas-bg: #fdfaf2;
-	--brand-canvas-bg-2: #f6f1e3;
+	--brand-canvas-bg: #fbfaf7;
+	--brand-canvas-bg-2: #f2f0ea;
 	--brand-canvas-surface: #ffffff;
-	--brand-canvas-surface-2: #f0e9d6;
-	--brand-canvas-line: rgba(20, 18, 12, 0.14);
-	--brand-canvas-line-strong: rgba(20, 18, 12, 0.30);
-	--brand-canvas-text: #1a1812;
-	--brand-canvas-text-dim: #5a5446;
-	--brand-canvas-text-muted: #6f6758;
-	// Warm-editorial unification: terracotta accent shared with the osionos app
-	// (--osio-accent #CC785C). Kept a muted teal secondary as a cool counterpoint.
-	--brand-palette-primary: #cc785c;
-	--brand-palette-secondary: #056f84;
-	--brand-palette-warm: #995300;
-	--brand-palette-rose: #a3154f;
+	--brand-canvas-surface-2: #ebe8df;
+	--brand-canvas-line: rgba(28, 24, 16, 0.12);
+	--brand-canvas-line-strong: rgba(28, 24, 16, 0.28);
+	--brand-canvas-text: #1c1810;
+	--brand-canvas-text-dim: #48423a;
+	--brand-canvas-text-muted: #655f54;
+	// Sun and sky: a deep amber that still carries white text, cobalt for links
+	// and focus. Both read at 3:1 or more as strokes on white.
+	--brand-palette-primary: #b45309;
+	--brand-palette-secondary: #1f56c8;
+	--brand-palette-warm: #9a6700;
+	--brand-palette-rose: #b4234a;
 
 	--system-bg: var(--brand-canvas-bg);
 	--system-surface: var(--brand-canvas-surface);
-	--system-surface-raised: #fffdf8;
+	--system-surface-raised: #ffffff;
 	--system-surface-sunken: var(--brand-canvas-bg-2);
 	--system-surface-inverse: var(--brand-canvas-text);
 	--system-text-strong: var(--brand-canvas-text);
@@ -41,87 +42,87 @@
 	--system-text-muted: var(--brand-canvas-text-muted);
 	--system-text-on-inverse: var(--brand-canvas-bg);
 	--system-text-on-accent: #ffffff;
-	--system-border: #827767;
-	--system-border-strong: #453d34;
-	--system-divider: #c8bfad;
-	--system-focus-ring: #cc785c;
+	--system-border: #8a8274;
+	--system-border-strong: #48423a;
+	--system-divider: #d9d4c8;
+	--system-focus-ring: var(--brand-palette-secondary);
 	--system-focus-ring-offset: var(--system-surface);
-	--system-link: #b5532e; // AA-safe terracotta text on cream (#cc785c as text is only ~3.4:1)
-	--system-link-hover: #8f3f22;
-	--system-success-text: #06757c;
-	--system-success-bg: #e4f6f3;
-	--system-success-border: var(--brand-palette-secondary);
+	--system-link: var(--brand-palette-secondary);
+	--system-link-hover: #163f96;
+	--system-success-text: #11734b;
+	--system-success-bg: #e7f5ee;
+	--system-success-border: #11734b;
 	--system-warning-text: #8a4d00;
 	--system-warning-bg: #fff3d7;
 	--system-warning-border: var(--brand-palette-warm);
 	--system-danger-text: #a3154f;
 	--system-danger-bg: #fde8f1;
 	--system-danger-border: var(--brand-palette-rose);
-	--system-info-text: #4b2ca0;
-	--system-info-bg: #efeafd;
-	--system-info-border: var(--brand-palette-primary);
+	--system-info-text: var(--brand-palette-secondary);
+	--system-info-bg: #eaf0fc;
+	--system-info-border: var(--brand-palette-secondary);
 	--system-action-bg: var(--brand-canvas-text);
-	--system-action-bg-hover: #332f28;
-	--system-action-bg-active: #0d0b08;
+	--system-action-bg-hover: #36302a;
+	--system-action-bg-active: #0e0c08;
 	--system-action-fg: var(--brand-canvas-bg);
 	--system-action-secondary-bg: #ffffff;
-	--system-action-secondary-bg-hover: #f1eadb;
+	--system-action-secondary-bg-hover: #f2f0ea;
 	--system-action-secondary-fg: var(--brand-canvas-text);
-	--system-action-secondary-border: #827767;
+	--system-action-secondary-border: #8a8274;
 	--system-input-bg: #ffffff;
 	--system-input-fg: var(--brand-canvas-text);
-	--system-input-placeholder: #665f55;
-	--system-input-border: #9d9486;
-	--system-input-border-hover: #665f55;
-	--system-input-border-focus: var(--brand-palette-primary);
+	--system-input-placeholder: var(--brand-canvas-text-muted);
+	--system-input-border: #8a8274;
+	--system-input-border-hover: #48423a;
+	--system-input-border-focus: var(--brand-palette-secondary);
 	--system-input-border-invalid: var(--brand-palette-rose);
-	--system-input-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--brand-palette-primary) 22%, transparent);
+	--system-input-shadow-focus: 0 0 0 3px color-mix(in srgb, var(--brand-palette-secondary) 22%, transparent);
 	--system-input-shadow-invalid: 0 0 0 3px color-mix(in srgb, var(--brand-palette-rose) 18%, transparent);
-	--system-chip-bg: #f2eadb;
+	--system-chip-bg: #f2f0ea;
 	--system-chip-fg: var(--brand-canvas-text-dim);
-	--system-chip-border: #9d9486;
+	--system-chip-border: #b9b2a4;
 	--system-dialog-bg: #ffffff;
 	--system-dialog-fg: var(--brand-canvas-text);
-	--system-dialog-border: #9d9486;
-	--system-dialog-backdrop: rgba(20, 18, 12, 0.66);
+	--system-dialog-border: #b9b2a4;
+	--system-dialog-backdrop: rgba(28, 24, 16, 0.66);
 	--system-dialog-summary-bg: var(--brand-canvas-bg-2);
 	--system-dialog-summary-fg: var(--brand-canvas-text);
 	--system-dialog-summary-muted: var(--brand-canvas-text-muted);
-	--system-shadow-1: 0 1px 0 rgba(20, 18, 12, 0.06), 0 1px 2px rgba(20, 18, 12, 0.04);
-	--system-shadow-2: 0 10px 28px rgba(20, 18, 12, 0.10), 0 1px 2px rgba(20, 18, 12, 0.06);
-	--system-shadow-3: 0 24px 72px rgba(20, 18, 12, 0.14), 0 8px 22px rgba(20, 18, 12, 0.08);
+	--system-shadow-1: 0 1px 0 rgba(28, 24, 16, 0.06), 0 1px 2px rgba(28, 24, 16, 0.04);
+	--system-shadow-2: 0 10px 28px rgba(28, 24, 16, 0.10), 0 1px 2px rgba(28, 24, 16, 0.06);
+	--system-shadow-3: 0 24px 72px rgba(28, 24, 16, 0.14), 0 8px 22px rgba(28, 24, 16, 0.08);
 }
 
 :root[data-theme='ember'] {
-	--brand-canvas-bg: #0d0806;
-	--brand-canvas-bg-2: #140b08;
-	--brand-canvas-surface: #1c110d;
-	--brand-canvas-surface-2: #2a1812;
-	--brand-canvas-line: rgba(255, 220, 180, 0.10);
-	--brand-canvas-line-strong: rgba(255, 220, 180, 0.20);
-	--brand-canvas-text: #fef3e2;
-	--brand-canvas-text-dim: #e4c3a8;
-	--brand-canvas-text-muted: #c9a78b;
-	--brand-palette-primary: #fb7185;
-	--brand-palette-secondary: #fbbf24;
-	--brand-palette-warm: #f97316;
-	--brand-palette-rose: #ec4899;
+	--brand-canvas-bg: #120d0b;
+	--brand-canvas-bg-2: #18110e;
+	--brand-canvas-surface: #1f1613;
+	--brand-canvas-surface-2: #2a1e19;
+	--brand-canvas-line: rgba(255, 226, 200, 0.10);
+	--brand-canvas-line-strong: rgba(255, 226, 200, 0.20);
+	--brand-canvas-text: #fbf1e6;
+	--brand-canvas-text-dim: #e0c9b5;
+	--brand-canvas-text-muted: #b89c86;
+	--brand-palette-primary: #ff8650;
+	--brand-palette-secondary: #f0c27a;
+	--brand-palette-warm: #ffd166;
+	--brand-palette-rose: #ff8f8f;
 }
 
 :root[data-theme='forest'] {
-	--brand-canvas-bg: #06120c;
-	--brand-canvas-bg-2: #0a1a12;
-	--brand-canvas-surface: #0f2419;
-	--brand-canvas-surface-2: #163524;
-	--brand-canvas-line: rgba(180, 230, 200, 0.09);
-	--brand-canvas-line-strong: rgba(180, 230, 200, 0.20);
-	--brand-canvas-text: #ecfdf5;
-	--brand-canvas-text-dim: #bdebd1;
-	--brand-canvas-text-muted: #86b89c;
-	--brand-palette-primary: #a3e635;
-	--brand-palette-secondary: #5eead4;
-	--brand-palette-warm: #fde68a;
-	--brand-palette-rose: #fda4af;
+	--brand-canvas-bg: #0b1510;
+	--brand-canvas-bg-2: #0f1b15;
+	--brand-canvas-surface: #13221a;
+	--brand-canvas-surface-2: #1a2e23;
+	--brand-canvas-line: rgba(200, 235, 215, 0.09);
+	--brand-canvas-line-strong: rgba(200, 235, 215, 0.20);
+	--brand-canvas-text: #eef7f1;
+	--brand-canvas-text-dim: #c0dccb;
+	--brand-canvas-text-muted: #8fb19d;
+	--brand-palette-primary: #9cd67c;
+	--brand-palette-secondary: #e6d9a8;
+	--brand-palette-warm: #f2cf7a;
+	--brand-palette-rose: #f5a3a3;
 }
 
 :root[data-theme='ember'],
@@ -196,23 +197,6 @@
 	--ink: var(--brand-ink);
 	--ink-mid: var(--brand-ink-mid);
 	--page-bg: var(--brand-paper);
-}
-
-:root[data-theme='dark'],
-:root[data-theme='night'] {
-	--brand-canvas-bg: #0a0a12;
-	--brand-canvas-bg-2: #0f0f1a;
-	--brand-canvas-surface: #15151f;
-	--brand-canvas-surface-2: #1c1c2a;
-	--brand-canvas-line: rgba(255, 255, 255, 0.08);
-	--brand-canvas-line-strong: rgba(255, 255, 255, 0.16);
-	--brand-canvas-text: #f0f0f5;
-	--brand-canvas-text-dim: #b9b7c9;
-	--brand-canvas-text-muted: #8a8a9a;
-	--brand-palette-primary: #a78bfa;
-	--brand-palette-secondary: #22d3ee;
-	--brand-palette-warm: #fbbf24;
-	--brand-palette-rose: #f472b6;
 }
 
 :root[data-theme='aurora'] .asset-icon-grid img,

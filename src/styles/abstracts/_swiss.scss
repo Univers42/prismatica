@@ -92,7 +92,7 @@
 	--system-input-bg: #ffffff;
 	--system-input-fg: #111111;
 	--system-input-placeholder: #6b6b6b;
-	--system-input-border: rgba(17, 17, 17, 0.34);
+	--system-input-border: #767676; /* 4.5:1 on white: inputs need a 3:1 boundary */
 	--system-input-border-hover: #111111;
 	--system-input-border-focus: var(--swiss-red);
 	--system-input-border-invalid: var(--swiss-red);
