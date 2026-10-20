@@ -8,15 +8,20 @@
 // scroll-driven animations gets them from scripts/hero-devices.ts instead;
 // with JS off there, the scene is open and still.
 
+// Shared by every drawn device: the hero devices and the stack showcase iPad.
+:root {
+	--device-bezel: #050506;
+	--device-rim: #474b54;
+	--device-shade: rgb(0 0 0 / 70%);
+	--device-camera: #1d2027;
+}
+
 .devices {
 	// Below 1000px the laptop and phone stand side by side, so the phone never
 	// covers the live app on the laptop's screen; wider, the tablet joins and
 	// the laptop centres.
 	--lw: 76cqi;
 	--laptop-left: 0;
-	--device-bezel: #050506;
-	--device-rim: #474b54;
-	--device-shade: rgb(0 0 0 / 70%);
 
 	position: relative;
 	width: 100%;
@@ -71,7 +76,7 @@
 		left: 50%;
 		width: 1.1cqi;
 		border-radius: 50%;
-		background: #1d2027;
+		background: var(--device-camera);
 		transform: translateX(-50%);
 		aspect-ratio: 1;
 	}

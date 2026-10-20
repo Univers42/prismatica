@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SERVICES, type GrobaseService } from '../../../src/data/grobase-services';
 import { pipelineStatus, servicesForProfiles, withDependencies, withoutDependents } from '../../../src/lib/service-graph';
-import { describeChange, eventsText, pathText } from '../../../src/lib/service-graph-copy';
+import { describeChange, eventsText, pathText, shortList } from '../../../src/lib/service-graph-copy';
 
 const NAMES = new Map(SERVICES.map((service) => [service.id, service.name]));
 
@@ -101,5 +101,17 @@ describe('eventsText', () => {
 		const status = pipelineStatus(enabled);
 		expect(status.eventsBlockedAt).toBe('outbox-relay');
 		expect(eventsText(status, NAMES)).toBe('Not delivered: Outbox relay is off');
+	});
+});
+
+describe('shortList', () => {
+	const names = new Map([['a', 'Alpha'], ['b', 'Beta'], ['c', 'Gamma'], ['d', 'Delta'], ['e', 'Eps']]);
+
+	it('names up to three and counts the rest', () => {
+		expect(shortList([], names)).toBe('Nothing');
+		expect(shortList(['a'], names)).toBe('Alpha');
+		expect(shortList(['a', 'b'], names)).toBe('Alpha and Beta');
+		expect(shortList(['a', 'b', 'c'], names)).toBe('Alpha, Beta and Gamma');
+		expect(shortList(['a', 'b', 'c', 'd', 'e'], names)).toBe('Alpha, Beta and 3 more');
 	});
 });

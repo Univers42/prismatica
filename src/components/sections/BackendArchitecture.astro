@@ -1,6 +1,6 @@
 ---
 import Eyebrow from '../brand/Eyebrow.astro';
-import HexExplorer from './backend-architecture/HexExplorer.astro';
+import StackShowcase from './stack-showcase/StackShowcase.astro';
 import StudioNetworkStory from './studio-network/StudioNetworkStory.astro';
 ---
 
@@ -11,27 +11,17 @@ import StudioNetworkStory from './studio-network/StudioNetworkStory.astro';
 			<h2 class="section__title">One network for every database, app and team.</h2>
 			<p class="section__lede">
 				Prismatica joins your databases into one network. Each team builds on the part it is
-				allowed to reach, and the explorer below lets you reshape the backend yourself.
+				allowed to reach, and the tablet below lets you run the backend yourself.
 			</p>
 		</header>
 
 		<StudioNetworkStory />
 
-		<div class="backend-arch__explorer">
-			<h3 class="backend-arch__explorer-title">Run the stack yourself</h3>
-			<p class="backend-arch__explorer-lede">All 55 services from the grobase compose file. Start one and its
-				dependencies start with it; stop one and everything that needs it stops too.</p>
-			<HexExplorer />
-		</div>
+		<StackShowcase />
 	</div>
 </section>
 
 <script>
-	import { initHexExplorer } from './backend-architecture/hex-explorer';
-	initHexExplorer();
+	import { initStackShowcase } from './stack-showcase/stack-showcase';
+	initStackShowcase();
 </script>
-
-<style is:global>
-	/* Only the heading rhythm lives here; the explorer owns its own styles. */
-	.backend-arch__explorer-title { margin-top: clamp(3rem, 8vw, 6rem); }
-</style>

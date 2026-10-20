@@ -67,3 +67,13 @@ export function eventsText(status: StatusShape, names: Map<string, string>): str
 	if (status.eventsBlockedAt === null) return 'Delivered as signed webhooks';
 	return `Not delivered: ${nameOf(status.eventsBlockedAt, names)} is off`;
 }
+
+// WHY: the inspector must keep one height whatever is selected (Postgres has
+// ten dependents), so lists past three names collapse to a count.
+export function shortList(ids: string[], names: Map<string, string>): string {
+	const labels = ids.map((id) => nameOf(id, names));
+	if (labels.length === 0) return 'Nothing';
+	if (labels.length === 1) return labels[0] as string;
+	if (labels.length <= 3) return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+	return `${labels[0]}, ${labels[1]} and ${labels.length - 2} more`;
+}

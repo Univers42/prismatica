@@ -1,0 +1,91 @@
+---
+// Third iPad slide: the problems Prismatica exists to remove, each paired
+// with what answers it. Counts come from the data files so the copy cannot
+// drift from the graph and the chart on the other slides.
+import { CONNECTED_APPS } from '../../../data/connected-apps';
+import { ENGINES, SERVICES } from '../../../data/grobase-services';
+import { PLANES } from '../../../data/stack-scale';
+
+const dataPlane = PLANES.find((plane) => plane.id === 'data')!;
+const ITEMS = [
+	{
+		problem: 'Your team’s tools don’t talk to each other.',
+		answer: `${CONNECTED_APPS.length} apps share one workspace: pages, databases, boards, calendars, mail and whiteboards.`,
+	},
+	{
+		problem: 'Your data is split across databases.',
+		answer: `One network reaches ${ENGINES.length} engines, from Postgres to DynamoDB, through one API.`,
+	},
+	{
+		problem: 'Every new app rebuilds sign-in, permissions and webhooks.',
+		answer: `${SERVICES.length} services come wired: sign-in, a permission check on every query, signed webhooks and live updates.`,
+	},
+	{
+		problem: 'Growing means a rewrite.',
+		answer: `The same images run on a laptop and on Kubernetes, from one data plane to ${dataPlane.max}.`,
+	},
+	{
+		problem: 'Owning your data is hard to prove.',
+		answer: 'Open source under MIT and self-hosted, with GDPR export and erasure built in.',
+	},
+];
+---
+
+<div class="why">
+	<h4 class="why__title">What Prismatica takes off your plate</h4>
+	<dl class="why__list">
+		{ITEMS.map((item) => (
+			<div class="why__item">
+				<dt class="why__problem"><span>{item.problem}</span></dt>
+				<dd class="why__answer">
+					<svg class="why__tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7" pathLength="1" /></svg>
+					<span>{item.answer}</span>
+				</dd>
+			</div>
+		))}
+	</dl>
+</div>
+
+<style is:global>
+	.why { display: grid; align-content: start; gap: 0.9rem; padding: 1rem 1rem 1.1rem; }
+	:root .why__title { margin: 0; font-size: 1.125rem; line-height: 1.2; letter-spacing: -0.01em; color: var(--system-text-strong); }
+	.why__list { display: grid; gap: 0.85rem; margin: 0; }
+	.why__item { display: grid; gap: 0.25rem; padding-top: 0.85rem; border-top: 1px solid var(--system-divider); }
+	.why__item:first-child { padding-top: 0; border-top: 0; }
+
+	.why__problem { font-size: 0.8125rem; color: var(--system-text-muted); }
+
+	/* Struck through rather than deleted, so the problem stays readable; a
+	   background line (not text-decoration) can draw across wrapped lines. */
+	.why__problem span {
+		background: linear-gradient(var(--brand-palette-primary), var(--brand-palette-primary)) no-repeat 0 55% / 100% 1.5px;
+	}
+
+	.why__answer { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); gap: 0.5rem; margin: 0; font-size: 0.9375rem; line-height: 1.4; color: var(--system-text-strong); }
+	.why__tick { width: 1.25rem; height: 1.25rem; margin-top: 0.05rem; }
+	.why__tick path { fill: none; stroke: var(--brand-palette-primary); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+	@container ipad (min-width: 40rem) {
+		.why { padding: 1.5rem 1.75rem; gap: 1.25rem; }
+		:root .why__title { font-size: 1.375rem; }
+		.why__list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.75rem; }
+		.why__item:nth-child(2) { padding-top: 0; border-top: 0; }
+	}
+
+	/* Each time the slide opens, the problems strike through in turn and the
+	   answers tick in after them. */
+	@media (prefers-reduced-motion: no-preference) {
+		:root:not(.motion-paused) [data-play] .why__problem span { animation: why-strike 420ms var(--ease-premium, ease-out) calc(var(--why-i, 0) * 140ms + 200ms) backwards; }
+		:root:not(.motion-paused) [data-play] .why__tick path { animation: why-tick 360ms ease-out calc(var(--why-i, 0) * 140ms + 480ms) backwards; }
+		:root:not(.motion-paused) [data-play] .why__answer span { animation: why-rise 420ms var(--ease-premium, ease-out) calc(var(--why-i, 0) * 140ms + 420ms) backwards; }
+	}
+
+	.why__item:nth-child(2) { --why-i: 1; }
+	.why__item:nth-child(3) { --why-i: 2; }
+	.why__item:nth-child(4) { --why-i: 3; }
+	.why__item:nth-child(5) { --why-i: 4; }
+
+	@keyframes why-strike { from { background-size: 0% 1.5px; } }
+	@keyframes why-tick { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+	@keyframes why-rise { from { opacity: 0; translate: 0 6px; } }
+</style>

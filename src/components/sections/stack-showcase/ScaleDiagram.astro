@@ -1,0 +1,180 @@
+---
+// Second iPad slide: the Kubernetes shape of the stack as a top-down
+// flowchart, drawn from data/stack-scale.ts, whose Mermaid source is shown
+// beside it. Pods are squares; the load control (scale-diagram.ts) adds and
+// removes them as the autoscaler would. Server-rendered at "Quiet".
+import { CPU_TARGET, LEVELS, LINKS, PLANES, type Plane } from '../../../data/stack-scale';
+import { mermaidSource, replicasAt, totalPods } from '../../../lib/stack-scale';
+
+const BOX: Record<string, { x: number; y: number; w: number; h: number }> = {
+	clients: { x: 128, y: 8, w: 104, h: 28 },
+	ingress: { x: 124, y: 60, w: 112, h: 30 },
+	kong: { x: 80, y: 114, w: 200, h: 64 },
+	realtime: { x: 24, y: 214, w: 148, h: 64 },
+	data: { x: 188, y: 214, w: 148, h: 64 },
+	tenant: { x: 24, y: 314, w: 148, h: 64 },
+	registry: { x: 188, y: 314, w: 148, h: 64 },
+	postgres: { x: 24, y: 414, w: 148, h: 64 },
+	redis: { x: 188, y: 414, w: 148, h: 64 },
+};
+
+// Hand-routed so no wire crosses a box; the two long ones run in the margins.
+const WIRE: Record<string, string> = {
+	'clients>ingress': 'M 180 36 V 58',
+	'ingress>kong': 'M 180 90 V 112',
+	'kong>data': 'M 240 178 C 240 196 262 194 262 212',
+	'kong>realtime': 'M 120 178 C 120 196 98 194 98 212',
+	'data>tenant': 'M 214 278 C 214 296 146 294 146 312',
+	'data>registry': 'M 290 278 V 312',
+	'tenant>registry': 'M 172 346 H 186',
+	'tenant>postgres': 'M 70 378 V 412',
+	'registry>postgres': 'M 214 378 C 214 396 146 394 146 412',
+	'data>redis': 'M 336 246 H 350 V 446 H 338',
+	'realtime>postgres': 'M 24 246 H 10 V 446 H 22',
+};
+
+const wires = LINKS.map(([from, to]) => {
+	const d = WIRE[`${from}>${to}`];
+	if (!d) throw new Error(`ScaleDiagram: no wire drawn for ${from} -> ${to}`);
+	return { from, to, d };
+});
+const initial = 'quiet';
+const tag = (plane: Plane) => (plane.kind === 'autoscaled' ? `HPA ${plane.min}–${plane.max}` : plane.kind === 'manual' ? 'Fixed' : 'StatefulSet');
+const pods = (count: number) => `${count} ${count === 1 ? 'pod' : 'pods'}`;
+---
+
+<div class="scale" data-scale>
+	<div class="scale__figure">
+		<svg class="scale__svg" viewBox="0 0 360 492" role="img" aria-labelledby="scale-title scale-desc">
+			<title id="scale-title">How the stack scales on Kubernetes</title>
+			<desc id="scale-desc">Clients reach Kong through the ingress. Kong calls the Rust data plane and realtime; the data plane calls tenant control, the adapter registry and Redis; the control planes and realtime use PostgreSQL. Kong, the data plane and both control planes autoscale; realtime is fixed; PostgreSQL and Redis run one replica each.</desc>
+			<defs>
+				<marker id="scale-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+					<path class="scale__arrow" d="M 0 0 L 8 4 L 0 8 z" />
+				</marker>
+			</defs>
+			{wires.map((wire) => <path class="scale__wire" d={wire.d} marker-end="url(#scale-arrow)" data-from={wire.from} />)}
+			{PLANES.map((plane) => {
+				const box = BOX[plane.id]!;
+				const count = replicasAt(plane, initial);
+				return (
+					<g class="scale__node" data-kind={plane.kind}>
+						<rect class="scale__box" x={box.x} y={box.y} width={box.w} height={box.h} rx={plane.id === 'clients' ? box.h / 2 : 6} />
+						{plane.kind === 'entry' ? (
+							<text class="scale__name" x={box.x + box.w / 2} y={box.y + box.h / 2} text-anchor="middle" dominant-baseline="central">{plane.name}</text>
+						) : (
+							<>
+								<text class="scale__name" x={box.x + 12} y={box.y + 20}>{plane.name}</text>
+								{Array.from({ length: plane.max }, (_, index) => (
+									<rect class="scale__pod" x={box.x + 12 + index * 12} y={box.y + 30} width="8" height="8" rx="1.5" data-pod={plane.id} data-index={index} data-on={index < count ? '' : undefined} />
+								))}
+								<text class="scale__tag" x={box.x + 12} y={box.y + 54}>{tag(plane)}</text>
+								<text class="scale__count" x={box.x + box.w - 12} y={box.y + 54} text-anchor="end" data-count={plane.id}>{pods(count)}</text>
+							</>
+						)}
+					</g>
+				);
+			})}
+		</svg>
+	</div>
+
+	<div class="scale__panel">
+		<fieldset class="scale__levels">
+			<legend>Load</legend>
+			{LEVELS.map((level) => (
+				<label class="scale__level">
+					<input type="radio" name="stack-load" value={level.id} checked={level.id === initial} />
+					<span>{level.label}</span>
+				</label>
+			))}
+		</fieldset>
+		<p class="scale__total"><span data-scale-total>{totalPods(initial)}</span> pods running</p>
+		<p class="scale__caption" aria-live="polite" data-scale-caption>{LEVELS.find((level) => level.id === initial)?.caption}</p>
+		<ul class="scale__legend">
+			<li data-kind="autoscaled">Autoscaled at {CPU_TARGET}% CPU</li>
+			<li data-kind="manual">Scaled by hand</li>
+			<li data-kind="stateful">One stateful replica</li>
+		</ul>
+		<p class="scale__note">Inside the namespace a NetworkPolicy denies every connection the chart does not allow; each arrow is an allowed call.</p>
+		<details class="scale__source">
+			<summary>Mermaid source</summary>
+			<pre><code>{mermaidSource()}</code></pre>
+		</details>
+	</div>
+</div>
+
+<style is:global>
+	.scale { display: grid; gap: 0.75rem; padding: 0.75rem 0.9rem 0.9rem; font-size: 0.8125rem; line-height: 1.4; }
+	.scale__figure { display: grid; place-items: center; min-width: 0; }
+	.scale__svg { display: block; width: 100%; max-width: 26rem; height: auto; }
+
+	.scale__wire { fill: none; stroke: var(--system-text-muted); stroke-width: 1.2; }
+	.scale__arrow { fill: var(--system-text-muted); }
+	.scale__box { fill: var(--system-surface); stroke: var(--system-text-strong); stroke-width: 1.2; }
+	.scale__node[data-kind='entry'] .scale__box { stroke: var(--system-text-muted); }
+	.scale__node[data-kind='autoscaled'] .scale__box { stroke-width: 2; }
+	.scale__node[data-kind='manual'] .scale__box { stroke-dasharray: 5 3; }
+	.scale__node[data-kind='stateful'] .scale__box { fill: var(--system-surface-sunken); }
+
+	.scale__name { font-family: var(--system-font-sans); font-size: 13.5px; font-weight: 600; fill: var(--system-text-strong); }
+	.scale__node[data-kind='entry'] .scale__name { font-weight: 500; }
+	.scale__tag,
+	.scale__count { font-family: var(--system-font-sans); font-size: 11.5px; fill: var(--system-text-muted); }
+	.scale__count { font-variant-numeric: tabular-nums; fill: var(--system-text-strong); }
+
+	.scale__pod {
+		fill: var(--system-text-strong);
+		opacity: 0.12;
+		transform-box: fill-box;
+		transform-origin: center;
+		scale: 0.6;
+		transition: scale 420ms var(--ease-premium, ease-out), opacity 240ms ease, fill 240ms ease;
+		transition-delay: var(--pod-delay, 0ms);
+	}
+
+	.scale__pod[data-on] { opacity: 1; scale: 1; }
+	.scale__pod[data-on][data-extra] { fill: var(--brand-palette-primary); }
+
+	.scale__panel { display: grid; align-content: start; gap: 0.6rem; }
+	.scale__levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; margin: 0; padding: 0; border: 0; }
+	.scale__levels legend { margin-bottom: 0.35rem; padding: 0; font-size: 0.75rem; color: var(--system-text-muted); }
+	.scale__level { position: relative; display: grid; }
+	.scale__level input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+
+	.scale__level span {
+		display: grid;
+		place-items: center;
+		min-height: 44px;
+		border: 1px solid var(--system-border-strong);
+		border-radius: var(--system-radius-pill);
+		font-weight: 500;
+		color: var(--system-text-strong);
+		transition: background-color 160ms ease, color 160ms ease;
+	}
+
+	.scale__level input:checked + span { border-color: var(--system-text-strong); background: var(--system-text-strong); color: var(--system-surface); }
+	.scale__level input:focus-visible + span { outline: 2px solid var(--system-focus-ring); outline-offset: 2px; }
+
+	.scale__total { margin: 0; color: var(--system-text-muted); }
+	.scale__total span { font-size: 1.25rem; font-weight: 700; color: var(--system-text-strong); font-variant-numeric: tabular-nums; }
+	.scale__caption { min-height: 4.2em; margin: 0; color: var(--system-text); }
+
+	.scale__legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin: 0; padding: 0; list-style: none; font-size: 0.75rem; color: var(--system-text-muted); }
+	.scale__legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+	.scale__legend li::before { content: ''; width: 14px; height: 10px; border: 1.5px solid var(--system-text-strong); border-radius: 2px; }
+	.scale__legend li[data-kind='autoscaled']::before { border-width: 2px; }
+	.scale__legend li[data-kind='manual']::before { border-style: dashed; }
+	.scale__legend li[data-kind='stateful']::before { background: var(--system-surface-sunken); }
+
+	.scale__note { margin: 0; font-size: 0.75rem; color: var(--system-text-muted); }
+	.scale__source summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--system-text-strong); cursor: pointer; }
+	.scale__source pre { max-height: 12rem; overflow: auto; margin: 0; padding: 0.6rem; border-radius: var(--system-radius-sm); background: var(--system-surface-sunken); font-family: var(--system-font-mono); font-size: 0.6875rem; line-height: 1.5; }
+
+	@container ipad (min-width: 40rem) {
+		.scale { grid-template-columns: minmax(0, 1.1fr) minmax(14rem, 1fr); align-items: start; gap: 1rem; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.scale__pod { transition: none; }
+	}
+</style>

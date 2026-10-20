@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { SERVICES } from '../../../src/data/grobase-services';
 import {
+	dependencyDepth,
+	pipelineRoute,
 	pipelineStatus,
 	reachableEngines,
 	servicesForProfiles,
@@ -168,6 +171,32 @@ describe('service graph', () => {
 			];
 			const status = pipelineStatus(new Set(['query-router', 'data-plane-router-rust']), small);
 			expect(status.engine).toBe('sqlite');
+		});
+	});
+
+	describe('dependencyDepth', () => {
+		it('starts every dependency before the services that need it', () => {
+			const depth = dependencyDepth();
+			expect(depth.size).toBe(SERVICES.length);
+			for (const service of SERVICES) {
+				for (const dep of service.dependsOn) expect(depth.get(dep)!).toBeLessThan(depth.get(service.id)!);
+			}
+			expect(depth.get('postgres')).toBe(0);
+		});
+	});
+
+	describe('pipelineRoute', () => {
+		it('follows the whole path when every hop runs', () => {
+			const route = pipelineRoute(pipelineStatus(servicesForProfiles(['*'])));
+			expect(route.request).toEqual(['waf', 'kong', 'query-router', 'permission-engine', 'adapter-registry-go', 'data-plane-router-rust', 'postgres']);
+			expect(route.events).toEqual(['outbox-relay', 'redis', 'webhook-dispatcher']);
+		});
+
+		it('stops at the first stopped hop and sends no events', () => {
+			const enabled = withoutDependents(servicesForProfiles(['*']), 'permission-engine');
+			const route = pipelineRoute(pipelineStatus(enabled));
+			expect(route.request).toEqual(['waf', 'kong', 'query-router']);
+			expect(route.events).toEqual([]);
 		});
 	});
 });

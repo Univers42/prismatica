@@ -104,6 +104,26 @@ export function pipelineStatus(
 	return { hops, engine, blockedAt, eventsBlockedAt };
 }
 
+// The services a request visits, in order, up to and including the first
+// stopped one; an embedded engine repeats the data plane and the 'engine'
+// marker has no service, so both drop. Events only flow after a request
+// completes, up to their own first stopped hop.
+export function pipelineRoute(status: ReturnType<typeof pipelineStatus>): { request: string[]; events: string[] } {
+	const walk = (phase: PipelineHop['phase'], stopAt: string | null) => {
+		const ids: string[] = [];
+		for (const hop of status.hops.filter((entry) => entry.phase === phase)) {
+			if (hop.service === 'engine' || ids.includes(hop.service)) continue;
+			ids.push(hop.service);
+			if (hop.service === stopAt) break;
+		}
+		return ids;
+	};
+	return {
+		request: walk('request', status.blockedAt),
+		events: status.blockedAt === null ? walk('events', status.eventsBlockedAt) : [],
+	};
+}
+
 // WHY: the figure narrates one path, so it names one engine — the first with a
 // backing service wins, falling back to an embedded one.
 function firstReachableEngine(enabled: Set<string>, services: Graph): string | null {
@@ -113,6 +133,23 @@ function firstReachableEngine(enabled: Set<string>, services: Graph): string | n
 	const withService = reachable.find((id) => resolveEngineService(id) !== null);
 	const embedded = reachable.find((id) => resolveEngineService(id) === null);
 	return withService ?? embedded ?? null;
+}
+
+// WHY: the graph builds itself in the order compose would start it, so each
+// service's depth is one more than its deepest dependency (0 for none).
+export function dependencyDepth(services: Graph = SERVICES): Map<string, number> {
+	const byId = indexById(services);
+	const depth = new Map<string, number>();
+	const visit = (id: string): number => {
+		const known = depth.get(id);
+		if (known !== undefined) return known;
+		const deps = byId.get(id)?.dependsOn ?? [];
+		const value = deps.length === 0 ? 0 : 1 + Math.max(...deps.map(visit));
+		depth.set(id, value);
+		return value;
+	};
+	services.forEach((service) => visit(service.id));
+	return depth;
 }
 
 function indexById(services: Graph): Map<string, GrobaseService> {
