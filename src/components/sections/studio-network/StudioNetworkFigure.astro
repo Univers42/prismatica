@@ -1,0 +1,95 @@
+---
+import {
+	ASSISTANT_PICKS as picks,
+	SPACES as spaces,
+	layoutStudioNetwork,
+} from '../../../data/studio-network';
+
+export interface Props {
+	size?: number;
+}
+
+const { size = 640 } = Astro.props;
+const { hub, engines, apps, engineRays, appRays, orgRing } = layoutStudioNetwork(size);
+
+// Membership computed at build time: team marks what attribute-based rules let
+// the sales team reach, public marks the public space members, picks mark the
+// assistant prompt — so the CSS can dim or highlight by data attribute.
+const space = spaces.find((s) => s.id === 'team');
+const publicSpace = spaces.find((s) => s.id === 'public');
+const teamEngines = new Set(space?.engines ?? []);
+const teamApps = new Set(space?.apps ?? []);
+const publicEngines = new Set(publicSpace?.engines ?? []);
+const publicApps = new Set(publicSpace?.apps ?? []);
+const pickEngines = new Set(picks.engines);
+const pickApps = new Set(picks.apps);
+const marks = (isTeam: boolean, isPublic: boolean, isPick: boolean) => ({
+	'data-team': isTeam ? 'true' : undefined,
+	'data-public': isPublic ? 'true' : undefined,
+	'data-pick': isPick ? 'true' : undefined,
+});
+const rayMarks = (id: string) =>
+	marks(teamEngines.has(id) || teamApps.has(id), publicEngines.has(id) || publicApps.has(id), pickEngines.has(id) || pickApps.has(id));
+---
+
+<svg
+	class="studio-net__svg"
+	viewBox="0 0 640 640"
+	role="img"
+	aria-labelledby="studio-net-title studio-net-desc"
+>
+	<title id="studio-net-title">Ten database engines and five apps connect through the Prismatica hub.</title>
+	<desc id="studio-net-desc">
+		Every engine and app joins one network through the Prismatica hub; the dashed ring bounds
+		the reach that subnetworks such as the sales team or a public space see inside.
+	</desc>
+
+	<g class="studio-net__orbits">
+		<circle class="studio-net__orbit" cx="320" cy="320" r="96" />
+		<circle class="studio-net__orbit" cx="320" cy="320" r="210" />
+		<!-- Corner shapes give the orbits a visible drift as the story scrolls. -->
+		<path class="studio-net__orbit-shape" d="M56 96 L92 96 L74 60 Z" />
+		<rect class="studio-net__orbit-shape" x="556" y="70" width="28" height="28" />
+		<circle class="studio-net__orbit-shape" cx="74" cy="560" r="14" />
+	</g>
+
+	<!-- One ring, not slices: spaces are nested, so they share one boundary. -->
+	<path class="studio-net__org-ring" d={orgRing.d} pathLength="1" />
+
+	<g class="studio-net__rays">
+		{[...engineRays, ...appRays].map((ray) => (
+			<g class="studio-net__ray" data-node={ray.id} {...rayMarks(ray.id)}>
+				<path class="studio-net__beam" d={ray.d} pathLength="1" />
+				<path class="studio-net__packet" d={ray.d} pathLength="1" />
+			</g>
+		))}
+	</g>
+
+	<g class="studio-net__hub">
+		<circle cx={hub.x} cy={hub.y} r={hub.r} />
+		<text class="studio-net__hub-label" x={hub.x} y={hub.y + 7} text-anchor="middle">Prismatica</text>
+	</g>
+
+	<g class="studio-net__nodes">
+		{engines.map((engine) => (
+			<g
+				class="studio-net__node studio-net__node--engine"
+				data-node={engine.id}
+				{...marks(teamEngines.has(engine.id), publicEngines.has(engine.id), pickEngines.has(engine.id))}
+			>
+				<rect class="studio-net__pill" x={engine.x - 62} y={engine.y - 19} width="124" height="38" rx="19" />
+				<text class="studio-net__label" x={engine.x} y={engine.y + 8} text-anchor="middle">{engine.label}</text>
+			</g>
+		))}
+		{apps.map((app) => (
+			<g
+				class="studio-net__node studio-net__node--app"
+				data-node={app.id}
+				{...marks(teamApps.has(app.id), publicApps.has(app.id), pickApps.has(app.id))}
+			>
+				<circle class="studio-net__dot" cx={app.x} cy={app.y} r="14" />
+				<text class="studio-net__label" x={app.labelX} y={app.labelY} text-anchor={app.anchor}>{app.label}</text>
+			</g>
+		))}
+	</g>
+</svg>
