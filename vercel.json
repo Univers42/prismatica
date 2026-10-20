@@ -6,15 +6,18 @@
   "outputDirectory": "dist",
   "build": {
     "env": {
-      "TRACK_BINOCLE_IN_DOCKER": "1"
+      "TRACK_BINOCLE_IN_DOCKER": "1",
+      "PUBLIC_SITE_URL": "https://prismatica-eta.vercel.app",
+      "PUBLIC_OSIONOS_APP_URL": "https://baas.tail10f2ea.ts.net:8443",
+      "PUBLIC_AUTH_REQUIRE_EMAIL_VERIFICATION": "true"
     }
   },
   "rewrites": [
-    { "source": "/api/auth/:path*", "destination": "https://prismatica-auth-gateway.fly.dev/api/auth/:path*" },
-    { "source": "/api/newsletter/:path*", "destination": "https://prismatica-auth-gateway.fly.dev/api/newsletter/:path*" },
-    { "source": "/auth/:path*", "destination": "https://grobase-stack.fly.dev/auth/:path*" },
-    { "source": "/query/:path*", "destination": "https://grobase-stack.fly.dev/query/:path*" },
-    { "source": "/storage/:path*", "destination": "https://grobase-stack.fly.dev/storage/:path*" }
+    { "source": "/api/auth/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/auth/:path*" },
+    { "source": "/api/newsletter/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/newsletter/:path*" },
+    { "source": "/auth/:path*", "destination": "https://baas.tail10f2ea.ts.net/auth/:path*" },
+    { "source": "/query/:path*", "destination": "https://baas.tail10f2ea.ts.net/query/:path*" },
+    { "source": "/storage/:path*", "destination": "https://baas.tail10f2ea.ts.net/storage/:path*" }
   ],
   "headers": [
     {
