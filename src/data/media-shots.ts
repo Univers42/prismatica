@@ -143,6 +143,33 @@ export const MEDIA_SHOTS = {
 		src: 'osionos-themes.webp',
 		srcSmall: 'osionos-themes-800.webp',
 	},
+	crmDeals: {
+		id: 'crmDeals',
+		kind: 'image',
+		ratio: '16/10',
+		label: 'A Deals table for a sales CRM: stage, amount, probability, a weighted-value formula, a health formula, owner, company and region; won deals are green, lost deals red, likely deals blue',
+		capture: 'Laptop (1440x900 @2x): Northwind CRM, Deals, "All deals" table view with its colour rules.',
+		src: 'osionos-crm-deals.webp',
+		srcSmall: 'osionos-crm-deals-800.webp',
+	},
+	crmCalendar: {
+		id: 'crmCalendar',
+		kind: 'image',
+		ratio: '16/10',
+		label: 'November 2026 in a calendar view of the same deals, each next step on its date and coloured by stage',
+		capture: 'Laptop (1440x900 @2x): Deals, "Next steps" calendar view, month scale.',
+		src: 'osionos-crm-calendar.webp',
+		srcSmall: 'osionos-crm-calendar-800.webp',
+	},
+	crmGallery: {
+		id: 'crmGallery',
+		kind: 'image',
+		ratio: '16/10',
+		label: 'Deals worth more than 60,000 as gallery cards showing company, amount, stage and owner',
+		capture: 'Laptop (1440x900 @2x): Deals, "Big tickets" gallery view, filtered on amount.',
+		src: 'osionos-crm-gallery.webp',
+		srcSmall: 'osionos-crm-gallery-800.webp',
+	},
 } as const satisfies Record<string, MediaShot>;
 
 export type MediaShotId = keyof typeof MEDIA_SHOTS;

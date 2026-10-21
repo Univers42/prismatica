@@ -19,6 +19,15 @@ file wins).
 | `whiteboard` | video | 1600×1000 | 8 s | Sketch a three-step flow on the whiteboard, then embed it in a page. |
 | `mobile` | photo | 900×1600 | — | Phone screenshot (1080×1920) of the home page with tasks, calendar and mail blocks. |
 | `tablet` | photo | 1600×1200 | — | Landscape tablet screenshot (2048×1536) of a board view, status bar hidden. |
+| `dashboard` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Products overview dashboard, Databases sidebar expanded. |
+| `analytics` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Products analytics dashboard, Midnight theme, dark mode. |
+| `map` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Products warehouse map view. |
+| `timeline` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Projects timeline, month scale, Feb to Aug 2026. |
+| `split` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Split right, Tasks board left, Products analytics right. |
+| `themes` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Settings, Preferences, colour theme list, dark mode. |
+| `crmDeals` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Northwind CRM, Deals, "All deals" table view with its colour rules. |
+| `crmCalendar` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Next steps" calendar view, month scale. |
+| `crmGallery` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Big tickets" gallery view, filtered on amount. |
 
 Each app clip appears twice — as a block in the workspace on the hero laptop and
 in the app tour — from the same file. `mobile` and `tablet` fill the phone and
@@ -63,6 +72,14 @@ The crop keeps the centre: frame the action in the middle of the recording.
    	src: 'board.mp4',
    	poster: 'board-poster.webp',
    },
+   ```
+
+3. An image also gets an 800×500 copy, named `<name>-800.webp`, and lists it as
+   `srcSmall` (phones must not download the 1600px copy):
+
+   ```sh
+   ffmpeg -i shot.png -vf scale=800:500:flags=lanczos -c:v libwebp -quality 80 public/assets/<name>-800.webp
+   ffmpeg -i shot.png -vf scale=1600:1000 -c:v libwebp -quality 82 public/assets/<name>.webp
    ```
 
 A slot takes one `src`. Ship the H.264 `.mp4`: it plays in every current browser,
