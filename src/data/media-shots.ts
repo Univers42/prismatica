@@ -170,6 +170,24 @@ export const MEDIA_SHOTS = {
 		src: 'osionos-crm-gallery.webp',
 		srcSmall: 'osionos-crm-gallery-800.webp',
 	},
+	crmPipeline: {
+		id: 'crmPipeline',
+		kind: 'image',
+		ratio: '16/10',
+		label: 'The same deals as a pipeline board, one column per stage from Lead to Won, each card showing amount, owner, close date and products',
+		capture: 'Laptop (1440x900 @2x): Deals, "Pipeline" board view grouped by stage.',
+		src: 'osionos-crm-pipeline.webp',
+		srcSmall: 'osionos-crm-pipeline-800.webp',
+	},
+	crmForecast: {
+		id: 'crmForecast',
+		kind: 'image',
+		ratio: '16/10',
+		label: 'A forecast dashboard over the deals: closing this quarter, deals over 60,000, the largest open deal and average win odds, with accounts on a world map coloured by stage and a donut of deals by region',
+		capture: 'Laptop (1440x900 @2x): Deals, "Forecast & regions" dashboard view.',
+		src: 'osionos-crm-forecast.webp',
+		srcSmall: 'osionos-crm-forecast-800.webp',
+	},
 } as const satisfies Record<string, MediaShot>;
 
 export type MediaShotId = keyof typeof MEDIA_SHOTS;

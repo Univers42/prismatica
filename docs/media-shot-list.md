@@ -28,6 +28,8 @@ file wins).
 | `crmDeals` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Northwind CRM, Deals, "All deals" table view with its colour rules. |
 | `crmCalendar` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Next steps" calendar view, month scale. |
 | `crmGallery` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Big tickets" gallery view, filtered on amount. |
+| `crmPipeline` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Pipeline" board view grouped by stage. |
+| `crmForecast` | photo | 1600×1000 | — | Laptop (1440x900 @2x): Deals, "Forecast & regions" dashboard view. |
 
 Each app clip appears twice — as a block in the workspace on the hero laptop and
 in the app tour — from the same file. `mobile` and `tablet` fill the phone and
