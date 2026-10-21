@@ -16,7 +16,7 @@ const VIDEO_TYPES: Record<string, string> = { webm: 'video/webm', mp4: 'video/mp
 
 export type ResolvedMediaSlot =
 	| { state: 'placeholder'; ratioClass: string; width: number; height: number; label: string; kind: MediaShot['kind']; durationSeconds?: number }
-	| { state: 'image'; ratioClass: string; width: number; height: number; label: string; src: string }
+	| { state: 'image'; ratioClass: string; width: number; height: number; label: string; src: string; srcset?: string }
 	| { state: 'video'; ratioClass: string; width: number; height: number; label: string; src: string; type: string; poster?: string };
 
 /** CSS modifier for a ratio: classes, not inline style, because the CSP forbids style attributes. */
@@ -37,7 +37,9 @@ export function resolveMediaSlot(shot: MediaShot, baseUrl = '/'): ResolvedMediaS
 	}
 	const src = safePublicAssetPath(shot.src, baseUrl);
 	if (shot.kind === 'image') {
-		return { ...base, state: 'image', src };
+		if (!shot.srcSmall) return { ...base, state: 'image', src };
+		const srcset = `${safePublicAssetPath(shot.srcSmall, baseUrl)} ${width / 2}w, ${src} ${width}w`;
+		return { ...base, state: 'image', src, srcset };
 	}
 	const extension = shot.src.split('.').pop()?.toLowerCase() ?? '';
 	const type = VIDEO_TYPES[extension];

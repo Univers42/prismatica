@@ -5,6 +5,8 @@
 // Laid out in logical px at the size HeroDevices picks for the screen, then
 // zoomed, so no size in here may depend on the viewport; below 720 logical px
 // (`@container app`) it takes its phone layout, the sidebar becoming a tab bar.
+// Blocks stay drawn (`drawn`) even where a capture exists: at block size a
+// full-window screenshot is unreadable. The app tour shows the captures.
 import AppGlyph from '../../ui/AppGlyph.astro';
 import MediaSlot from '../../ui/MediaSlot.astro';
 import WorkspaceCommand from './WorkspaceCommand.astro';
@@ -40,7 +42,7 @@ const FIRST_BLOCK: ConnectedAppId = 'board';
 							{app.links.map((link) => <li class="workspace__link">{appName(link)}</li>)}
 						</ul>
 					</div>
-					<MediaSlot shot={app.shot} eager={app.id === FIRST_BLOCK}><AppSketch name={app.id} /></MediaSlot>
+					<MediaSlot shot={app.shot} eager={app.id === FIRST_BLOCK} drawn><AppSketch name={app.id} /></MediaSlot>
 				</div>
 			))}
 		</div>

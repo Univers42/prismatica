@@ -1,0 +1,146 @@
+---
+// Unedited screenshots of the running app, one per kind of window the canvas
+// copy promises. Phones swipe through them (scroll-snap, edge to edge); from
+// 768px they settle into a grid. Files and alt text live in media-shots.ts.
+import MediaSlot from '../ui/MediaSlot.astro';
+import { MEDIA_SHOTS } from '../../data/media-shots';
+
+const SCREENS = [
+	{ shot: MEDIA_SHOTS.dashboard, title: 'Dashboards over your rows', note: 'Totals, charts and breakdowns, next to every database the workspace reads.' },
+	{ shot: MEDIA_SHOTS.map, title: 'Rows on a map', note: 'Each product pinned at its warehouse address, coloured by category.' },
+	{ shot: MEDIA_SHOTS.timeline, title: 'Projects on a timeline', note: 'Start and end dates drawn as bars, labelled with their status.' },
+	{ shot: MEDIA_SHOTS.split, title: 'Two views side by side', note: 'Split the editor to keep the board and the numbers in sight.' },
+	{ shot: MEDIA_SHOTS.analytics, title: 'Same data, any theme', note: 'The analytics view in Midnight, one of nine colour themes.' },
+	{ shot: MEDIA_SHOTS.themes, title: 'Set up the way you work', note: 'Light or dark, an accent colour, density, corners and text size.' },
+];
+---
+
+<div class="screen-gallery">
+	<div class="screen-gallery__head">
+		<h3 class="screen-gallery__title" id="screen-gallery-title">Screens from the running app</h3>
+		<p class="screen-gallery__lede">Unedited screenshots of osionos on a demo workspace: one set of data, shown the ways your team needs it.</p>
+	</div>
+	<div class="screen-gallery__scroller" role="region" aria-labelledby="screen-gallery-title">
+		<ul class="screen-gallery__list" role="list">
+			{SCREENS.map((screen) => (
+				<li class="screen-gallery__item">
+					<figure class="screen-gallery__figure">
+						<MediaSlot shot={screen.shot} frame="browser" sizes="(min-width: 1200px) 360px, (min-width: 768px) 46vw, 82vw" />
+						<figcaption class="screen-gallery__caption">
+							<span class="screen-gallery__name">{screen.title}</span>
+							<span class="screen-gallery__note">{screen.note}</span>
+						</figcaption>
+					</figure>
+				</li>
+			))}
+		</ul>
+	</div>
+</div>
+
+<style is:global>
+	.screen-gallery {
+		display: grid;
+		gap: 1.25rem;
+		min-width: 0;
+		margin-top: clamp(1.5rem, 5vw, 3.5rem);
+	}
+
+	.screen-gallery__head {
+		display: grid;
+		gap: 0.5rem;
+		max-width: 60ch;
+	}
+
+	.screen-gallery__title {
+		margin: 0;
+		font-size: clamp(1.35rem, 4.4vw, 1.9rem);
+		font-weight: 600;
+		line-height: 1.15;
+		color: var(--brand-canvas-text);
+	}
+
+	.screen-gallery__lede {
+		margin: 0;
+		line-height: 1.55;
+		color: var(--brand-canvas-text-dim);
+	}
+
+	/* Phones: a swipeable row bleeding to the screen edge (4vw = the gutter
+	   left by .section__container at 92vw), the next card peeking in. */
+	.screen-gallery__scroller {
+		margin-inline: -4vw;
+		padding: 0.25rem 4vw 0.75rem;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scroll-padding-inline: 4vw;
+		overscroll-behavior-x: contain;
+		border-radius: var(--system-radius-md);
+	}
+
+	/* No tabindex: the row holds no controls, and Chrome and Firefox already put a
+	   scroller in the tab order. Caveat: Safari does not, so there a keyboard user
+	   reads the screens only in the 768px+ grid. */
+	.screen-gallery__scroller:focus-visible {
+		outline: 3px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+
+	.screen-gallery__list {
+		display: grid;
+		grid-auto-columns: 82vw;
+		grid-auto-flow: column;
+		gap: 0.85rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.screen-gallery__item {
+		min-width: 0;
+		scroll-snap-align: start;
+	}
+
+	.screen-gallery__figure {
+		display: grid;
+		gap: 0.65rem;
+		margin: 0;
+	}
+
+	.screen-gallery__figure .media-slot {
+		box-shadow: var(--system-shadow-2);
+	}
+
+	.screen-gallery__caption {
+		display: grid;
+		gap: 0.2rem;
+	}
+
+	.screen-gallery__name {
+		font-weight: 600;
+		color: var(--brand-canvas-text);
+	}
+
+	.screen-gallery__note {
+		font-size: 0.9375rem;
+		line-height: 1.45;
+		color: var(--brand-canvas-text-dim);
+	}
+
+	@media (min-width: 768px) {
+		.screen-gallery__scroller {
+			margin-inline: 0;
+			padding: 0;
+			overflow: visible;
+		}
+
+		.screen-gallery__list {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1.75rem 1.25rem;
+		}
+	}
+
+	@media (min-width: 1200px) {
+		.screen-gallery__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	}
+</style>

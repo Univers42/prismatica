@@ -44,6 +44,12 @@ describe('resolveMediaSlot', () => {
 		expect(resolveMediaSlot(shot)).toMatchObject({ state: 'image', src: '/assets/mobile.webp', width: 900, height: 1600 });
 	});
 
+	it('offers the half-width copy of an image as a srcset, through the same allowlist', () => {
+		const shot: MediaShot = { id: 'map', kind: 'image', ratio: '16/10', label: 'Map', capture: 'Screenshot.', src: 'map.webp', srcSmall: 'map-800.webp' };
+		expect(resolveMediaSlot(shot)).toMatchObject({ src: '/assets/map.webp', srcset: '/assets/map-800.webp 800w, /assets/map.webp 1600w' });
+		expect(() => resolveMediaSlot({ ...shot, srcSmall: '../map.webp' })).toThrow(/Unsafe public asset path/u);
+	});
+
 	it('rejects traversal and remote URLs', () => {
 		expect(() => resolveMediaSlot({ ...video, src: '../secret.mp4' })).toThrow(/Unsafe public asset path/u);
 		expect(() => resolveMediaSlot({ ...video, src: 'https://evil.example/clip.mp4' })).toThrow(/Unsafe public asset path/u);

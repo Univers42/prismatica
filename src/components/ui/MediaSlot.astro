@@ -3,7 +3,9 @@
 // wireframe "blueprint" at the media's final size; with one it renders the
 // <img>/<video>. The box size never changes between the two, so swapping a
 // placeholder for the real file is a one-line edit in src/data/media-shots.ts.
-// Children, when given, replace the blueprint as a drawn stand-in (AppSketch).
+// Children, when given, replace the blueprint as a drawn stand-in (AppSketch);
+// `drawn` keeps that stand-in even once a capture exists, for slots too small
+// to read a full-window screenshot.
 import type { MediaShot } from '../../data/media-shots';
 import { resolveMediaSlot } from '../../lib/media-slot';
 
@@ -12,11 +14,14 @@ type Props = {
 	frame?: 'browser' | 'phone' | 'none';
 	/** Above-the-fold slots load eagerly. */
 	eager?: boolean;
+	/** Rendered width, for picking between `src` and `srcSmall`. */
+	sizes?: string;
+	drawn?: boolean;
 	class?: string;
 };
 
-const { shot, frame = 'none', eager = false, class: className = '' } = Astro.props;
-const slot = resolveMediaSlot(shot, import.meta.env.BASE_URL);
+const { shot, frame = 'none', eager = false, sizes = '(min-width: 1000px) 60vw, 92vw', drawn = false, class: className = '' } = Astro.props;
+const slot = resolveMediaSlot(drawn ? { ...shot, src: undefined } : shot, import.meta.env.BASE_URL);
 const kindLabel = shot.kind === 'video' ? 'Video' : 'Photo';
 const hasSketch = Astro.slots.has('default');
 const meta = [kindLabel, shot.durationSeconds ? `${shot.durationSeconds} s` : '', `${slot.width}×${slot.height}`].filter(Boolean).join(', ');
@@ -45,6 +50,8 @@ const meta = [kindLabel, shot.durationSeconds ? `${shot.durationSeconds} s` : ''
 		{slot.state === 'image' && (
 			<img
 				src={slot.src}
+				srcset={slot.srcset}
+				sizes={slot.srcset ? sizes : undefined}
 				width={slot.width}
 				height={slot.height}
 				alt={slot.label}
