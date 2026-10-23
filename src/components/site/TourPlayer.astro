@@ -1,0 +1,93 @@
+---
+// The tour's player and chapter list, shared by the dialog (click 1 on /) and the /tour page (the
+// same content with JavaScript off). The video is fetched only when it plays (preload="none").
+import CaptureFrame from './CaptureFrame.astro';
+import { CHAPTERS, TOUR } from '../../data/tour';
+---
+
+<div class="tour">
+	<div class="tour__media">
+		{TOUR.ready ? (
+			<video controls preload="none" playsinline poster={TOUR.poster} width={TOUR.width} height={TOUR.height} data-tour-video>
+				<source src={TOUR.webm} type="video/webm" />
+				<source src={TOUR.mp4} type="video/mp4" />
+				<track kind="captions" src={TOUR.captions} srclang="en" label="English" default />
+				<p>Your browser cannot play this video. <a href={TOUR.mp4}>Download the MP4</a> or <a href={TOUR.transcript}>read the transcript</a>.</p>
+			</video>
+		) : (
+			<CaptureFrame shot="S12" />
+		)}
+	</div>
+
+	<ol class="tour__chapters" aria-label="Chapters">
+		{CHAPTERS.map((chapter) => (
+			<li>
+				<span class="label">{chapter.start}</span>
+				<span class="tour__chapter-title">{chapter.title}</span>
+				<span class="tour__caption">{chapter.caption}</span>
+			</li>
+		))}
+	</ol>
+
+	{TOUR.ready ? (
+		<p class="tour__alternatives">
+			<a href={TOUR.mp4}>Download the MP4</a> · <a href={TOUR.transcript}>Read the transcript</a>
+		</p>
+	) : (
+		<p class="tour__alternatives">The recording is made from the demo account and lands with it. The chapters above are its script.</p>
+	)}
+</div>
+
+<style>
+	.tour {
+		display: grid;
+		gap: var(--space-5);
+	}
+
+	.tour video {
+		width: 100%;
+		height: auto;
+		border-radius: var(--radius-m);
+		background: var(--ink);
+	}
+
+	.tour__chapters {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	.tour__chapters li {
+		display: grid;
+		grid-template-columns: 3.5rem 1fr;
+		column-gap: var(--space-3);
+		max-width: none;
+	}
+
+	.tour__chapter-title {
+		font-weight: 600;
+	}
+
+	.tour__caption {
+		grid-column: 2;
+		color: var(--graphite);
+		font-size: var(--step--1);
+	}
+
+	.tour__alternatives {
+		font-size: var(--step--1);
+		color: var(--graphite);
+	}
+
+	@media (min-width: 64rem) {
+		.tour {
+			grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+			align-items: start;
+		}
+
+		.tour__alternatives {
+			grid-column: 1 / -1;
+		}
+	}
+</style>

@@ -1,0 +1,58 @@
+---
+// Section 7: what exists and what does not, in the product's own terms. It replaces the old FAQ,
+// testimonials and logo strip, whose claims nothing backed (AUDIT R8). Each "not yet" is a known
+// gap with evidence in groot docs/redesign/PLAN.md §5.1; remove a line only when its fix ships.
+import { SOURCE_URL } from '../../data/links';
+---
+
+<section class="section" id="plainly" aria-labelledby="plainly-title">
+	<div class="container">
+		<div class="section__head">
+			<h2 id="plainly-title">What it is, plainly.</h2>
+		</div>
+
+		<div class="plainly">
+			<div>
+				<h3>What it does</h3>
+				<ul>
+					<li>Pages and databases in one workspace, with relations between records, backlinks between pages and a graph of both.</li>
+					<li>Saved views over the same data: table, board, calendar, gallery and chart.</li>
+					<li>PostgreSQL, MySQL and MongoDB databases on grobase, linked into a workspace and read where they live.</li>
+					<li>Public source on <a href={SOURCE_URL} rel="noopener">GitHub</a>. The grobase backend is licensed AGPL-3.0.</li>
+				</ul>
+			</div>
+			<div>
+				<h3>Not done yet</h3>
+				<ul>
+					<li>The Share dialog does not decide who can open a page yet. Access is set by the page's owner, and the dialog is being repaired.</li>
+					<li>A relation is written on one side only; the reverse side is not filled in for you.</li>
+					<li>Linking an outside database is an administrator task through grobase's API. There is no screen for it.</li>
+					<li>The desktop app still needs its backend running in Docker on the same machine.</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.plainly {
+		display: grid;
+		gap: var(--space-7);
+	}
+
+	.plainly h3 {
+		margin-bottom: var(--space-4);
+	}
+
+	.plainly ul {
+		padding-inline-start: var(--space-5);
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	@media (min-width: 48rem) {
+		.plainly {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+</style>

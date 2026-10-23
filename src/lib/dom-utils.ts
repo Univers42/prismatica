@@ -52,3 +52,13 @@ export function isHtmlElement(element: Element): element is HTMLElement {
 export function isInput(element: Element): element is HTMLInputElement {
 	return element instanceof HTMLInputElement;
 }
+
+/**
+ * Shows the parts of a page that belong to one state: every `[data-when]` element whose
+ * space-separated list names `state` is shown, every other one hidden.
+ */
+export function showWhen(root: ParentNode, state: string): void {
+	root.querySelectorAll<HTMLElement>('[data-when]').forEach((element) => {
+		element.hidden = !(element.dataset.when ?? '').split(/\s+/).includes(state);
+	});
+}

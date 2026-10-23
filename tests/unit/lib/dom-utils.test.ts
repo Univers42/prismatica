@@ -7,7 +7,8 @@ import {
 	queryElements, 
 	trustedHTML, 
 	setTrustedInnerHTML, 
-	insertTrustedHTML 
+	insertTrustedHTML,
+	showWhen,
 } from '../../../src/lib/dom-utils';
 
 describe('dom-utils', () => {
@@ -119,5 +120,16 @@ let _policyCreated = false;
 			insertTrustedHTML(div, 'beforeend', '<i>inserted</i>');
 			expect(div.innerHTML).toBe('<i>inserted</i>');
 		});
+	});
+});
+
+describe('showWhen', () => {
+	it('shows the elements whose data-when names the state and hides the rest', () => {
+		const root = document.createElement('div');
+		root.innerHTML = '<p data-when="done">a</p><p data-when="refused unavailable">b</p><p data-when="form" hidden>c</p><p>always</p>';
+		showWhen(root, 'unavailable');
+		expect(Array.from(root.querySelectorAll('p'), (p) => p.hidden)).toEqual([true, false, true, false]);
+		showWhen(root, 'form');
+		expect(Array.from(root.querySelectorAll('p'), (p) => p.hidden)).toEqual([true, true, false, false]);
 	});
 });

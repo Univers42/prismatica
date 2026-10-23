@@ -1,0 +1,32 @@
+---
+// Section 8: click 2 again, for whoever read to the end.
+---
+
+<section class="section final" aria-labelledby="final-title">
+	<div class="container final__inner">
+		<h2 id="final-title">Start with one department.</h2>
+		<p class="lead">Bring the rest in when they see it working.</p>
+		<div class="final__actions">
+			<button class="button button--primary" type="button" data-open-portal data-js-only>Create your workspace</button>
+			<a class="text-link" href="/tour/" data-open-tour>Watch the tour first</a>
+		</div>
+	</div>
+</section>
+
+<style>
+	.final__inner {
+		display: grid;
+		gap: var(--space-4);
+		justify-items: center;
+		text-align: center;
+	}
+
+	.final__actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: center;
+		gap: var(--space-3) var(--space-6);
+		margin-top: var(--space-3);
+	}
+</style>

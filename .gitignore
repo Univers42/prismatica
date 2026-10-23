@@ -41,3 +41,7 @@ docker-compose.override.yml
 .antigravity/
 opencode.json
 
+
+# Playwright output and scratch files never belong in git (R16).
+test-results/
+scratch_links.txt

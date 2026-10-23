@@ -45,6 +45,9 @@ export default tseslint.config(
 			// list semantics when list-style:none is set, so the explicit role
 			// restores them. Still flag other redundant roles (e.g. output/status).
 			'astro/jsx-a11y/no-redundant-roles': ['error', { ul: ['list'], ol: ['list'] }],
+			// A table that scrolls sideways sits in role="region" with tabindex="0" so a keyboard user
+			// can scroll it (axe scrollable-region-focusable; the WAI pattern). tabpanel is the default.
+			'astro/jsx-a11y/no-noninteractive-tabindex': ['error', { tags: [], roles: ['tabpanel', 'region'] }],
 		},
 	},
 	{

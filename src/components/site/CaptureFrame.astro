@@ -1,0 +1,71 @@
+---
+// A product capture in its hairline frame: flat, 1:1, never tilted (PLAN §2.3). The box size is
+// fixed by the shot's intrinsic size before any byte arrives, so captures never shift layout.
+// Until the shot is captured it renders a labelled placeholder at the same aspect ratio.
+import { SHOTS, type ShotId } from '../../data/shots';
+
+interface Props {
+	shot: ShotId;
+	eager?: boolean;
+	sizes?: string;
+	class?: string;
+}
+
+const { shot, eager = false, sizes = '(min-width: 80rem) 80rem, 100vw', class: className } = Astro.props;
+const meta = SHOTS[shot];
+const base = `/media/${meta.id.toLowerCase()}`;
+const widths = [720, 1440, 2880];
+const srcset = (ext: string): string => widths.map((w) => `${base}-${w}.${ext} ${w}w`).join(', ');
+---
+
+<figure class:list={['frame', className]}>
+	{meta.ready ? (
+		<picture>
+			<source type="image/avif" srcset={srcset('avif')} sizes={sizes} />
+			<source type="image/webp" srcset={srcset('webp')} sizes={sizes} />
+			<img
+				src={`${base}-1440.jpg`}
+				alt={meta.alt}
+				width={meta.width}
+				height={meta.height}
+				loading={eager ? 'eager' : 'lazy'}
+				decoding={eager ? 'sync' : 'async'}
+				fetchpriority={eager ? 'high' : 'auto'}
+			/>
+		</picture>
+	) : (
+		<div class="frame__placeholder" role="img" aria-label={meta.alt}>
+			<span class="label">{meta.id} · {meta.title}</span>
+		</div>
+	)}
+</figure>
+
+<style>
+	.frame {
+		margin: 0;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--radius-l);
+		padding: var(--space-2);
+		box-shadow: var(--shadow-1);
+	}
+
+	.frame img,
+	.frame__placeholder {
+		width: 100%;
+		aspect-ratio: 1440 / 900;
+		border-radius: calc(var(--radius-l) - var(--space-2));
+	}
+
+	.frame__placeholder {
+		display: grid;
+		place-items: center;
+		background:
+			repeating-linear-gradient(
+				-45deg,
+				var(--tint) 0 1px,
+				transparent 1px 14px
+			),
+			var(--paper);
+	}
+</style>

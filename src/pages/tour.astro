@@ -1,0 +1,33 @@
+---
+// The tour as a page: where [data-open-tour] links land without JavaScript, and a URL to share.
+import Layout from '../layouts/Layout.astro';
+import TourPlayer from '../components/site/TourPlayer.astro';
+import { TOUR } from '../data/tour';
+
+const videoObject = TOUR.ready
+	? [{ '@type': 'VideoObject', name: TOUR.title, contentUrl: TOUR.mp4, thumbnailUrl: TOUR.poster, duration: 'PT1M15S', transcript: TOUR.transcript }]
+	: [];
+---
+
+<Layout title={`${TOUR.title} | Prismatica`} description="Watch one operations director's week in Prismatica: one customer record, four views of the same deals, notes linked to decisions." jsonLd={videoObject}>
+	<main id="main-content" class="page-main">
+		<div class="container container--wide tour-page">
+			<h1>{TOUR.title}</h1>
+			<TourPlayer />
+			<div>
+				<button class="button button--primary" type="button" data-open-portal data-js-only>Create your workspace</button>
+			</div>
+		</div>
+	</main>
+</Layout>
+
+<style>
+	.tour-page {
+		display: grid;
+		gap: var(--space-6);
+	}
+
+	.tour-page h1 {
+		font-size: var(--step-3);
+	}
+</style>
