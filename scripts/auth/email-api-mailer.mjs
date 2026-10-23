@@ -1,0 +1,68 @@
+/**
+ * The gateway's only mail path: grobase's emailsvc through Kong (`POST ${baseUrl}/email/v1/send`,
+ * `apikey: <service role key>`, route acl baas-admin). The gateway holds no SMTP settings;
+ * emailsvc owns the transport and always sends from its own EMAIL_FROM (ADR 0006).
+ * `send` resolves on 2xx and otherwise throws an Error whose message is a status only: the
+ * response body and the cause of a network failure can echo request headers, and the key must
+ * not reach a log line (the queue logs error.message).
+ *
+ * Caveat: Kong rate-limits this route at 10/min and 200/h per client IP, and behind a Funnel
+ * every caller shares one IP, hence one bucket. A burst beyond it is retried once (Retry-After,
+ * capped at 10 s) and then lost to the caller; the mail queue does not re-enqueue it.
+ * An optional `dailyCap` (mail-daily-cap.mjs) refuses the send, as a 429 would, once the day's ceiling is spent.
+ * `timeoutMs` (30 s) is a guess at "emailsvc is down". Measured on b2b 2026-10-17: Titan's SMTP
+ * exchange makes emailsvc answer "sent" 9-13 s after the request, so a send that times out may
+ * still be delivered; the caller sees a failure for a mail that arrives.
+ */
+
+const MAX_RETRY_WAIT_MS = 10_000;
+export const DEFAULT_MAIL_TIMEOUT_MS = 30_000;
+
+/** A positive integer of milliseconds, or the default for anything else (unset, 0, negative, "1e3", "abc"). */
+export function resolveMailTimeoutMs(raw) {
+	return /^[1-9]\d*$/.test(String(raw ?? '').trim()) ? Number(String(raw).trim()) : DEFAULT_MAIL_TIMEOUT_MS;
+}
+
+function retryWaitMs(response) {
+	const seconds = Number(response.headers.get('retry-after'));
+	const wanted = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1000;
+	return Math.min(wanted, MAX_RETRY_WAIT_MS);
+}
+
+function withoutLineBreaks(value) {
+	return typeof value === 'string' && value !== '' && !/[\r\n]/.test(value) ? value : undefined;
+}
+
+/** @param {{baseUrl: string, serviceKey: string, fetch?: typeof fetch, timeoutMs?: number, dailyCap?: {take: () => Promise<boolean>}}} options */
+export function createEmailApiMailer({ baseUrl, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_MAIL_TIMEOUT_MS, dailyCap }) {
+	const url = `${String(baseUrl ?? '').replace(/\/+$/, '')}/email/v1/send`;
+
+	async function post(body) {
+		try {
+			return await fetchImpl(url, {
+				method: 'POST',
+				headers: { apikey: serviceKey, 'content-type': 'application/json' },
+				body,
+				signal: AbortSignal.timeout(timeoutMs),
+			});
+		} catch (error) {
+			throw new Error(error instanceof Error && error.name === 'TimeoutError' ? 'email service timed out' : 'email service unreachable');
+		}
+	}
+
+	/** @param {{to: string, subject: string, html: string, text?: string, listUnsubscribe?: string}} message */
+	async function send({ to, subject, html, text, listUnsubscribe }) {
+		if (!baseUrl || !serviceKey) throw new Error('email service not configured');
+		const body = JSON.stringify({ to, subject, html, text, listUnsubscribe: withoutLineBreaks(listUnsubscribe) });
+		// Taken once per message, before the 429 retry, so a retry does not spend a second slot.
+		if (dailyCap && !(await dailyCap.take())) throw Object.assign(new Error('email service answered HTTP 429'), { status: 429 });
+		let response = await post(body);
+		if (response.status === 429) {
+			await new Promise((done) => setTimeout(done, retryWaitMs(response)));
+			response = await post(body);
+		}
+		if (!response.ok) throw Object.assign(new Error(`email service answered HTTP ${response.status}`), { status: response.status });
+	}
+
+	return { send };
+}

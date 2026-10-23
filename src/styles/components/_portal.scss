@@ -787,3 +787,58 @@ dialog.portal [hidden] {
 		transform: translateY(0);
 	}
 }
+
+
+// The MFA signing-in steps the gateway can answer (after the password form): the 6-digit code
+// step and the waiting-of-approval step. They ride inside the same dialog, styled from the site's
+// tokens only (docs/redesign/DECISIONS.md D-017: a literal colour is a bug).
+.portal-login-code,
+.portal-login-approve {
+	display: grid;
+	gap: 0.9rem;
+	width: 100%;
+}
+
+.portal-login-code[hidden],
+.portal-login-approve[hidden] {
+	display: none;
+}
+
+.portal-approve-number {
+	font-family: var(--font-mono);
+	font-size: 1.6rem;
+	letter-spacing: 0.12em;
+	color: var(--ink);
+}
+
+.portal-form-error {
+	color: var(--signal);
+	font-size: 0.85rem;
+	margin: 0;
+}
+
+.portal-alt-actions {
+	display: flex;
+	gap: 1.2rem;
+	justify-content: center;
+}
+
+.portal-link-action {
+	border: 0;
+	background: none;
+	color: var(--graphite);
+	cursor: pointer;
+	font-family: var(--font-text);
+	font-size: 0.85rem;
+	text-decoration: underline;
+	padding: 0;
+
+	&:hover {
+		color: var(--ink);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--signal);
+		outline-offset: 2px;
+	}
+}

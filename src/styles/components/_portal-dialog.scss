@@ -1,0 +1,200 @@
+// Sign-in dialog (markup: src/scripts/portal-markup.ts). Phones get a
+// full-screen sheet; from 560px a centred card; from 900px the card splits
+// into the form and a night-sky panel echoing the hero. The form side uses
+// system tokens only, like every form; the sky panel keeps the hero's local
+// colours so it reads as the same scene in every theme.
+
+dialog.portal {
+	--portal-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+	--portal-sky-ink: #05070c;
+	--portal-sky-deep: #0d121e;
+	--portal-sky-text: #f4f5f7;
+	--portal-signal: var(--brand-palette-primary);
+
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	max-height: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	border: 0;
+	background: transparent;
+	color: var(--system-text);
+	font-family: var(--system-font-sans);
+	overscroll-behavior: contain;
+}
+
+dialog.portal:not([open]) {
+	display: none;
+}
+
+dialog.portal[open] {
+	display: grid;
+	place-items: center;
+}
+
+dialog.portal::backdrop {
+	background: color-mix(in srgb, #05070c 64%, transparent);
+	backdrop-filter: blur(6px);
+}
+
+dialog.portal [hidden],
+dialog.portal .is-hidden {
+	display: none;
+}
+
+.portal__frame {
+	position: relative;
+	display: grid;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: var(--system-dialog-bg);
+	animation: portal-in 360ms var(--portal-ease) both;
+}
+
+.portal__main {
+	display: grid;
+	grid-template-rows: auto 1fr;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.portal__bar {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 1.25rem 0.7rem;
+	border-bottom: 1px solid var(--system-divider);
+	background: var(--system-dialog-bg);
+}
+
+.portal-brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--system-text-strong);
+
+	.prismatica-logo {
+		width: 30px;
+		height: 30px;
+	}
+}
+
+.portal__close {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 1px solid var(--system-border);
+	border-radius: 50%;
+	background: var(--system-surface);
+	color: var(--system-text-strong);
+	cursor: pointer;
+	transition: background-color 160ms ease, transform 300ms var(--portal-ease);
+
+	svg {
+		width: 18px;
+		height: 18px;
+		fill: none;
+		stroke: currentcolor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+	}
+
+	&:hover {
+		background: var(--system-surface-sunken);
+		transform: rotate(90deg);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+}
+
+.portal-login-area {
+	display: grid;
+	align-content: start;
+	gap: 1rem;
+	width: min(100%, 27rem);
+	margin-inline: auto;
+	padding: 1.75rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
+}
+
+.portal__title {
+	margin: 0;
+	font-size: clamp(1.65rem, 6vw, 2.05rem);
+	font-weight: 650;
+	line-height: 1.1;
+	letter-spacing: -0.025em;
+	color: var(--system-text-strong);
+}
+
+.portal-note {
+	margin: -0.35rem 0 0.25rem;
+	font-size: 0.95rem;
+	line-height: 1.5;
+	color: var(--system-text-muted);
+}
+
+// Mode switch: a sliding thumb on a sunken track.
+.portal-auth-switch {
+	--switch-x: 0%;
+
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	padding: 4px;
+	border: 1px solid var(--system-divider);
+	border-radius: 12px;
+	background: var(--system-surface-sunken);
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 4px auto 4px 4px;
+		width: calc(50% - 4px);
+		border-radius: 9px;
+		background: var(--system-surface);
+		box-shadow: 0 0 0 1px var(--system-border), 0 2px 6px -2px color-mix(in srgb, var(--system-text-strong) 25%, transparent);
+		transform: translateX(var(--switch-x));
+		transition: transform 420ms var(--portal-ease);
+	}
+}
+
+dialog.portal[data-auth-mode='login'] .portal-auth-switch {
+	--switch-x: 100%;
+}
+
+.portal-auth-switch__button {
+	position: relative;
+	z-index: 1;
+	min-height: 40px;
+	padding: 0.5rem 0.75rem;
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--system-text-muted);
+	font: 600 0.9rem/1.2 var(--system-font-sans);
+	cursor: pointer;
+	transition: color 200ms ease;
+
+	&[aria-pressed='true'] {
+		color: var(--system-text-strong);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+}

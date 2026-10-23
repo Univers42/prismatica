@@ -1,0 +1,282 @@
+---
+// The app tour: one tab per connected app over a large media stage, then the
+// phone band. Tabs are a swipeable chip row on phones and a vertical list from
+// 1000px. Each panel shows its app's capture from media-shots.ts, or a drawn
+// sketch where none exists yet.
+import AppGlyph from '../ui/AppGlyph.astro';
+import MediaSlot from '../ui/MediaSlot.astro';
+import AppSketch from './hero/AppSketch.astro';
+import { CONNECTED_APPS, appName } from '../../data/connected-apps';
+import { MEDIA_SHOTS } from '../../data/media-shots';
+---
+
+<section class="section app-tour" id="apps" aria-labelledby="app-tour-title">
+	<div class="section__container">
+		<header class="app-tour__head" data-reveal="head">
+			<h2 class="section__title" id="app-tour-title">Six apps that already talk to each other.</h2>
+			<p class="section__lede">
+				Each one is a block you can drop into any page. They read the same data, so a client
+				added in the database shows up on the board, in the calendar and in your mail.
+			</p>
+		</header>
+
+		<div class="app-tour__body" data-app-tour data-scroll-grow>
+			<div class="app-tour__tabs" role="tablist" aria-label="Apps">
+				{CONNECTED_APPS.map((app, index) => (
+					<button
+						type="button"
+						role="tab"
+						class="app-tour__tab"
+						id={`app-tab-${app.id}`}
+						aria-controls={`app-panel-${app.id}`}
+						aria-selected={index === 0 ? 'true' : 'false'}
+						tabindex={index === 0 ? 0 : -1}
+						data-app-tab={app.id}
+					>
+						<AppGlyph name={app.id} />
+						<span class="app-tour__tab-text">
+							<span class="app-tour__tab-name">{app.name}</span>
+							<span class="app-tour__tab-hint">{app.hint}</span>
+						</span>
+					</button>
+				))}
+			</div>
+
+			<div class="app-tour__panels">
+				{CONNECTED_APPS.map((app, index) => (
+					<div
+						role="tabpanel"
+						class="app-tour__panel"
+						id={`app-panel-${app.id}`}
+						aria-labelledby={`app-tab-${app.id}`}
+						data-app-panel={app.id}
+						hidden={index !== 0}
+					>
+						<MediaSlot shot={app.shot} frame="browser"><AppSketch name={app.id} /></MediaSlot>
+						<div class="app-tour__caption">
+							<p class="app-tour__summary">{app.summary}</p>
+							<p class="app-tour__links">
+								<span>Works with</span>
+								{app.links.map((link) => <span class="app-tour__link">{appName(link)}</span>)}
+							</p>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+
+		<div class="app-tour__pocket" data-scroll-rise>
+			<div class="app-tour__pocket-copy">
+				<h3 class="app-tour__pocket-title">Your workspace in your pocket.</h3>
+				<p>
+					The same pages, boards and inbox on your phone, synced as you work. Check today's tasks
+					on the way in, answer a client from the train.
+				</p>
+			</div>
+			<MediaSlot shot={MEDIA_SHOTS.mobile} frame="phone" class="app-tour__phone" />
+		</div>
+	</div>
+</section>
+
+<script>
+	import { bindTabs } from '../../lib/tabs';
+	const root = document.querySelector<HTMLElement>('[data-app-tour]');
+	if (root) bindTabs(root, 'app');
+</script>
+
+<style is:global>
+	.app-tour__head { display: grid; gap: 0.75rem; margin-bottom: clamp(1.5rem, 5vw, 2.75rem); }
+	.app-tour__head .section__title { max-width: 18ch; margin: 0; }
+	.app-tour__head .section__lede { margin: 0; }
+
+	.app-tour__body {
+		display: grid;
+		gap: 1rem;
+		min-width: 0;
+	}
+
+	/* Phones: a chip row that scrolls sideways, bleeding to the screen edge
+	   (4vw = the gutter left by .section__container at 92vw). */
+	.app-tour__tabs {
+		display: flex;
+		gap: 0.5rem;
+		margin-inline: -4vw;
+		padding: 0.25rem 4vw 0.5rem;
+		overflow-x: auto;
+		scroll-snap-type: x proximity;
+		scroll-padding-inline: 4vw;
+		scrollbar-width: none;
+	}
+
+	.app-tour__tabs::-webkit-scrollbar { display: none; }
+
+	.app-tour__tab {
+		position: relative;
+		display: inline-flex;
+		flex: none;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 44px;
+		padding: 0.5rem 0.95rem;
+		border: 1px solid var(--system-border);
+		border-radius: var(--system-radius-pill);
+		background: var(--system-surface);
+		color: var(--system-text);
+		font: inherit;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		scroll-snap-align: start;
+		cursor: pointer;
+		transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+	}
+
+	.app-tour__tab:hover { border-color: var(--system-border-strong); color: var(--system-text-strong); }
+
+	.app-tour__tab[aria-selected='true'] {
+		border-color: var(--system-action-bg);
+		background: var(--system-action-bg);
+		color: var(--system-action-fg);
+	}
+
+	.app-tour__tab:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+
+	.app-tour__tab-text { display: grid; text-align: left; }
+	.app-tour__tab-hint { display: none; }
+
+	.app-tour__panels { display: grid; min-width: 0; }
+	.app-tour__panel { display: grid; gap: 1rem; min-width: 0; }
+	.app-tour__panel[hidden] { display: none; }
+	.app-tour__panel.is-entering { animation: app-tour-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+	.app-tour__caption { display: grid; gap: 0.6rem; }
+
+	.app-tour__summary {
+		max-width: 56ch;
+		margin: 0;
+		font-size: 1.0625rem;
+		line-height: 1.55;
+		color: var(--system-text-strong);
+	}
+
+	.app-tour__links {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--system-text-muted);
+	}
+
+	.app-tour__link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.15rem 0.6rem;
+		border: 1px solid var(--system-divider);
+		border-radius: var(--system-radius-pill);
+		color: var(--system-text);
+	}
+
+	.app-tour__link::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--brand-palette-primary);
+	}
+
+	.app-tour__pocket {
+		display: grid;
+		gap: 1.75rem;
+		justify-items: start;
+		margin-top: clamp(3rem, 9vw, 5.5rem);
+		padding-top: clamp(2rem, 6vw, 3rem);
+		border-top: 1px solid var(--system-divider);
+	}
+
+	.app-tour__pocket-copy { display: grid; gap: 0.6rem; max-width: 40ch; }
+	.app-tour__pocket-copy p { margin: 0; color: var(--system-text); line-height: 1.55; }
+
+	:root .app-tour__pocket-title {
+		margin: 0;
+		font-size: clamp(1.6rem, 6vw, 2.25rem);
+		line-height: 1.05;
+		letter-spacing: -0.025em;
+	}
+
+	.app-tour__phone { width: min(260px, 72vw); justify-self: center; }
+
+	@keyframes app-tour-in {
+		from { opacity: 0; transform: translateY(10px); }
+		to { opacity: 1; transform: none; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.app-tour__panel.is-entering { animation: none; }
+		.app-tour__tab { transition: none; }
+	}
+
+	/* Desktop: a vertical list beside the stage, each tab showing its hint. */
+	@media (min-width: 1000px) {
+		.app-tour__body {
+			grid-template-columns: minmax(15rem, 0.32fr) minmax(0, 1fr);
+			gap: clamp(2rem, 4vw, 3.5rem);
+			align-items: start;
+		}
+
+		.app-tour__tabs {
+			flex-direction: column;
+			gap: 2px;
+			margin: 0;
+			padding: 0;
+			overflow: visible;
+		}
+
+		.app-tour__tab {
+			width: 100%;
+			padding: 0.75rem 1rem;
+			border: 0;
+			border-radius: var(--system-radius-sm);
+			background: transparent;
+		}
+
+		.app-tour__tab:hover { background: var(--system-surface-sunken); }
+
+		.app-tour__tab[aria-selected='true'] {
+			background: var(--system-surface-sunken);
+			color: var(--system-text-strong);
+		}
+
+		.app-tour__tab::before {
+			content: '';
+			position: absolute;
+			inset: 10px auto 10px 0;
+			width: 2px;
+			background: var(--brand-palette-primary);
+			transform: scaleY(0);
+			transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		.app-tour__tab[aria-selected='true']::before { transform: scaleY(1); }
+		.app-tour__tab-name { font-weight: 600; }
+
+		.app-tour__tab-hint {
+			display: block;
+			font-size: 0.8125rem;
+			font-weight: 400;
+			color: var(--system-text-muted);
+		}
+
+		.app-tour__pocket {
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			gap: 4rem;
+		}
+
+		.app-tour__phone { width: 280px; }
+	}
+</style>

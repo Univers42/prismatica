@@ -9,6 +9,9 @@
  * like a new one (DECISIONS D-028, Q6). Links carry GoTrue's hashed_token, never its
  * action_link, which Kong's key-auth blocks (R4).
  *
+ * /register also checks the signup allowlist (signup-allowlist.mjs): a refused address gets the
+ * accepted answer and nothing else happens. /recover and /resend only mail existing accounts and are not gated.
+ *
  * Caveat: the bucket counts requests, not mails: an attacker who knows an address can spend
  * its 3 per hour, and the owner's own request then sends nothing (stated in DECISIONS, C7).
  */
@@ -34,7 +37,7 @@ function isEmailTaken(result) {
 	return result.status === 422 && (result.body?.error_code === 'email_exists' || /already (been )?registered|already exists/i.test(text));
 }
 
-export function createAccountMail({ store, queue, gotrue, mailer, render, links, siteUrl, profiles, isDeliverable, audit, newsletterOptIn }) {
+export function createAccountMail({ store, queue, gotrue, mailer, render, links, siteUrl, profiles, isDeliverable, audit, newsletterOptIn, signupAllowed = () => true }) {
 	async function accept(kind, email, job) {
 		const count = await store.incrWithTtl(addressBucketKey(email), ADDRESS_MAIL_WINDOW_SEC);
 		if (count > ADDRESS_MAIL_LIMIT) {
@@ -100,6 +103,12 @@ export function createAccountMail({ store, queue, gotrue, mailer, render, links,
 		async requestRegistration(context) {
 			if (await profiles.usernameTaken(context.profile.username)) return { status: 409, body: { error: 'username_taken', message: 'This username is already taken.' } };
 			if (!links.configured) return { status: 503, body: { error: 'link_signing_unconfigured', message: 'Email verification is not configured.' } };
+			// After the username check so a taken username answers the same for every address, and
+			// before the address bucket and any mail; the audit is the only trace (SGN-2).
+			if (!signupAllowed(context.email)) {
+				audit('signup_refused_allowlist', { email: context.email, source: 'register' });
+				return { status: 202, body: REGISTER_ACCEPTED };
+			}
 			await accept('register', context.email, () => registerJob(context));
 			return { status: 202, body: REGISTER_ACCEPTED };
 		},

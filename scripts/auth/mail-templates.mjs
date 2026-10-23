@@ -12,6 +12,7 @@ export const MESSAGES = Object.freeze({
 	resetPassword: { file: 'reset-password', subject: 'Reset your password' },
 	passwordChanged: { file: 'password-changed', subject: 'Your password was changed' },
 	accountExists: { file: 'account-exists', subject: 'You already have an account' },
+	approveSignIn: { file: 'approve-sign-in', subject: 'Sign-in request' },
 });
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z][\w]*)\s*\}\}/g;
@@ -37,4 +38,13 @@ export function renderMessage(dir, name, vars) {
 		html: fill(read('html'), vars, escapeHtml, `${message.file}.html`),
 		text: fill(read('txt'), vars, (value) => value, `${message.file}.txt`),
 	};
+}
+
+/** A template with only an HTML part (the sign-in alert); a placeholder without a value reads "unknown", and `{{.Name}}` is `{{Name}}`. */
+export function renderHtmlTemplate(dir, fileName, variables) {
+	const html = readFileSync(resolve(dir, fileName), 'utf8');
+	return html.replaceAll(/{{\s*([\w.-]+)\s*}}/g, (_match, rawKey) => {
+		const key = String(rawKey).replace(/^\./, '');
+		return escapeHtml(variables[key] ?? variables[rawKey] ?? 'unknown');
+	});
 }

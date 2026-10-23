@@ -1,0 +1,284 @@
+// Form parts inside the sign-in dialog (markup: src/scripts/portal-markup.ts).
+// Base .field rules come from _portal.scss, shared with the /auth pages; this
+// adds what only the dialog draws. System tokens only.
+
+dialog.portal {
+	.portal-login,
+	.portal-login-code {
+		gap: 1.05rem;
+	}
+
+	.field-row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.05rem;
+	}
+
+	.field {
+		gap: 0.4rem;
+	}
+
+	.field label {
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.field input {
+		min-height: 48px;
+		padding: 0.7rem 0.9rem;
+		border-radius: 10px;
+	}
+
+	.field-validation-message[data-validation-state='idle'] {
+		color: var(--system-text-muted);
+	}
+}
+
+.field__required {
+	font-weight: 400;
+	color: var(--system-text-muted);
+}
+
+.field__head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+dialog.portal[data-auth-mode='register'] .portal-forgot {
+	visibility: hidden;
+}
+
+// Password input with its show/hide button inside the field.
+.input-with-button {
+	position: relative;
+	display: grid;
+
+	> input {
+		padding-inline-end: 3.1rem;
+	}
+}
+
+.portal-eye {
+	position: absolute;
+	inset-block: 4px;
+	inset-inline-end: 4px;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	padding: 0;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--system-text-muted);
+	cursor: pointer;
+
+	svg {
+		width: 20px;
+		height: 20px;
+		fill: none;
+		stroke: currentcolor;
+		stroke-width: 1.6;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	&:hover,
+	&[aria-pressed='true'] {
+		background: var(--system-surface-sunken);
+		color: var(--system-text-strong);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 1px;
+	}
+}
+
+.portal-eye__slash {
+	opacity: 0;
+	transition: opacity 160ms ease;
+}
+
+.portal-eye[aria-pressed='true'] .portal-eye__slash {
+	opacity: 1;
+}
+
+// Strength meter: drawn by portal.ts as DOM nodes (bar width via CSSOM).
+[data-password-strength-container] {
+	display: grid;
+	gap: 0.35rem;
+
+	&:empty {
+		display: none;
+	}
+}
+
+.password-meter {
+	--meter-color: var(--system-text-muted);
+
+	height: 4px;
+	overflow: hidden;
+	border-radius: 99px;
+	background: var(--system-surface-sunken);
+
+	&[data-score='1'] {
+		--meter-color: var(--system-danger-text);
+	}
+
+	&[data-score='2'] {
+		--meter-color: var(--system-warning-text);
+	}
+
+	&[data-score='3'],
+	&[data-score='4'] {
+		--meter-color: var(--system-success-text);
+	}
+}
+
+.password-meter__bar {
+	height: 100%;
+	border-radius: inherit;
+	background: var(--meter-color);
+	transition: width 360ms var(--portal-ease), background-color 200ms ease;
+}
+
+.password-meter__label {
+	font-size: 0.78rem;
+	color: var(--system-text-muted);
+}
+
+// Consents: a real (visually hidden) checkbox drives a drawn box whose tick
+// strokes in when checked.
+.portal-consents {
+	display: grid;
+	gap: 0.75rem;
+	padding-top: 0.15rem;
+}
+
+.checkbox-label {
+	position: relative;
+	display: grid;
+	grid-template-columns: 20px minmax(0, 1fr);
+	align-items: start;
+	gap: 0.7rem;
+	font-size: 0.875rem;
+	line-height: 1.45;
+	color: var(--system-text);
+	cursor: pointer;
+
+	> input {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 20px;
+		height: 20px;
+		margin: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	a {
+		color: var(--system-link);
+		text-underline-offset: 3px;
+	}
+}
+
+.portal-check {
+	display: grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	margin-top: 1px;
+	border: 1.5px solid var(--system-input-border);
+	border-radius: 6px;
+	background: var(--system-input-bg);
+	transition: background-color 160ms ease, border-color 160ms ease;
+
+	svg {
+		width: 14px;
+		height: 14px;
+		fill: none;
+		stroke: var(--system-action-fg);
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-dasharray: 16;
+		stroke-dashoffset: 16;
+		transition: stroke-dashoffset 260ms ease 60ms;
+	}
+}
+
+.checkbox-label > input:checked + .portal-check {
+	border-color: var(--system-action-bg);
+	background: var(--system-action-bg);
+
+	svg {
+		stroke-dashoffset: 0;
+	}
+}
+
+.checkbox-label > input:focus-visible + .portal-check {
+	outline: 2px solid var(--system-focus-ring);
+	outline-offset: 2px;
+}
+
+.portal-form-error {
+	display: block;
+	padding: 0.7rem 0.85rem;
+	border: 1px solid color-mix(in srgb, var(--system-danger-text) 30%, transparent);
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--system-danger-text) 7%, transparent);
+	color: var(--system-danger-text);
+	font-size: 0.875rem;
+	line-height: 1.4;
+}
+
+.portal-link-action {
+	justify-self: start;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--system-link);
+	font: 600 0.85rem/1.3 var(--system-font-sans);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+
+	&:focus-visible {
+		border-radius: 4px;
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
+	}
+}
+
+.portal-alt-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+dialog.portal .portal-cta,
+dialog.portal .button--primary {
+	width: 100%;
+	min-height: 50px;
+	margin-top: 0.25rem;
+	border: 0;
+	border-radius: 12px;
+	background: var(--system-action-bg);
+	color: var(--system-action-fg);
+	font: 600 1rem/1.2 var(--system-font-sans);
+	box-shadow: none;
+	cursor: pointer;
+	transition: transform 300ms var(--portal-ease), box-shadow 200ms ease, background-color 160ms ease;
+
+	&:hover:not(:disabled) {
+		background: var(--system-action-bg-hover);
+		box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--system-text-strong) 70%, transparent);
+		transform: translateY(-1px);
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(1px);
+	}
+}

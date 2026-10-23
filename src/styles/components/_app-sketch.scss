@@ -1,0 +1,219 @@
+// App sketches — the drawn app screens inside MediaSlot placeholders
+// (src/components/sections/hero/AppSketch.astro). Every size is in container
+// units of the slot, so a sketch scales with its frame, not the viewport.
+// Theme tokens only: the drawings follow light and dark themes.
+
+.media-slot__sketch {
+	position: absolute;
+	inset: 0;
+	container-type: inline-size;
+	background: var(--system-surface);
+}
+
+.sk {
+	--sk-ink: var(--system-text-strong);
+	--sk-hair: color-mix(in srgb, var(--sk-ink) 11%, transparent);
+	--sk-fill: color-mix(in srgb, var(--sk-ink) 6%, transparent);
+	--sk-signal: var(--brand-palette-primary);
+
+	position: absolute;
+	inset: 0;
+	padding: 4cqi;
+	color: var(--system-text);
+	font-size: clamp(7.5px, 2.55cqi, 13px);
+	line-height: 1.25;
+
+	b {
+		font-weight: 600;
+		color: var(--sk-ink);
+	}
+
+	p,
+	ul {
+		margin: 0;
+	}
+}
+
+.sk-line {
+	display: block;
+	height: 0.55em;
+	border-radius: 99px;
+	background: var(--sk-hair);
+}
+
+.sk-line--short {
+	width: 62%;
+}
+
+.sk-av {
+	display: inline-block;
+	flex: none;
+	width: 1.6em;
+	height: 1.6em;
+	border: 1.5px solid var(--system-surface);
+	border-radius: 50%;
+	background: linear-gradient(135deg, color-mix(in srgb, var(--sk-ink) 30%, transparent), var(--sk-fill));
+}
+
+// Entrance: when a block or tour panel lands, its parts settle in one by one.
+.is-entering .sk > * {
+	animation: sk-rise 620ms var(--spring-pop, cubic-bezier(0.2, 0.9, 0.3, 1.2)) both;
+}
+
+.is-entering .sk > :nth-child(2) {
+	animation-delay: 70ms;
+}
+
+.is-entering .sk > :nth-child(3) {
+	animation-delay: 140ms;
+}
+
+.is-entering .sk > :nth-child(n + 4) {
+	animation-delay: 200ms;
+}
+
+@keyframes sk-rise {
+	from {
+		opacity: 0;
+		transform: translateY(8%) scale(0.97);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.is-entering .sk > * {
+		animation: none;
+	}
+}
+
+// Board: three columns, one card mid-drag.
+.sk--board {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 2.4cqi;
+	background: var(--system-surface-sunken);
+}
+
+.sk-col {
+	display: grid;
+	align-content: start;
+	gap: 1.8cqi;
+	min-width: 0;
+}
+
+.sk-col__head {
+	display: flex;
+	gap: 0.5em;
+	font-weight: 600;
+	color: var(--sk-ink);
+
+	span {
+		font-weight: 500;
+		color: var(--system-text-muted);
+	}
+}
+
+.sk-card {
+	display: grid;
+	gap: 0.65em;
+	padding: 0.8em;
+	border: 1px solid var(--system-border);
+	border-radius: 1.4cqi;
+	background: var(--system-surface);
+	box-shadow: 0 1px 2px var(--sk-fill);
+
+	b {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+}
+
+.sk-card__foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 1.6em;
+}
+
+.sk-tag {
+	padding: 0.1em 0.55em;
+	border-radius: 99px;
+	background: var(--sk-fill);
+	font-size: 0.9em;
+}
+
+.sk-card--moving {
+	border-color: var(--sk-ink);
+	box-shadow: 0 12px 22px -12px color-mix(in srgb, var(--sk-ink) 55%, transparent);
+	transform: rotate(-2.5deg) translate(4%, -6%);
+
+	.sk-tag {
+		background: color-mix(in srgb, var(--sk-signal) 14%, transparent);
+		color: var(--sk-ink);
+	}
+}
+
+// Calendar: a work week with one deadline pulled in from the board.
+.sk--calendar {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	gap: 1.6cqi;
+}
+
+.sk-cal__head {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	color: var(--system-text-muted);
+
+	span:nth-child(4) b {
+		padding: 0 0.4em;
+		border-radius: 99px;
+		background: var(--sk-signal);
+		color: var(--system-surface);
+	}
+}
+
+.sk-cal__grid {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	grid-template-rows: repeat(6, minmax(0, 1fr));
+	gap: 0.7cqi;
+	padding: 0.7cqi;
+	border: 1px solid var(--sk-hair);
+	border-radius: 1.2cqi;
+	background-image: linear-gradient(var(--sk-hair) 1px, transparent 1px);
+	background-size: 100% calc(100% / 6);
+}
+
+.sk-ev {
+	display: block;
+	overflow: hidden;
+	padding: 0.45em 0.55em;
+	border-left: 2px solid var(--sk-ink);
+	border-radius: 0.8cqi;
+	background: var(--sk-fill);
+	font-weight: 600;
+	color: var(--sk-ink);
+}
+
+.sk-ev--a {
+	grid-area: 1 / 1 / span 2;
+}
+
+.sk-ev--b {
+	grid-area: 3 / 2 / span 2;
+}
+
+.sk-ev--c {
+	grid-area: 2 / 3 / span 2;
+}
+
+.sk-ev--d {
+	grid-area: 3 / 4 / span 3;
+	border-left-color: var(--sk-signal);
+	background: color-mix(in srgb, var(--sk-signal) 11%, transparent);
+}
+
+.sk-ev--e {
+	grid-area: 1 / 5 / span 2;
+}

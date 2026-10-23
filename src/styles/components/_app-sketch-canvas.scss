@@ -1,0 +1,171 @@
+// App sketches, free-form views: whiteboard and page. Shared parts live in
+// _app-sketch.scss. Note positions are percentages of the slot, and the
+// connector paths in AppSketch.astro are drawn to those same numbers.
+
+.sk--whiteboard {
+	background-color: var(--system-surface);
+	background-image: radial-gradient(color-mix(in srgb, var(--sk-ink) 16%, transparent) 1px, transparent 1.4px);
+	background-size: 4cqi 4cqi;
+}
+
+.sk-wb__links {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke: color-mix(in srgb, var(--sk-ink) 55%, transparent);
+	stroke-width: 1.5;
+	stroke-dasharray: 4 4;
+
+	path {
+		vector-effect: non-scaling-stroke;
+	}
+}
+
+.sk-note {
+	position: absolute;
+	display: grid;
+	place-items: center;
+	width: 24%;
+	aspect-ratio: 1.25;
+	padding: 0.8em;
+	border: 1px solid var(--sk-hair);
+	border-radius: 0.8cqi;
+	background: var(--system-surface-sunken);
+	box-shadow: 0 8px 16px -10px color-mix(in srgb, var(--sk-ink) 55%, transparent);
+	font-weight: 600;
+	color: var(--sk-ink);
+	text-align: center;
+}
+
+.sk-note--a {
+	top: 14%;
+	left: 8%;
+	transform: rotate(-3deg);
+}
+
+.sk-note--b {
+	top: 40%;
+	left: 38%;
+	background: color-mix(in srgb, var(--sk-ink) 9%, var(--system-surface));
+	transform: rotate(2deg);
+}
+
+.sk-note--c {
+	top: 18%;
+	left: 68%;
+	background: color-mix(in srgb, var(--sk-signal) 14%, var(--system-surface));
+	transform: rotate(-1deg);
+}
+
+// A collaborator's cursor drifting over the board.
+.sk-cursor {
+	position: absolute;
+	top: 60%;
+	left: 72%;
+	padding: 0.2em 0.55em;
+	border-radius: 0.3em 99px 99px;
+	background: var(--sk-signal);
+	font-weight: 600;
+	color: var(--system-surface);
+	animation: sk-drift 7s ease-in-out infinite alternate;
+
+	&::before {
+		content: '';
+		position: absolute;
+		top: -1.1em;
+		left: -0.7em;
+		width: 1em;
+		height: 1.2em;
+		background: var(--sk-ink);
+		clip-path: polygon(0 0, 100% 62%, 45% 62%, 22% 100%);
+	}
+}
+
+@keyframes sk-drift {
+	to {
+		transform: translate(-28%, -40%);
+	}
+}
+
+.workspace.is-offscreen .sk-cursor,
+:root.motion-paused .sk-cursor {
+	animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sk-cursor {
+		animation: none;
+	}
+}
+
+// Page: a short plan with mentions, a checklist and an embedded board.
+.sk--docs {
+	display: grid;
+	align-content: start;
+	gap: 2.2cqi;
+	padding-inline: 7cqi;
+}
+
+.sk-doc__title {
+	font-size: 1.7em;
+	letter-spacing: -0.02em;
+}
+
+.sk-mention {
+	padding: 0 0.3em;
+	border-radius: 0.3em;
+	background: color-mix(in srgb, var(--sk-signal) 11%, transparent);
+	font-weight: 600;
+	color: var(--sk-ink);
+}
+
+.sk-doc__todo {
+	display: grid;
+	gap: 0.6em;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 0.6em;
+	}
+
+	li::before {
+		content: '';
+		flex: none;
+		width: 1.1em;
+		height: 1.1em;
+		border: 1.5px solid color-mix(in srgb, var(--sk-ink) 50%, transparent);
+		border-radius: 0.25em;
+	}
+
+	.is-done {
+		color: var(--system-text-muted);
+		text-decoration: line-through;
+	}
+
+	.is-done::before {
+		border-color: var(--sk-ink);
+		background: var(--sk-ink);
+	}
+}
+
+.sk-doc__embed {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1.2cqi;
+	padding: 1.4cqi;
+	border: 1px solid var(--sk-hair);
+	border-radius: 1.2cqi;
+	background: var(--system-surface-sunken);
+
+	span {
+		height: 6cqi;
+		border-radius: 0.7cqi;
+		background: var(--system-surface);
+		box-shadow: 0 0 0 1px var(--system-border);
+	}
+}

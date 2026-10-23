@@ -1,6 +1,6 @@
 // @vitest-environment node
 // The real scripts/auth-gateway.mjs as a child process, against an in-process fake Kong (GoTrue
-// + PostgREST) and a fake SMTP listener: proves the glue the module tests cannot see.
+// + PostgREST + grobase /email/v1): proves the glue the module tests cannot see.
 import { spawn, type ChildProcess } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
@@ -14,7 +14,8 @@ const HASH = 'e'.repeat(56);
 
 type Hit = { method: string; path: string; body: string };
 const hits: Hit[] = [];
-const mails: string[] = [];
+type Mail = { apikey: string | undefined; to: string; subject: string; html: string; text: string };
+const mails: Mail[] = [];
 let gateway: ChildProcess;
 let base = '';
 let output = '';
@@ -42,44 +43,23 @@ function fakeKong() {
 				response.writeHead(status, { 'content-type': 'application/json' });
 				response.end(JSON.stringify(payload));
 			};
+			if (path.startsWith('/auth/v1/token?grant_type=password')) {
+				const email = JSON.parse(body).email as string;
+				if (email.startsWith('unconfirmed')) return send(400, { code: 400, error_code: 'email_not_confirmed', msg: 'Email not confirmed' });
+				return send(400, { code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' });
+			}
+			if (path === '/email/v1/send') {
+				const mail = JSON.parse(body);
+				if (String(mail.to).startsWith('burst')) return send(502, { error: 'send_failed' });
+				mails.push({ ...mail, apikey: request.headers.apikey as string | undefined });
+				return send(200, { messageId: 'm1' });
+			}
 			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: HASH, action_link: 'http://kong/never' });
 			if (path.startsWith('/auth/v1/token?grant_type=refresh_token')) return send(200, { access_token: 'at-1', refresh_token: 'rt-2', user: { id: 'u1' } });
 			if (path.startsWith('/auth/v1/logout')) return send(204, {});
 			if (path.startsWith('/auth/v1/verify')) return send(200, { access_token: 'at-v', user: { id: 'u1' } });
 			if (path.startsWith('/rest/v1/users')) return send(200, []);
 			return send(200, {});
-		});
-	});
-}
-
-function fakeSmtp() {
-	return net.createServer((socket) => {
-		let buffer = '';
-		let inData = false;
-		socket.write('220 fake\r\n');
-		socket.on('data', (chunk) => {
-			buffer += chunk.toString();
-			for (;;) {
-				if (inData) {
-					const end = buffer.indexOf('\r\n.\r\n');
-					if (end < 0) return;
-					mails.push(buffer.slice(0, end));
-					buffer = buffer.slice(end + 5);
-					inData = false;
-					socket.write('250 ok\r\n');
-					continue;
-				}
-				const index = buffer.indexOf('\r\n');
-				if (index < 0) return;
-				const line = buffer.slice(0, index);
-				buffer = buffer.slice(index + 2);
-				if (line.startsWith('RCPT TO:<burst')) socket.write('550 mailbox refused\r\n');
-				else if (line === 'DATA') {
-					inData = true;
-					socket.write('354 go\r\n');
-				} else if (line === 'QUIT') socket.end('221 bye\r\n');
-				else socket.write('250 ok\r\n');
-			}
 		});
 	});
 }
@@ -99,10 +79,8 @@ async function until(check: () => boolean, ms = 5000) {
 
 beforeAll(async () => {
 	const kong = fakeKong();
-	const smtp = fakeSmtp();
 	const kongPort = await listen(kong);
-	const smtpPort = await listen(smtp);
-	servers.push(kong, smtp);
+	servers.push(kong);
 	const port = await freePort();
 	base = `http://127.0.0.1:${port}`;
 	gateway = spawn(process.execPath, ['scripts/auth-gateway.mjs'], {
@@ -117,10 +95,9 @@ beforeAll(async () => {
 			AUTH_REQUIRE_EMAIL_VERIFICATION: 'true',
 			TURNSTILE_BYPASS_LOCAL: 'true',
 			AUTH_LINK_SIGNING_KEY: KEY,
-			SMTP_HOST: '127.0.0.1',
-			SMTP_PORT: String(smtpPort),
-			EMAIL_FROM: 'no-reply@mail.prismatica.test',
 			AUTH_EMAIL_DOMAIN_ALLOWLIST: 'arlet.test',
+			// Low so the lockout is reachable inside the gateway's 8-logins-per-IP rate limit.
+			AUTH_LOGIN_LOCKOUT_THRESHOLD: '2',
 		},
 	});
 	gateway.stdout?.on('data', (chunk) => (output += chunk));
@@ -139,13 +116,13 @@ describe('auth-gateway.mjs as a process', () => {
 		expect((await call('/api/auth/availability?email=a%40arlet.test')).status).toBe(404);
 	});
 
-	it('answers /recover 202 and mails a signed fragment link built from PUBLIC_SITE_URL, with EHLO domain from EMAIL_FROM', async () => {
+	it('answers /recover 202 and mails a signed fragment link built from PUBLIC_SITE_URL through /email/v1 with the service key', async () => {
 		const result = await call('/api/auth/recover', { method: 'POST', body: JSON.stringify({ email: 'ines@arlet.test' }), headers: { host: 'evil.example' } });
 		expect(result.status).toBe(202);
 		await until(() => mails.length > 0);
-		const raw = mails.at(-1) ?? '';
-		expect(raw).toMatch(/^Message-ID: <[^@]+@mail\.prismatica\.test>$/m);
-		const text = Buffer.from(raw.split('Content-Transfer-Encoding: base64\r\n\r\n')[1].split('\r\n--')[0].replaceAll(/\s+/g, ''), 'base64').toString('utf8');
+		const mail = mails.at(-1) as Mail;
+		expect(mail).toMatchObject({ apikey: 'service', to: 'ines@arlet.test' });
+		const text = `${mail.text}\n${mail.html}`;
 		expect(text).toMatch(new RegExp(`https://localhost:4322/auth/reset-password#token_hash=${HASH}&type=recovery&exp=\\d+&sig=[A-Za-z0-9_-]{43}`));
 		expect(text).not.toContain('evil.example');
 		expect(text).not.toContain('kong/never');
@@ -168,12 +145,29 @@ describe('auth-gateway.mjs as a process', () => {
 		expect(hits.some((hit) => hit.path === '/auth/v1/logout?scope=local')).toBe(true);
 	});
 
-	it('keeps serving after queued work fails (SMTP refused for a burst of /recover)', async () => {
+	it('keeps serving after queued work fails (email service refused for a burst of /recover)', async () => {
 		for (let index = 0; index < 5; index += 1) {
 			expect((await call('/api/auth/recover', { method: 'POST', body: JSON.stringify({ email: `burst${index}@arlet.test` }) })).status).toBe(202);
 		}
-		await until(() => (output.match(/queued "recovery" failed: SMTP command failed with 550/g) ?? []).length === 5);
+		await until(() => (output.match(/queued "recovery" failed: email service answered HTTP 502/g) ?? []).length === 5);
 		expect((await call('/api/auth/health')).status).toBe(200);
 		expect(gateway.exitCode).toBeNull();
+	});
+
+	it('answers 403 email_not_confirmed after a correct password and never counts it toward the lockout', async () => {
+		const login = (email: string) => call('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password: 'Right-Pass-1!', turnstileToken: 'localhost-turnstile-token' }) });
+		for (let attempt = 0; attempt < 3; attempt += 1) {
+			expect(await login('unconfirmed@arlet.test')).toMatchObject({
+				status: 403,
+				body: { error: 'email_not_confirmed', message: 'Confirm your email first \u2014 check your inbox, or send a new link.' },
+			});
+		}
+	});
+
+	it('keeps a wrong password at 401 and still locks that account out after the threshold', async () => {
+		const login = (email: string) => call('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password: 'Wrong-Pass-1!', turnstileToken: 'localhost-turnstile-token' }) });
+		expect((await login('wrong@arlet.test')).status).toBe(401);
+		expect((await login('wrong@arlet.test')).status).toBe(401);
+		expect((await login('wrong@arlet.test')).status).toBe(429);
 	});
 });

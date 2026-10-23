@@ -1,0 +1,63 @@
+---
+// The page stage behind the home sections (scripts/story-stage.ts): a fixed
+// canvas whose nodes take the shape of the section being read, so the page
+// changes in place while the backdrop stays put. Decorative: every section
+// carries its own meaning. Sections are listed by `data-stage` on their scene.
+---
+
+<canvas class="story-stage" data-story-stage aria-hidden="true"></canvas>
+
+<script>
+	import { bindStoryStage } from '../../scripts/story-stage';
+	const canvas = document.querySelector<HTMLCanvasElement>('[data-story-stage]');
+	const main = document.querySelector<HTMLElement>('main[data-swipe-stack]');
+	if (canvas && main) bindStoryStage(canvas, main);
+</script>
+
+<style is:global>
+	/* Large viewport height: the mobile address bar folding away does not
+	   resize the canvas and re-lay every scene. */
+	.story-stage {
+		position: fixed;
+		inset: 0 auto auto 0;
+		width: 100%;
+		height: 100lvh;
+		z-index: 0;
+		pointer-events: none;
+	}
+
+	/* Once the stage draws, the sections below the hero let it show through:
+	   a light veil keeps text on the tinted themes over a calm ground, and the
+	   Swiss ground is the page white already, so it needs none. Without JS the
+	   sections keep their own background. */
+	.swipe-stack[data-stage-ready] .swipe-stack__scene:not(:first-child) .section {
+		background: color-mix(in srgb, var(--system-bg) 55%, transparent);
+	}
+	:root[data-theme='swiss'] .swipe-stack[data-stage-ready] .swipe-stack__scene:not(:first-child) .section {
+		background: transparent;
+	}
+
+	/* Content hands the screen over in place: as a section scrolls away it
+	   settles back and fades into the stage while the next shape forms.
+	   Longhands: the build minifier folds a following animation-timeline into
+	   the shorthand, which Chrome drops. */
+	@supports (animation-timeline: view()) {
+		@media (prefers-reduced-motion: no-preference) {
+			:root:not(.motion-paused) .swipe-stack[data-stage-ready] .swipe-stack__scene:not(:first-child) .section__container {
+				animation-name: stage-hand-off;
+				animation-duration: auto;
+				animation-timing-function: linear;
+				animation-fill-mode: both;
+				animation-timeline: view();
+				animation-range: exit 35% exit 100%;
+			}
+		}
+	}
+	@keyframes stage-hand-off {
+		to {
+			opacity: 0.2;
+			scale: 0.97;
+			translate: 0 -1.5rem;
+		}
+	}
+</style>

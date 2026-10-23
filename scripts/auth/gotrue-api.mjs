@@ -3,7 +3,7 @@
  * Every method resolves to `{ ok, status, body }` and never throws: a network failure is
  * status 0, an unreadable body is `{}`. Work queued after a 202 therefore cannot turn a GoTrue
  * outage into an unhandled rejection (verdict B, B12).
- * Plain fetch, not the SDK: the SDK's updateUser POSTs /user, and GoTrue only takes PUT.
+ * Plain fetch, not the SDK: this gateway needs the status and body of every answer, never a throw.
  *
  * Caveat: `timeoutMs` (8 s) is a guess at "GoTrue is down"; a slower healthy answer reads as
  * a failure (status 0).

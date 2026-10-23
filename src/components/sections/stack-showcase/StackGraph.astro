@@ -1,0 +1,284 @@
+---
+// The live service graph on the first iPad slide: all 55 grobase services on
+// a hexagon (lib/stack-layout.ts), wired by their real compose dependencies.
+// Server-rendered with the "Query plane" preset so it reads without script;
+// stack-graph.ts adds selection, start/stop, presets, labels and packets.
+import { GROUPS, PRESETS, SERVICES } from '../../../data/grobase-services';
+import { TERMINAL_LABEL_RISE, labelPlacement, layoutStack } from '../../../lib/stack-layout';
+import { pipelineStatus, reachableEngines, servicesForProfiles } from '../../../lib/service-graph';
+import { eventsText, pathText, shortList } from '../../../lib/service-graph-copy';
+import { ENGINES } from '../../../data/grobase-services';
+
+const layout = layoutStack();
+const names = new Map(SERVICES.map((service) => [service.id, service.name]));
+const groupNames = new Map(GROUPS.map((group) => [group.id, group.label]));
+const preset = PRESETS.find((entry) => entry.id === 'query') ?? PRESETS[0]!;
+const enabled = servicesForProfiles(preset.profiles);
+const status = pipelineStatus(enabled);
+const selected = SERVICES.find((service) => service.id === 'query-router')!;
+const neededBy = SERVICES.filter((service) => service.dependsOn.includes(selected.id)).map((service) => service.id);
+const label = (id: string, group: string) => `${names.get(id)}, ${groupNames.get(group as never)}, ${enabled.has(id) ? 'running' : 'stopped'}`;
+---
+
+<div class="stack-graph" data-stack-graph>
+	<div class="stack-graph__canvas">
+		<!-- [html-validate-disable-next prefer-native-element -- the services form a spatial listbox (arrow keys move by position on the hexagon); a native select cannot draw that] -->
+		<svg
+			class="stack-graph__svg"
+			viewBox={`0 0 ${layout.width} ${layout.height}`}
+			role="listbox"
+			tabindex="0"
+			aria-label="The 55 grobase services. Arrow keys move between services, Enter starts or stops the selected one."
+			aria-activedescendant={`stack-node-${selected.id}`}
+			data-graph
+		>
+			<g aria-hidden="true">
+				<polygon class="stack-graph__hex stack-graph__hex--outer" points={layout.outerHex} />
+				<polygon class="stack-graph__hex" points={layout.coreHex} />
+				{layout.groups.map((group) => (
+					<text class="stack-graph__group" x={group.x} y={group.y} transform={`rotate(${group.rotate} ${group.x} ${group.y})`} text-anchor="middle" dominant-baseline="central">{group.label}</text>
+				))}
+				<g class="stack-graph__edges">
+					{layout.edges.map((edge) => <path class="stack-graph__edge" d={edge.d} data-from={edge.from} data-to={edge.to} />)}
+				</g>
+				<path class="stack-graph__route" data-route="request" />
+				<path class="stack-graph__route stack-graph__route--events" data-route="events" />
+				{layout.terminals.map((terminal) => (
+					<g class="stack-graph__terminal" transform={`translate(${terminal.x} ${terminal.y})`}>
+						<rect x="-13" y="-10" width="26" height="20" rx="4" />
+						<text x={terminal.id === 'clients' ? -14 : 14} y={-TERMINAL_LABEL_RISE} text-anchor={terminal.id === 'clients' ? 'start' : 'end'} dominant-baseline="text-after-edge">{terminal.label}</text>
+					</g>
+				))}
+			</g>
+			<g class="stack-graph__nodes">
+				{layout.nodes.map((node) => (
+					<g
+						class="stack-graph__node"
+						id={`stack-node-${node.id}`}
+						role="option"
+						aria-selected={node.id === selected.id ? 'true' : 'false'}
+						aria-label={label(node.id, node.group)}
+						transform={`translate(${node.x} ${node.y})`}
+						data-node={node.id}
+						data-on={enabled.has(node.id) ? '' : undefined}
+						data-job={node.job ? '' : undefined}
+					>
+						<circle class="stack-graph__halo" r={node.r + 7} />
+						<circle class="stack-graph__dot" r={node.r} />
+						<text
+							class="stack-graph__label"
+							x={labelPlacement(node).dx}
+							y={labelPlacement(node).dy}
+							text-anchor={labelPlacement(node).anchor}
+							dominant-baseline={labelPlacement(node).baseline}
+							aria-hidden="true"
+						>{node.label}</text>
+					</g>
+				))}
+			</g>
+			<g class="stack-graph__packets" aria-hidden="true"></g>
+		</svg>
+	</div>
+
+	<div class="stack-graph__panel">
+		<dl class="stack-graph__hud">
+			<div><dt>Running</dt><dd data-hud="running">{enabled.size} of {SERVICES.length}</dd></div>
+			<div><dt>Engines</dt><dd data-hud="engines">{reachableEngines(enabled).length} of {ENGINES.length}</dd></div>
+			<div><dt>Request</dt><dd data-hud="path">{pathText(status, names)}</dd></div>
+			<div><dt>Events</dt><dd data-hud="events">{eventsText(status, names)}</dd></div>
+		</dl>
+
+		<div class="stack-graph__card">
+			<p class="stack-graph__card-kind" data-card="kind">{groupNames.get(selected.group)}</p>
+			<h4 class="stack-graph__card-name"><span data-card="name">{selected.name}</span> <span class="stack-graph__state" data-card="state" data-on="">Running</span></h4>
+			<p class="stack-graph__card-desc" data-card="desc">{selected.desc}</p>
+			<p class="stack-graph__card-links"><span>Needs</span> <span data-card="needs">{shortList(selected.dependsOn, names)}</span></p>
+			<p class="stack-graph__card-links"><span>Needed by</span> <span data-card="needed-by">{shortList(neededBy, names)}</span></p>
+			<button type="button" class="stack-graph__toggle" data-toggle>Stop {selected.name}</button>
+		</div>
+
+		<div class="stack-graph__presets" role="group" aria-label="Start a preset">
+			{PRESETS.map((entry) => (
+				<button type="button" class="stack-graph__preset" data-preset={entry.id} aria-pressed={entry.id === preset.id ? 'true' : 'false'}>{entry.label}</button>
+			))}
+		</div>
+		<p class="stack-graph__status" role="status" data-status>{preset.label}: {enabled.size} of {SERVICES.length} services running.</p>
+	</div>
+</div>
+
+<style is:global>
+	.stack-graph { display: grid; min-height: 0; }
+	.stack-graph__canvas { display: grid; place-items: center; min-width: 0; padding: 0.25rem; }
+
+	.stack-graph__svg {
+		display: block;
+		width: 100%;
+		height: auto;
+		touch-action: pan-y;
+		cursor: pointer;
+		border-radius: var(--system-radius-md);
+	}
+
+	.stack-graph__svg:focus { outline: none; }
+	.stack-graph__svg:focus-visible { outline: 2px solid var(--system-focus-ring); outline-offset: -2px; }
+
+	.stack-graph__hex { fill: none; stroke: var(--system-divider); stroke-width: calc(var(--graph-k, 2) * 1px); }
+	.stack-graph__hex--outer { stroke-dasharray: calc(var(--graph-k, 2) * 2px) calc(var(--graph-k, 2) * 6px); stroke-linecap: round; }
+
+	.stack-graph__group,
+	.stack-graph__terminal text {
+		font-family: var(--system-font-sans);
+		font-size: calc(var(--graph-k, 2) * 10px);
+		font-weight: 600;
+		fill: var(--system-text-muted);
+	}
+
+	.stack-graph__terminal rect { fill: var(--system-surface); stroke: var(--system-text-strong); stroke-width: calc(var(--graph-k, 2) * 1.2px); }
+
+	.stack-graph__edge {
+		fill: none;
+		stroke: var(--system-text-muted);
+		stroke-width: calc(var(--graph-k, 2) * 0.8px);
+		opacity: 0.3;
+		transition: opacity 200ms ease, stroke 200ms ease;
+	}
+
+	.stack-graph__edge[data-off] { opacity: 0.08; }
+	/* Red belongs to the request path; a selection's wires stay ink and their
+	   dashes march from caller to dependency, so direction shows without colour. */
+	.stack-graph__edge[data-rel] { opacity: 0.9; stroke: var(--system-text-strong); stroke-width: calc(var(--graph-k, 2) * 1.4px); }
+	.stack-graph__edge[data-rel='needed-by'] { opacity: 0.5; }
+
+	.stack-graph__route { fill: none; stroke: var(--brand-palette-primary); stroke-width: calc(var(--graph-k, 2) * 2px); stroke-linecap: round; opacity: 0.85; }
+	.stack-graph__route--events { stroke-dasharray: calc(var(--graph-k, 2) * 5px) calc(var(--graph-k, 2) * 5px); }
+
+	.stack-graph__dot {
+		fill: var(--system-surface);
+		stroke: var(--system-text-muted);
+		stroke-width: calc(var(--graph-k, 2) * 1.2px);
+		transform-box: fill-box;
+		transform-origin: center;
+		transition: scale 260ms var(--ease-premium, ease-out), fill 200ms ease, stroke 200ms ease;
+	}
+
+	.stack-graph__node[data-on] .stack-graph__dot { fill: var(--system-text-strong); stroke: var(--system-text-strong); }
+	.stack-graph__node[data-hop] .stack-graph__dot { fill: var(--brand-palette-primary); stroke: var(--brand-palette-primary); }
+	.stack-graph__node[data-blocked] .stack-graph__dot { fill: var(--system-surface); stroke: var(--brand-palette-primary); stroke-width: calc(var(--graph-k, 2) * 2.5px); }
+	.stack-graph__node[data-rel] .stack-graph__dot { scale: 1.2; }
+	.stack-graph__node[aria-selected='true'] .stack-graph__dot { scale: 1.3; }
+
+	.stack-graph__halo { fill: none; stroke: var(--brand-palette-primary); stroke-width: calc(var(--graph-k, 2) * 1.5px); opacity: 0; transition: opacity 200ms ease; }
+	.stack-graph__node[aria-selected='true'] .stack-graph__halo { opacity: 1; }
+	.stack-graph__svg:focus-visible .stack-graph__node[aria-selected='true'] .stack-graph__halo { stroke: var(--system-focus-ring); stroke-width: calc(var(--graph-k, 2) * 3px); }
+
+	.stack-graph__label {
+		font-family: var(--system-font-sans);
+		font-size: var(--graph-label, 20px);
+		font-weight: 500;
+		fill: var(--system-text-strong);
+		paint-order: stroke;
+		stroke: var(--system-surface);
+		stroke-width: calc(var(--graph-k, 2) * 3px);
+		stroke-linejoin: round;
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	/* inherit, not visible: a visible child would show through the hidden
+	   slide it sits on. */
+	.stack-graph__node[data-label] .stack-graph__label { visibility: inherit; }
+	.stack-graph__svg[data-hover] .stack-graph__node:not([data-rel], [data-hover]) { opacity: 0.35; }
+	.stack-graph__node { transition: opacity 200ms ease; }
+
+	.stack-graph__packet { fill: var(--brand-palette-primary); stroke: var(--system-surface); stroke-width: calc(var(--graph-k, 2) * 1.5px); offset-rotate: 0deg; transform-box: view-box; }
+
+	.stack-graph__panel { display: grid; align-content: start; gap: 0.75rem; padding: 0.75rem 0.9rem 0.9rem; border-top: 1px solid var(--system-divider); font-size: 0.8125rem; line-height: 1.4; }
+	.stack-graph__hud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; margin: 0; }
+	.stack-graph__hud dt { font-size: 0.75rem; color: var(--system-text-muted); }
+	.stack-graph__hud dd { margin: 0; font-weight: 600; color: var(--system-text-strong); font-variant-numeric: tabular-nums; }
+
+	.stack-graph__card { display: grid; gap: 0.3rem; padding-top: 0.75rem; border-top: 1px solid var(--system-divider); }
+	.stack-graph__card p { margin: 0; }
+	.stack-graph__card-kind { font-size: 0.75rem; color: var(--system-text-muted); }
+	:root .stack-graph__card-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; margin: 0; font-size: 1rem; line-height: 1.2; color: var(--system-text-strong); }
+	.stack-graph__state { font-size: 0.75rem; font-weight: 500; color: var(--system-text-muted); }
+	.stack-graph__state[data-on] { color: var(--system-success-text); }
+	.stack-graph__card-desc { min-height: 2.8em; color: var(--system-text); }
+	/* Two lines are reserved so the inspector keeps its height whichever
+	   service is selected (shortList caps the names at three). */
+	.stack-graph__card-links { display: -webkit-box; min-height: 2.8em; overflow: hidden; color: var(--system-text); -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+	.stack-graph__card-links > span:first-child { margin-right: 0.35rem; color: var(--system-text-muted); }
+
+	.stack-graph__toggle,
+	.stack-graph__preset {
+		min-height: 44px;
+		padding: 0.4rem 0.8rem;
+		border: 1px solid var(--system-border-strong);
+		border-radius: var(--system-radius-pill);
+		background: var(--system-surface);
+		color: var(--system-text-strong);
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+	}
+
+	.stack-graph__toggle { margin-top: 0.35rem; background: var(--system-action-bg); border-color: var(--system-action-bg); color: var(--system-action-fg); }
+	.stack-graph__toggle:hover { background: var(--system-action-bg-hover); }
+	.stack-graph__presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
+	.stack-graph__preset { font-size: 0.8125rem; font-weight: 500; }
+	.stack-graph__preset:hover { border-color: var(--system-text-strong); }
+	.stack-graph__preset[aria-pressed='true'] { border-color: var(--system-text-strong); background: var(--system-text-strong); color: var(--system-surface); }
+
+	.stack-graph__toggle:focus-visible,
+	.stack-graph__preset:focus-visible { outline: 2px solid var(--system-focus-ring); outline-offset: 2px; }
+
+	.stack-graph__status { min-height: 2.8em; margin: 0; color: var(--system-text-muted); }
+
+	@container ipad (min-width: 40rem) {
+		.stack-graph { grid-template-columns: minmax(0, 1fr) 15.5rem; height: 100%; }
+		.stack-graph__panel { border-top: 0; border-left: 1px solid var(--system-divider); }
+	}
+
+	/* The graph assembles in dependency order the first time it is seen:
+	   a service appears after everything it needs, then its wires draw. */
+	@media (prefers-reduced-motion: no-preference) {
+		:root:not(.motion-paused) .stack-graph__svg[data-build='pending'] :is(.stack-graph__node, .stack-graph__edge, .stack-graph__route) { opacity: 0; }
+
+		/* The dot pops around its own centre (fill-box); the node group only
+		   fades, since its box also holds the label and would pull the origin. */
+		:root:not(.motion-paused) .stack-graph__svg[data-build='run'] .stack-graph__node {
+			animation: stack-graph-fade 360ms ease-out var(--d, 0ms) backwards;
+		}
+
+		:root:not(.motion-paused) .stack-graph__svg[data-build='run'] .stack-graph__dot {
+			animation: stack-graph-pop 520ms var(--ease-premium, ease-out) var(--d, 0ms) backwards;
+		}
+
+		:root:not(.motion-paused) .stack-graph__svg[data-build='run'] :is(.stack-graph__edge, .stack-graph__route) {
+			animation: stack-graph-draw 640ms ease-out var(--d, 0ms) backwards;
+		}
+
+		:root:not(.motion-paused) .stack-graph__edge[data-rel] {
+			stroke-dasharray: calc(var(--graph-k, 2) * 4px) calc(var(--graph-k, 2) * 4px);
+			animation: stack-graph-flow 900ms linear infinite;
+		}
+	}
+
+	@keyframes stack-graph-fade {
+		from { opacity: 0; }
+	}
+
+	@keyframes stack-graph-pop {
+		from { scale: 0.2; }
+	}
+
+	@keyframes stack-graph-draw {
+		from { stroke-dasharray: var(--len, 1000); stroke-dashoffset: var(--len, 1000); }
+		to { stroke-dasharray: var(--len, 1000); stroke-dashoffset: 0; }
+	}
+
+	@keyframes stack-graph-flow {
+		to { stroke-dashoffset: calc(var(--graph-k, 2) * -8px); }
+	}
+</style>

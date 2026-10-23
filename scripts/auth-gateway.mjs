@@ -19,21 +19,28 @@ import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { createAccountMail, REGISTER_ACCEPTED } from './auth/account-mail.mjs';
 import { createGotrueApi } from './auth/gotrue-api.mjs';
-import { enforceStartupGuards } from './auth/guards.mjs';
+import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
+import { approveRoutes } from './auth/approve-routes.mjs';
+import { createLoginApprove, createSignInMailCap } from './auth/login-approve.mjs';
+import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
 import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
 import { classifyLoginFailure } from './auth/login-failure.mjs';
-import { escapeHtml, renderMessage } from './auth/mail-templates.mjs';
-import { deriveClientIp } from './auth/net-ip.mjs';
+import { escapeHtml, renderHtmlTemplate, renderMessage } from './auth/mail-templates.mjs';
+import { loginAlertMailFields } from './auth/request-display.mjs';
+import { deriveClientIp, ipBucket } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
-import { hasSmtpConfig, smtpConfigFromEnv } from './auth/smtp-config.mjs';
-import { createSmtpMailer } from './auth/smtp-mailer.mjs';
+import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
+import { createOtpClient } from './auth/otp-client.mjs';
+import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
+import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
+import { parseVerificationExempt, isVerificationExempt, withExemptSuppression } from './auth/verification-exempt.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
-for (const file of ['.env.local', '.env', '../../.env.local', '../../apps/baas/.env.local']) {
+for (const file of ['.env.local', '.env', '../../.env.local']) {
 	const path = resolve(process.cwd(), file);
 	if (!existsSync(path)) continue;
 	for (const rawLine of readFileSync(path, 'utf8').split(/\r?\n/)) {
@@ -55,7 +62,6 @@ const config = {
 	turnstileBypassLocal: process.env.TURNSTILE_BYPASS_LOCAL === 'true',
 	demoInsecure: process.env.AUTH_DEMO_INSECURE === 'true',
 	siteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4322',
-	smtp: smtpConfigFromEnv(process.env),
 	linkTtls: linkTtls(process.env),
 	mailQueueMax: Number(process.env.AUTH_MAIL_QUEUE_MAX ?? 500),
 	emailDomainAllowlist: process.env.AUTH_EMAIL_DOMAIN_ALLOWLIST ?? process.env.EMAIL_DOMAIN_ALLOWLIST ?? '',
@@ -69,12 +75,32 @@ const config = {
 	loginLockoutThreshold: Number(process.env.AUTH_LOGIN_LOCKOUT_THRESHOLD ?? 10),
 	loginLockoutWindowSec: Number(process.env.AUTH_LOGIN_LOCKOUT_WINDOW_SEC ?? 900),
 	loginLockoutSec: Number(process.env.AUTH_LOGIN_LOCKOUT_SEC ?? 900),
+	loginEmailOtp: process.env.AUTH_LOGIN_EMAIL_OTP === 'true',
+	signupAllowlist: process.env.AUTH_SIGNUP_ALLOWLIST ?? '',
+	signupOpen: process.env.AUTH_SIGNUP_OPEN === 'true',
+	verificationExempt: process.env.AUTH_VERIFICATION_EXEMPT ?? '',
+	turnstileOptional: process.env.AUTH_TURNSTILE_OPTIONAL === 'true',
+	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR || 10),
+	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
+	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
+config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
+// Caveat: exempt means the gateway sends that address no mail and signs it unverified; baas
+// /auth/v1/recover and /otp still mail it through GoTrue's own SMTP, so whoever reads the inbox
+// owns the account. Never admin, nothing private in it; guards.mjs refuses a malformed list at boot.
+const verificationExempt = parseVerificationExempt(config.verificationExempt).addresses;
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12 };
+// otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
+const RATE_WINDOWS_SEC = { otpResend: 3600 };
+// Open signup swaps the per-minute register allowance for an hourly one: a mail cannon needs volume.
+if (config.signupOpen && config.registerHourlyLimit > 0) {
+	RATE_LIMITS.register = config.registerHourlyLimit;
+	RATE_WINDOWS_SEC.register = 3600;
+}
 const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
@@ -140,11 +166,12 @@ async function readJson(request) {
 
 async function rateLimit(ip, action) {
 	const limit = RATE_LIMITS[action] ?? 12;
-	const key = `rl:${action}:${ip}`;
-	const count = await store.incrWithTtl(key, RATE_WINDOW_SEC);
+	const windowSec = RATE_WINDOWS_SEC[action] ?? RATE_WINDOW_SEC;
+	const key = `rl:${action}:${ipBucket(ip)}`;
+	const count = await store.incrWithTtl(key, windowSec);
 	if (count <= limit) return null;
 	const remainingMs = await store.pttl(key);
-	const baseRetry = remainingMs > 0 ? Math.ceil(remainingMs / 1000) : RATE_WINDOW_SEC;
+	const baseRetry = remainingMs > 0 ? Math.ceil(remainingMs / 1000) : windowSec;
 	return baseRetry + Math.min((count - limit) * 2, 30);
 }
 
@@ -156,21 +183,10 @@ function csvValues(value) {
 	return String(value ?? '').split(',').map((entry) => entry.trim().toLowerCase()).filter(Boolean);
 }
 
-function isLocalSmtpHost() {
-	const host = config.smtp.host.toLowerCase().replace(/^\[|\]$/g, '');
-	return host === 'mailpit' || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === 'host.docker.internal' || host.endsWith('.local');
-}
-
+// Only AUTH_EMAIL_DOMAIN_ALLOWLIST exempts a domain from the MX check; local test domains
+// (mini-baas.local, example.test, localhost) are listed there, nothing is derived from a sender.
 function allowedEmailDomains() {
-	const domains = new Set(csvValues(config.emailDomainAllowlist));
-	const senderDomain = emailDomain(config.smtp.fromAddress);
-	if (senderDomain) domains.add(senderDomain);
-	if (isLocalSmtpHost()) {
-		domains.add('mini-baas.local');
-		domains.add('example.test');
-		domains.add('localhost');
-	}
-	return domains;
+	return new Set(csvValues(config.emailDomainAllowlist));
 }
 
 function isAllowedEmailDomain(email) {
@@ -191,9 +207,14 @@ async function hasDeliverableEmailDomain(email) {
 	return valid;
 }
 
+// AUTH_TURNSTILE_OPTIONAL: the osionos bridge's login proxy sends a fixed token, so with no secret
+// every app sign-in would be a 403. With a secret set it changes nothing.
+// Caveat: with no secret and the flag on, there is no CAPTCHA at all; the per-IP limits and the
+// e-mail proof are the only anti-abuse controls left.
 async function verifyTurnstile(token, ip) {
 	if (config.turnstileBypassLocal && (!token || token === 'localhost-turnstile-token')) return true;
-	if (!config.turnstileSecret || !token) return false;
+	if (!config.turnstileSecret) return config.turnstileOptional;
+	if (!token) return false;
 	const form = new URLSearchParams({ secret: config.turnstileSecret, response: token, remoteip: ip });
 	const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
 	const payload = await response.json().catch(() => ({}));
@@ -247,9 +268,19 @@ async function restRpc(name, body, authorization = config.anonKey) {
 	}
 }
 
-async function audit(eventType, _request, details = {}) {
+// The RPC has no ip/user-agent parameter and reads them from PostgREST request headers, which
+// the gateway's own call to Kong does not carry (the column stays empty on b2b), so the client
+// IP travels in details. Caveat: details.ip_address is not the ip_address column; PUB-1 must
+// read details until the RPC takes the parameter. Events audited without a request carry none.
+function requestAuditContext(request) {
+	if (!request) return {};
+	const userAgent = cleanText(request.headers?.['user-agent'], 256);
+	return { ip_address: clientIp(request), ...(userAgent ? { user_agent: userAgent } : {}) };
+}
+
+async function audit(eventType, request, details = {}) {
 	if (!serviceBaas || !config.serviceKey) return;
-	await serviceBaas.rpc('auth_record_audit_event', { event_type: eventType, email: details.email ?? null, details: { ...details, request_id: randomUUID() } }, { apiKey: config.serviceKey, bearerToken: config.serviceKey }).catch((error) => {
+	await serviceBaas.rpc('auth_record_audit_event', { event_type: eventType, email: details.email ?? null, details: { ...requestAuditContext(request), ...details, request_id: randomUUID() } }, { apiKey: config.serviceKey, bearerToken: config.serviceKey }).catch((error) => {
 		console.warn(`[auth-gateway] audit event "${eventType}" was not recorded: ${error instanceof Error ? error.message : 'unknown error'}`);
 	});
 }
@@ -288,11 +319,7 @@ function loginLocation(request, ipAddress) {
 }
 
 function renderEmailTemplate(fileName, variables) {
-	const html = readFileSync(resolve(emailTemplateDir, fileName), 'utf8');
-	return html.replaceAll(/{{\s*([\w.-]+)\s*}}/g, (_match, rawKey) => {
-		const key = String(rawKey).replace(/^\./, '');
-		return escapeHtml(variables[key] ?? variables[rawKey] ?? 'unknown');
-	});
+	return renderHtmlTemplate(emailTemplateDir, fileName, variables);
 }
 
 function siteBaseUrl() {
@@ -306,18 +333,16 @@ function loginAlertContext(request, email, outcome = 'success') {
 		timeStyle: 'long',
 		timeZone: 'UTC',
 	}).format(new Date());
+	const headers = request.headers;
+	const location = loginLocation(request, ipAddress);
 	return {
 		email,
 		ipAddress,
-		location: loginLocation(request, ipAddress),
-		method: outcome === 'success' ? 'Successful password sign-in through the Prismatica auth gateway' : 'Failed password sign-in attempt through the Prismatica auth gateway',
+		location,
 		outcome: outcome === 'success' ? 'Successful sign-in' : 'Failed sign-in attempt',
 		occurredAt: `${occurredAt} (UTC)`,
 		siteUrl: siteBaseUrl(),
-		userAgent: headerValue(request, 'user-agent', 'unknown device', 500),
-		origin: headerValue(request, 'origin', 'not sent', 240),
-		referer: headerValue(request, 'referer', 'not sent', 240),
-		forwardedFor: headerValue(request, 'x-forwarded-for', 'not sent', 240),
+		mail: loginAlertMailFields({ headers, ipAddress, location, outcome }),
 	};
 }
 
@@ -331,21 +356,22 @@ async function shouldSendSignInNotice(email, outcome) {
 }
 
 async function sendLoginSecurityNotification(email, outcome, context) {
-	if (!hasSmtpConfig(config.smtp)) {
-		console.warn(`[auth-gateway] login security alert skipped for ${email}: SMTP is not fully configured.`);
-		await audit('login_alert_skipped', null, { email, reason: 'smtp_not_configured' });
+	if (!mailConfigured()) {
+		console.warn(`[auth-gateway] login security alert skipped for ${email}: the email service is not configured.`);
+		await audit('login_alert_skipped', null, { email, reason: 'mail_not_configured' });
 		return;
 	}
 	if (!(await shouldSendSignInNotice(email, outcome))) {
 		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
-	await sendSmtpMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
-		html: renderEmailTemplate('login-alert.html', context),
+		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
 	});
-	console.info(`[auth-gateway] login security alert accepted by SMTP for ${email} from ${context.ipAddress}.`);
+	if (!wasSent(sendResult)) return;
+	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
 }
 
@@ -361,57 +387,69 @@ function scheduleLoginAlert(request, email, outcome) {
 }
 
 async function sendAccountCreatedNotification(request, email) {
-	if (!hasSmtpConfig(config.smtp)) return;
-	await sendSmtpMail({
+	if (!mailConfigured()) return;
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Your Prismatica account is ready',
 		html: renderEmailTemplate('account-created.html', { Email: email, SiteURL: siteBaseUrl() }),
 	});
-	await audit('account_created_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('account_created_email_sent', request, { email });
 }
 
 async function sendNewsletterConfirm(request, email, token) {
-	await sendSmtpMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Confirm your Prismatica newsletter subscription',
 		html: renderEmailTemplate('newsletter-confirm.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
 	});
-	await audit('newsletter_confirmation_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_confirmation_email_sent', request, { email });
 }
 
 async function sendNewsletterWelcome(request, email, token) {
-	await sendSmtpMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'Welcome to the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-welcome.html', { Email: email, SiteURL: siteBaseUrl(), Token: token }),
 	});
-	await audit('newsletter_welcome_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_welcome_email_sent', request, { email });
 }
 
 async function sendNewsletterUnsubscribe(request, email) {
-	await sendSmtpMail({
+	const sendResult = await sendMail({
 		to: email,
 		subject: 'You are unsubscribed from the Prismatica newsletter',
 		html: renderEmailTemplate('newsletter-unsubscribe.html', { Email: email, SiteURL: siteBaseUrl() }),
 	});
-	await audit('newsletter_unsubscribe_email_sent', request, { email });
+	if (wasSent(sendResult)) await audit('newsletter_unsubscribe_email_sent', request, { email });
 }
 
 function cleanText(value, maxLength) {
 	return String(value ?? '').trim().slice(0, maxLength);
 }
 
-const smtpMailer = createSmtpMailer(config.smtp);
+const signupAllowlist = parseSignupAllowlist(config.signupAllowlist);
+const signupAllowed = (email) => isSignupAllowed(signupAllowlist, email);
+const newsletterAllowed = (email) => isNewsletterAllowed(signupAllowlist, email, config.signupOpen);
+const mailDailyCap = createMailDailyCap({ store, cap: config.mailDailyCap });
+const emailMailer = createEmailApiMailer({ baseUrl: config.baasUrl, serviceKey: config.serviceKey, timeoutMs: resolveMailTimeoutMs(process.env.AUTH_MAIL_TIMEOUT_MS), dailyCap: mailDailyCap });
 
-function sendSmtpMail(message) {
-	if (!hasSmtpConfig(config.smtp)) return Promise.reject(Object.assign(new Error('SMTP is not configured.'), { status: 503 }));
-	return smtpMailer.send(message);
+function mailConfigured() {
+	return Boolean(config.serviceKey && config.baasUrl);
+}
+
+function sendThroughEmailService(message) {
+	if (!mailConfigured()) return Promise.reject(Object.assign(new Error('The email service is not configured.'), { status: 503 }));
+	return emailMailer.send(message);
 }
 
 // Flows report through this; it never rejects, so a fire-and-forget call cannot leak.
 function flowAudit(eventType, details) {
 	audit(eventType, null, details).catch(() => undefined);
 }
+
+// The one place a gateway mail can be withheld: every sender calls this, none calls the mailer.
+const sendMail = withExemptSuppression(verificationExempt, sendThroughEmailService, flowAudit);
+const wasSent = (sendResult) => sendResult?.suppressed !== true;
 
 let droppedJobs = 0;
 let lastDropReportMs = 0;
@@ -442,7 +480,7 @@ const accountMail = createAccountMail({
 	store,
 	queue: mailQueue,
 	gotrue,
-	mailer: { send: sendSmtpMail },
+	mailer: { send: sendMail },
 	render: (name, vars) => renderMessage(emailTemplateDir, name, vars),
 	links: {
 		configured: !config.linkSigningKeyProblem,
@@ -457,7 +495,9 @@ const accountMail = createAccountMail({
 	},
 	isDeliverable: hasDeliverableEmailDomain,
 	audit: flowAudit,
-	newsletterOptIn: (email) => requestNewsletterOptIn(null, email),
+	// Open signup proves an address for the account only; the newsletter keeps its own allowlist rule.
+	newsletterOptIn: (email) => (newsletterAllowed(email) ? requestNewsletterOptIn(null, email) : undefined),
+	signupAllowed,
 });
 
 const linkFlows = createLinkFlows({
@@ -472,6 +512,32 @@ const linkFlows = createLinkFlows({
 });
 
 const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
+
+const mailCap = config.loginApproveLink ? createSignInMailCap({ store }) : undefined;
+
+const loginOtp = createLoginOtp({
+	store,
+	otp: createOtpClient({ baseUrl: config.baasUrl, serviceKey: config.serviceKey }),
+	sessions: sessionFlows,
+	gotrue,
+	signingKey: config.linkSigningKey,
+	resendGapSec: config.loginOtpResendGapSec,
+	audit: flowAudit,
+	mailCap,
+});
+
+const loginApprove = config.loginApproveLink
+	? createLoginApprove({
+			otp: loginOtp,
+			store,
+			sessions: sessionFlows,
+			mail: { send: sendMail, render: (name, vars) => renderMessage(emailTemplateDir, name, vars) },
+			siteUrl: siteBaseUrl(),
+			mailCap,
+			lockLogin: (email) => store.set(`lock:login:${keyHash(email)}`, '1', config.loginLockoutSec),
+			audit: flowAudit,
+		})
+	: null;
 
 function linkTtlSec(type) {
 	return type === 'signup' ? config.linkTtls.verifySec : config.linkTtls.resetSec;
@@ -573,6 +639,11 @@ async function handleDevConfirmedRegistration(request, response, context) {
 		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
 		return;
 	}
+	if (!signupAllowed(context.email)) {
+		flowAudit('signup_refused_allowlist', { email: context.email, source: 'register' });
+		json(response, 200, { message: 'Development account created and confirmed. You can sign in now.' });
+		return;
+	}
 	if (await localProfileExists('email', context.email)) {
 		await accountMail.scheduleAccountExists(context.email);
 		json(response, 202, REGISTER_ACCEPTED);
@@ -595,6 +666,18 @@ async function handleDevConfirmedRegistration(request, response, context) {
 	json(response, 200, { message: 'Development account created and confirmed. You can sign in now.' });
 }
 
+// An exempt address is never registered here (an admin creates it). The answer is a taken
+// address's, so the list is not readable from outside; a taken username answers 409 as it does for everyone.
+async function answerExemptRegistration(response, context) {
+	if (await localProfileExists('username', context.profile.username)) {
+		json(response, 409, { error: 'username_taken', message: 'This username is already taken.' });
+		return;
+	}
+	// Not awaited: an audit round trip would make this answer slower than a taken address's.
+	flowAudit('signup_refused_exempt', { email: context.email });
+	json(response, 202, REGISTER_ACCEPTED);
+}
+
 async function handleRegister(request, response) {
 	await protectedAction(request, response, 'register', async (payload) => {
 		const context = registrationContext(payload);
@@ -606,8 +689,12 @@ async function handleRegister(request, response) {
 			json(response, 422, { message: 'Use an email domain that can receive mail.' });
 			return;
 		}
-		if (!config.serviceKey || (config.requireEmailVerification && !hasSmtpConfig(config.smtp))) {
+		if (!config.serviceKey || (config.requireEmailVerification && !mailConfigured())) {
 			json(response, 503, { message: 'Email verification is not configured.' });
+			return;
+		}
+		if (isVerificationExempt(verificationExempt, context.email)) {
+			await answerExemptRegistration(response, context);
 			return;
 		}
 		if (!config.requireEmailVerification || !context.profile.email_verification_consent) {
@@ -636,9 +723,20 @@ async function handleLogin(request, response) {
 			json(response, 429, { message: 'Too many failed attempts for this account. Try again later or reset your password.' }, { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) });
 			return;
 		}
+		if (config.loginEmailOtp && !loginOtp.ready) {
+			console.error('[auth-gateway] login: AUTH_LOGIN_EMAIL_OTP is on but AUTH_LINK_SIGNING_KEY is unusable; the password was not checked');
+			json(response, 503, { message: 'Sign-in with an emailed code is not configured.' });
+			return;
+		}
 		const result = await signInWithPassword({ email, password });
 		await audit(result.response.ok ? 'login_success' : 'login_failed', request, { email, status: result.response.status });
-		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status);
+		const failure = result.response.ok ? null : classifyLoginFailure(result.response.status, result.payload);
+		if (failure === 'unconfirmed') {
+			// GoTrue only says this after a correct password: no lockout count, no failed-login alert.
+			await audit('login_email_unconfirmed', request, { email });
+			json(response, 403, { error: 'email_not_confirmed', message: 'Confirm your email first — check your inbox, or send a new link.' });
+			return;
+		}
 		if (failure === 'rate-limited') {
 			json(response, 429, { message: 'Too many sign-in attempts reached the auth service. Wait a minute and try again.' });
 			return;
@@ -667,11 +765,36 @@ async function handleLogin(request, response) {
 		}
 		await store.del(failKey);
 		await store.del(lockKey);
+		if (config.loginEmailOtp) {
+			await handleLoginCodeStep(request, response, email, result.payload, ip);
+			return;
+		}
 		scheduleLoginAlert(request, email, 'success');
 		const refreshToken = typeof result.payload.refresh_token === 'string' ? result.payload.refresh_token : '';
 		const headers = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
 		json(response, 200, sanitizeAuthPayload(result.payload), headers);
 	});
+}
+
+// The session exists in GoTrue but is withheld: no token, no refresh cookie, only the ticket cookie.
+async function handleLoginCodeStep(request, response, email, grant, ip) {
+	const refreshToken = typeof grant.refresh_token === 'string' ? grant.refresh_token : '';
+	const userId = typeof grant.user?.id === 'string' ? grant.user.id : '';
+	const login = { email, userId, refreshToken };
+	let started = { ok: false, status: 503, message: 'The sign-in service returned no session.' };
+	if (refreshToken) started = loginApprove ? await loginApprove.begin({ ...login, summary: approvalSummary(request, email), ip }) : await loginOtp.begin(login);
+	if (!started.ok) {
+		json(response, started.status, { message: started.message });
+		return;
+	}
+	const body = loginApprove ? { mfa_required: 'email_approve', match: started.match } : { mfa_required: 'email_otp' };
+	json(response, 200, body, { 'set-cookie': ticketCookie(started.ticket) });
+}
+
+// What the approver is asked to recognise; only display-safe text is stored or mailed.
+function approvalSummary(request, email) {
+	const { occurredAt, mail } = loginAlertContext(request, email);
+	return { occurredAt, ipAddress: mail.ipAddress, location: mail.location, userAgent: mail.userAgent };
 }
 
 async function handleRecover(request, response) {
@@ -737,36 +860,33 @@ async function requestNewsletterOptIn(request, email) {
 }
 
 async function handleNewsletterSubscribe(request, response) {
-	const ip = clientIp(request);
-	const retryAfter = await rateLimit(ip, 'newsletter');
-	if (retryAfter) {
-		json(response, 429, { message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
-		return;
-	}
-	const payload = await readJson(request);
-	const email = String(payload.email ?? '').trim().toLowerCase();
-	if (!EMAIL_REGEX.test(email)) {
-		json(response, 422, { message: 'Use a valid email address.' });
-		return;
-	}
-	if (!await hasDeliverableEmailDomain(email)) {
-		json(response, 422, { message: 'Use an email domain that can receive mail.' });
-		return;
-	}
-	// Per-target cap: stop the newsletter from being used as an email-bomb
-	// amplifier against a victim's inbox, independent of source IP rotation.
-	const targetCount = await store.incrWithTtl(`rl:newsletter-target:${keyHash(email)}`, NEWSLETTER_TARGET_WINDOW_SEC);
-	if (targetCount > NEWSLETTER_TARGET_LIMIT) {
-		await audit('newsletter_target_throttled', request, { email });
-		json(response, 429, { message: 'Too many confirmation emails were requested for this address. Please check your inbox or try again later.' });
-		return;
-	}
-	const result = await requestNewsletterOptIn(request, email);
-	if (!result.ok) {
+	await protectedAction(request, response, 'newsletter', async (payload) => {
+		const email = String(payload.email ?? '').trim().toLowerCase();
+		if (!EMAIL_REGEX.test(email)) {
+			json(response, 422, { message: 'Use a valid email address.' });
+			return;
+		}
+		// Same 200 and body as a sent confirmation, so the answer is no oracle for the list (SGN-3).
+		if (!newsletterAllowed(email)) {
+			await audit('signup_refused_allowlist', request, { email, source: 'newsletter' });
+			json(response, 200, { message: `Check ${escapeHtml(email)} to confirm your subscription.` });
+			return;
+		}
+		if (!await hasDeliverableEmailDomain(email)) {
+			json(response, 422, { message: 'Use an email domain that can receive mail.' });
+			return;
+		}
+		// Per-target cap: stop the newsletter from being used as an email-bomb
+		// amplifier against a victim's inbox, independent of source IP rotation.
+		const targetCount = await store.incrWithTtl(`rl:newsletter-target:${keyHash(email)}`, NEWSLETTER_TARGET_WINDOW_SEC);
+		if (targetCount > NEWSLETTER_TARGET_LIMIT) {
+			await audit('newsletter_target_throttled', request, { email });
+			json(response, 429, { message: 'Too many confirmation emails were requested for this address. Please check your inbox or try again later.' });
+			return;
+		}
+		const result = await requestNewsletterOptIn(request, email);
 		json(response, result.status, { message: result.message });
-		return;
-	}
-	json(response, result.status, { message: result.message });
+	});
 }
 
 async function handleNewsletterConfirm(request, response) {
@@ -782,7 +902,7 @@ async function handleNewsletterConfirm(request, response) {
 		return;
 	}
 	const email = typeof result.payload?.email === 'string' ? result.payload.email : '';
-	if (EMAIL_REGEX.test(email) && hasSmtpConfig()) {
+	if (EMAIL_REGEX.test(email) && mailConfigured()) {
 		await sendNewsletterWelcome(request, email, token).catch(async (error) => {
 			console.error(`[auth-gateway] newsletter welcome failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 			await audit('newsletter_welcome_email_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
@@ -804,7 +924,7 @@ async function handleNewsletterUnsubscribe(request, response) {
 		return;
 	}
 	const email = typeof result.payload?.email === 'string' ? result.payload.email : '';
-	if (EMAIL_REGEX.test(email) && hasSmtpConfig()) {
+	if (EMAIL_REGEX.test(email) && mailConfigured()) {
 		await sendNewsletterUnsubscribe(request, email).catch(async (error) => {
 			console.error(`[auth-gateway] newsletter unsubscribe email failed for ${email}: ${error instanceof Error ? error.message : 'unknown error'}`);
 			await audit('newsletter_unsubscribe_email_failed', request, { email, error: error instanceof Error ? error.message : 'unknown_error' });
@@ -860,6 +980,9 @@ async function handleOsionosSession(request, response) {
 		subject,
 		email,
 		name: typeof metadata.username === 'string' ? metadata.username : email.split('@')[0],
+		// Signed with the rest so the bridge can trust it; a strict boolean, never the raw timestamp.
+		// An exempt address was never proven by its inbox, so false is its true value.
+		emailVerified: Boolean(user.email_confirmed_at) && !isVerificationExempt(verificationExempt, email),
 		jti: randomUUID(),
 	};
 	const timestamp = String(Date.now());
@@ -889,6 +1012,45 @@ async function handleOsionosSession(request, response) {
 	json(response, result.status, body);
 }
 
+async function emailOtpAction(request, response, action, flow) {
+	const retryAfter = await rateLimit(clientIp(request), action);
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
+	await flow(ticketFrom(request.headers.cookie), await readJson(request));
+}
+
+// Only the ticket's email goes to grobase: an `email` in this body is never read.
+async function handleMfaEmailVerify(request, response) {
+	await emailOtpAction(request, response, 'otpVerify', async (ticket, payload) => {
+		respondWithTicketOutcome(request, response, await loginOtp.verify(ticket, payload.code));
+	});
+}
+
+// A correct code and an approved poll end here, so both answer with the same body and cookies.
+function respondWithTicketOutcome(request, response, result) {
+	const headers = {};
+	if (result.refreshToken) headers['set-cookie'] = [refreshCookie(result.refreshToken), clearTicketCookie()];
+	else if (result.clearTicket) headers['set-cookie'] = clearTicketCookie();
+	if (result.retryAfterSec) headers['retry-after'] = String(result.retryAfterSec);
+	if (result.status === 200) scheduleLoginAlert(request, result.email, 'success');
+	json(response, result.status, result.body, headers);
+}
+
+async function handleMfaEmailStatus(request, response) {
+	await emailOtpAction(request, response, 'otpStatus', async (ticket) => {
+		respondWithTicketOutcome(request, response, await loginApprove.status(ticket, clientIp(request)));
+	});
+}
+
+async function handleMfaEmailResend(request, response) {
+	await emailOtpAction(request, response, 'otpResend', async (ticket) => {
+		const result = await loginOtp.resend(ticket);
+		json(response, result.status, result.body, result.retryAfterSec ? { 'retry-after': String(result.retryAfterSec) } : {});
+	});
+}
+
 function handleMfaHook(response) {
 	json(response, 501, { message: 'MFA hook reserved. Wire this endpoint to TOTP or WebAuthn provider integration before enabling in production.' });
 }
@@ -904,6 +1066,8 @@ const routes = new Map([
 	['POST /api/auth/refresh', handleRefresh],
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
+	...(config.loginEmailOtp ? [['POST /api/auth/mfa/email/verify', handleMfaEmailVerify], ['POST /api/auth/mfa/email/resend', handleMfaEmailResend]] : []),
+	...(loginApprove ? [['POST /api/auth/mfa/email/status', handleMfaEmailStatus], ...approveRoutes({ loginApprove, rateLimit, clientIp, readJson, json })] : []),
 	['POST /api/newsletter/subscribe', handleNewsletterSubscribe],
 	['POST /api/newsletter/confirm', handleNewsletterConfirm],
 	['POST /api/newsletter/unsubscribe', handleNewsletterUnsubscribe],

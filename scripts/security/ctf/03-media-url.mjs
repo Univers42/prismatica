@@ -20,6 +20,8 @@ const acceptedMedia = [
 	'product.png.svg',
 	'workspace.png',
 	'hero.webp',
+	'board-tour.webm',
+	'board-tour.mp4',
 ];
 
 const rejectedMedia = [
@@ -61,6 +63,14 @@ export async function run() {
 				const section = readProjectFile('src/components/sections/MediaAssetsSection.astro');
 				assert.ok(section.includes('safePublicAssetPath'), 'MediaAssetsSection must use the media URL allowlist helper');
 				assert.ok(!section.includes('`${import.meta.env.BASE_URL}assets/${fileName}`'), 'raw path concatenation must not return');
+			},
+		},
+		{
+			name: 'MediaSlot resolves every product photo and video through safePublicAssetPath',
+			run: () => {
+				const resolver = readProjectFile('src/lib/media-slot.ts');
+				assert.ok(resolver.includes('safePublicAssetPath(shot.src'), 'media sources must use the media URL allowlist helper');
+				assert.ok(resolver.includes('safePublicAssetPath(shot.poster'), 'video posters must use the media URL allowlist helper');
 			},
 		},
 	]));

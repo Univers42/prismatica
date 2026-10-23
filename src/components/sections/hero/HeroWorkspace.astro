@@ -1,0 +1,240 @@
+---
+// The live app on the hero laptop's screen: a workspace window where "/" opens
+// a menu of apps and picking one drops it in as a linked block. Every block is
+// server-rendered (one visible at a time) so it reads correctly with JS off.
+// Laid out in logical px at the size HeroDevices picks for the screen, then
+// zoomed, so no size in here may depend on the viewport; below 720 logical px
+// (`@container app`) it takes its phone layout, the sidebar becoming a tab bar.
+// Blocks stay drawn (`drawn`) even where a capture exists: at block size a
+// full-window screenshot is unreadable. The app tour shows the captures.
+import AppGlyph from '../../ui/AppGlyph.astro';
+import MediaSlot from '../../ui/MediaSlot.astro';
+import WorkspaceCommand from './WorkspaceCommand.astro';
+import WorkspaceRail from './WorkspaceRail.astro';
+import AppSketch from './AppSketch.astro';
+import { CONNECTED_APPS, appName, type ConnectedAppId } from '../../../data/connected-apps';
+
+const FIRST_BLOCK: ConnectedAppId = 'board';
+---
+
+<div class="workspace" data-workspace>
+	<div class="workspace__crumbs" aria-hidden="true">
+		<span class="workspace__dots"><i></i><i></i><i></i></span>
+		<span>Northwind Studio</span>
+		<span class="workspace__crumb-sep">/</span>
+		<span class="workspace__crumb-page">Q4 launch</span>
+		<span class="workspace__people"><span>IA</span><span>MK</span><span>JL</span></span>
+	</div>
+	<WorkspaceRail current={FIRST_BLOCK} />
+	<div class="workspace__body">
+		<p class="workspace__title">Q4 launch</p>
+		<p class="workspace__subtitle">Clients, tasks, dates and mail for the launch, on one page.</p>
+
+		<WorkspaceCommand current={FIRST_BLOCK} />
+
+		<div class="workspace__blocks">
+			{CONNECTED_APPS.map((app) => (
+				<div class="workspace__block" data-workspace-block={app.id} hidden={app.id !== FIRST_BLOCK}>
+					<div class="workspace__block-head">
+						<span class="workspace__block-name"><AppGlyph name={app.id} /> {app.name}</span>
+						<span class="visually-hidden">linked to</span>
+						<ul class="workspace__links" role="list">
+							{app.links.map((link) => <li class="workspace__link">{appName(link)}</li>)}
+						</ul>
+					</div>
+					<MediaSlot shot={app.shot} eager={app.id === FIRST_BLOCK} drawn><AppSketch name={app.id} /></MediaSlot>
+				</div>
+			))}
+		</div>
+	</div>
+</div>
+
+<script>
+	import { bindWorkspaceDemo } from '../../../scripts/hero-workspace';
+	const root = document.querySelector<HTMLElement>('[data-workspace]');
+	if (root) bindWorkspaceDemo(root, { order: ['calendar', 'mail', 'database', 'whiteboard', 'docs', 'board'] });
+</script>
+
+<style is:global>
+	/* Springs as CSS linear() curves: stiffness 300 / damping 20 ("pop") and
+	   170 / 22 ("soft"), sampled evenly with the settled tail trimmed.
+	   Caveat: linear() is piecewise-linear, so the overshoot peak is slightly
+	   flattened and the settle runs a little faster than the real spring. */
+	.workspace {
+		--spring-pop: linear(0, 0.043, 0.15, 0.294, 0.452, 0.606, 0.745, 0.863, 0.957, 1.025, 1.071, 1.097, 1.108, 1.106, 1.097, 1.082, 1.065, 1.048, 1.033, 1.019, 1.008, 1, 0.994, 0.99, 0.989, 0.988, 0.989, 0.991, 0.992, 0.994, 0.996, 0.997, 0.999, 1);
+		--spring-soft: linear(0, 0.022, 0.077, 0.152, 0.238, 0.329, 0.419, 0.504, 0.583, 0.655, 0.718, 0.773, 0.82, 0.86, 0.893, 0.92, 0.942, 0.959, 0.973, 0.984, 0.991, 0.997, 1.001, 1.004, 1.006, 1.007, 1.007, 1.006, 1.004, 1.003, 1.002, 1.001, 1);
+
+		display: grid;
+		grid-template: 'bar bar' 40px 'rail body' 1fr / 200px minmax(0, 1fr);
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+		background: var(--system-surface);
+		color: var(--system-text);
+		font-size: 15px;
+	}
+
+	.workspace__crumbs {
+		grid-area: bar;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 14px;
+		border-bottom: 1px solid var(--system-divider);
+		font-size: 13px;
+		color: var(--system-text-muted);
+		white-space: nowrap;
+	}
+
+	.workspace__dots { display: inline-flex; gap: 6px; margin-right: 10px; }
+
+	.workspace__dots i {
+		width: 11px;
+		height: 11px;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--system-text-strong) 18%, transparent);
+	}
+
+	.workspace__crumb-page { color: var(--system-text-strong); }
+
+	.workspace__people { display: inline-flex; margin-left: auto; }
+
+	.workspace__people span {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		margin-left: -6px;
+		border: 2px solid var(--system-surface);
+		border-radius: 50%;
+		background: var(--system-text-strong);
+		color: var(--system-surface);
+		font-size: 9px;
+		font-weight: 700;
+	}
+
+	.workspace__people span:first-child { background: var(--brand-palette-primary); color: var(--system-text-on-accent); }
+
+	.workspace__body {
+		grid-area: body;
+		display: grid;
+		grid-template-rows: auto auto auto 1fr;
+		gap: 12px;
+		min-height: 0;
+		padding: 26px 34px 24px;
+	}
+
+	.workspace__title {
+		margin: 0;
+		font-family: var(--brand-font-display);
+		font-size: 30px;
+		font-weight: 600;
+		line-height: 1.08;
+		letter-spacing: -0.025em;
+		color: var(--system-text-strong);
+	}
+
+	.workspace__subtitle {
+		margin: -6px 0 0;
+		font-size: 15px;
+		color: var(--system-text-muted);
+	}
+
+	.workspace__block[hidden] { display: none; }
+
+	/* Blocks share one grid cell so swapping them never changes the page height. */
+	.workspace__blocks { display: grid; }
+
+	.workspace__block .media-slot { width: 520px; }
+
+	.workspace__block {
+		grid-area: 1 / 1;
+		display: grid;
+		align-content: start;
+		gap: 0.6rem;
+		min-width: 0;
+	}
+
+	.workspace__block-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem 0.7rem;
+		font-size: 14px;
+	}
+
+	.workspace__block-name {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-weight: 600;
+		color: var(--system-text-strong);
+	}
+
+	.workspace__block-name .app-glyph { width: 17px; height: 17px; }
+
+	.workspace__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.workspace__link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.12rem 0.55rem;
+		border: 1px solid var(--system-divider);
+		border-radius: var(--system-radius-pill);
+		font-size: 12px;
+		color: var(--system-text);
+	}
+
+	.workspace__link::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--brand-palette-primary);
+	}
+
+	.workspace__block.is-entering { animation: workspace-block-in 720ms var(--spring-pop) both; }
+	.workspace__block.is-leaving { animation: workspace-block-out 220ms cubic-bezier(0.4, 0, 1, 1) both; }
+	.workspace__block.is-entering .workspace__link { animation: workspace-link-in 640ms var(--spring-pop) both; }
+	.workspace__block.is-entering .workspace__link:nth-child(1) { animation-delay: 180ms; }
+	.workspace__block.is-entering .workspace__link:nth-child(2) { animation-delay: 260ms; }
+	.workspace__block.is-entering .workspace__link:nth-child(3) { animation-delay: 340ms; }
+
+	@keyframes workspace-block-in {
+		from { opacity: 0; transform: translateY(16px) scale(0.96); }
+		to { opacity: 1; transform: none; }
+	}
+
+	@keyframes workspace-block-out {
+		to { opacity: 0; transform: translateY(-10px) scale(0.98); }
+	}
+
+	@keyframes workspace-link-in {
+		from { opacity: 0; transform: translateX(-8px) scale(0.9); }
+		to { opacity: 1; transform: none; }
+	}
+
+	@container app (width < 720px) {
+		.workspace { grid-template: 'bar' 34px 'body' minmax(0, 1fr) 'rail' auto / minmax(0, 1fr); }
+		.workspace__crumbs { padding: 0 12px; font-size: 12px; }
+		.workspace__dots { display: none; }
+		.workspace__body { gap: 8px; padding: 12px 14px 10px; overflow: hidden; }
+		.workspace__title { font-size: 21px; }
+		.workspace__subtitle { display: none; }
+		.workspace__block .media-slot { width: 100%; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.workspace__block.is-entering,
+		.workspace__block.is-leaving,
+		.workspace__block.is-entering .workspace__link { animation: none; }
+	}
+</style>

@@ -1,0 +1,289 @@
+// The hero's device scene (markup: components/sections/hero/HeroDevices.astro):
+// layout, the tablet and the phone, and the scroll parallax that lifts them as
+// the scene enters the viewport. The laptop is in _devices-laptop.scss.
+// Device bodies are fixed space-grey colours: hardware does not change with
+// the site theme. Screens use system tokens, like the app itself.
+// Caveat: the scroll effects run on the page's scroll from the top, so they
+// assume the hero is the first thing on the page. A browser without
+// scroll-driven animations gets them from scripts/hero-devices.ts instead;
+// with JS off there, the scene is open and still.
+
+// Shared by every drawn device: the hero devices and the stack showcase iPad.
+:root {
+	--device-bezel: #050506;
+	--device-rim: #474b54;
+	--device-shade: rgb(0 0 0 / 70%);
+	--device-camera: #1d2027;
+}
+
+.devices {
+	// Below 1000px the laptop and phone stand side by side, so the phone never
+	// covers the live app on the laptop's screen; wider, the tablet joins and
+	// the laptop centres.
+	--lw: 76cqi;
+	--laptop-left: 0;
+
+	position: relative;
+	width: 100%;
+	container-type: inline-size;
+}
+
+// Where the planet's horizon meets the scene (scripts/hero-universe.ts reads it).
+.devices__horizon {
+	position: absolute;
+	top: calc(var(--lw) * 0.3);
+	left: 0;
+	width: 100%;
+	height: 0;
+}
+
+.devices .media-slot {
+	border: 0;
+	border-radius: 0;
+}
+
+// Each device is a size container; its bezel is drawn by ::before and its
+// screen inset by margin, because the device's own padding or radius in cqi
+// would resolve against the scene, not the device.
+.tablet,
+.phone {
+	container-type: inline-size;
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: var(--device-bezel);
+	}
+}
+
+.tablet {
+	display: none;
+
+	&::before {
+		border-radius: 5.4cqi;
+		box-shadow:
+			0 0 0 0.5cqi var(--device-rim),
+			inset 0 0 0 0.35cqi #1b1c20,
+			0 7cqi 12cqi -3cqi var(--device-shade);
+	}
+
+	// Front camera, centred on the long edge.
+	&::after {
+		content: '';
+		position: absolute;
+		top: 1.3cqi;
+		left: 50%;
+		width: 1.1cqi;
+		border-radius: 50%;
+		background: var(--device-camera);
+		transform: translateX(-50%);
+		aspect-ratio: 1;
+	}
+
+	.media-slot {
+		position: relative;
+		margin: 3.6cqi;
+		border-radius: 2.4cqi;
+	}
+}
+
+.phone {
+	position: absolute;
+	z-index: 3;
+	right: 0;
+	bottom: calc(var(--lw) * 0.07);
+	width: 21cqi;
+
+	&::before {
+		border-radius: 16cqi;
+		box-shadow:
+			0 0 0 1.4cqi var(--device-rim),
+			inset 0 0 0 0.9cqi #1b1c20,
+			0 14cqi 22cqi -8cqi var(--device-shade);
+	}
+}
+
+.phone__screen {
+	position: relative;
+	display: grid;
+	margin: 4cqi;
+	overflow: hidden;
+	border-radius: 12cqi;
+	background: var(--system-surface);
+}
+
+.phone__status {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0;
+	padding: 3.5cqi 7cqi 2cqi;
+	font: 600 5.6cqi/1 var(--system-font-sans);
+	color: var(--system-text-strong);
+}
+
+.phone__island {
+	width: 30cqi;
+	height: 9cqi;
+	border-radius: 99px;
+	background: #000;
+}
+
+.phone__battery {
+	width: 9cqi;
+	height: 4.6cqi;
+	border: 0.8cqi solid currentcolor;
+	border-radius: 1.4cqi;
+	background: linear-gradient(90deg, currentcolor 70%, transparent 0);
+	background-clip: content-box;
+	padding: 0.5cqi;
+}
+
+.phone__home {
+	width: 36cqi;
+	height: 1.5cqi;
+	margin: 3cqi auto 3.4cqi;
+	border-radius: 99px;
+	background: var(--system-text-strong);
+	opacity: 0.85;
+}
+
+@media (width >= 640px) {
+	.devices {
+		--lw: 72cqi;
+		--laptop-left: 4cqi;
+	}
+
+	.phone {
+		right: 3cqi;
+		width: 17cqi;
+	}
+}
+
+@media (width >= 1000px) {
+	.devices {
+		--lw: 62cqi;
+		--laptop-left: auto;
+	}
+
+	.tablet {
+		position: absolute;
+		z-index: 1;
+		bottom: calc(var(--lw) * 0.09);
+		left: 1cqi;
+		display: block;
+		width: 31cqi;
+	}
+
+	.phone {
+		right: 9cqi;
+		bottom: calc(var(--lw) * 0.02);
+		width: 12cqi;
+	}
+}
+
+// Idle drift uses the separate `translate` property, so it adds to the scroll
+// rise below (which animates `transform`) instead of replacing it.
+@media (prefers-reduced-motion: no-preference) {
+	.tablet {
+		animation: device-float 7s ease-in-out infinite alternate;
+	}
+
+	.phone {
+		animation: device-float 5.5s ease-in-out -2s infinite alternate;
+	}
+
+	// Longhands for the build's minifier; see _devices-laptop.scss.
+	@supports (animation-timeline: scroll()) {
+		.tablet {
+			animation-name: device-float, device-rise-far;
+			animation-duration: 7s, auto;
+			animation-timing-function: ease-in-out, linear;
+			animation-delay: 0s, 0s;
+			animation-iteration-count: infinite, 1;
+			animation-direction: alternate, normal;
+			animation-fill-mode: none, both;
+			animation-timeline: auto, scroll(root block);
+			animation-range: normal, 0 60vh;
+		}
+
+		.phone {
+			animation-name: device-float, device-rise-near;
+			animation-duration: 5.5s, auto;
+			animation-timing-function: ease-in-out, linear;
+			animation-delay: -2s, 0s;
+			animation-iteration-count: infinite, 1;
+			animation-direction: alternate, normal;
+			animation-fill-mode: none, both;
+			animation-timeline: auto, scroll(root block);
+			animation-range: normal, 0 70vh;
+		}
+	}
+
+	// Eased by script, like the laptop; see _devices-laptop.scss.
+	:root:not(.motion-paused) [data-scroll-scrub] {
+		.tablet {
+			animation:
+				device-float 7s ease-in-out infinite alternate,
+				device-rise-far 1s linear both paused;
+			animation-delay: 0s, calc(clamp(0, var(--scroll-vh, 0) / 60, 1) * -1s);
+		}
+
+		.phone {
+			animation:
+				device-float 5.5s ease-in-out infinite alternate,
+				device-rise-near 1s linear both paused;
+			animation-delay: -2s, calc(clamp(0, var(--scroll-vh, 0) / 70, 1) * -1s);
+		}
+	}
+}
+
+// `none`, not paused: a paused scroll rise would hold the devices at its
+// invisible first frame.
+:root.motion-paused .tablet,
+:root.motion-paused .phone {
+	animation: none;
+}
+
+@keyframes device-float {
+	from {
+		translate: 0 0;
+	}
+
+	to {
+		translate: 0 -1.2%;
+	}
+}
+
+// Opaque within the first third, so a rising device never shows the deck
+// through it.
+@keyframes device-rise-far {
+	0% {
+		opacity: 0;
+		transform: translateY(30%) rotate(-4deg);
+	}
+
+	30% {
+		opacity: 1;
+	}
+
+	100% {
+		transform: none;
+	}
+}
+
+@keyframes device-rise-near {
+	0% {
+		opacity: 0;
+		transform: translateY(55%) rotate(7deg);
+	}
+
+	30% {
+		opacity: 1;
+	}
+
+	100% {
+		transform: none;
+	}
+}

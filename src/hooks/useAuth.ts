@@ -52,6 +52,12 @@ export type AuthResult = {
 	message: string;
 	/** The gateway's machine-readable reason (`mfa_required`, `link_expired`, …). */
 	code?: string;
+	/** The email-approval machine state the gateway returns: 'email_approve' waits for a device
+	 *  approval, 'email_otp' wants the 6-digit code from the mail (scripts/portal-login-*.ts). */
+	mfaRequired?: string;
+	/** The 2-digit number the waiting browser shows while the sign-in is approved elsewhere. */
+	match?: number;
+	pending?: boolean;
 	accessToken?: string;
 	expiresIn?: number;
 	/** Continues a reset after `mfa_required` or a refused password (scripts/auth/link-flows.mjs). */
@@ -146,6 +152,9 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 		status: response.status,
 		message,
 		code: typeof payload.error === 'string' ? payload.error : undefined,
+		mfaRequired: typeof payload.mfa_required === 'string' ? payload.mfa_required : undefined,
+		match: typeof payload.match === 'number' ? payload.match : undefined,
+		pending: payload.pending === true ? true : undefined,
 		accessToken: typeof payload.access_token === 'string' ? payload.access_token : undefined,
 		expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : undefined,
 		resetTicket: typeof payload.reset_ticket === 'string' ? payload.reset_ticket : undefined,
@@ -206,6 +215,18 @@ export function useAuth(options: AuthClientOptions = {}) {
 				return { ok: false, status: 422, message: error };
 			}
 			return parseAuthResponse(await post('/login', request));
+		},
+		async verifyLoginCode(code: string): Promise<AuthResult> {
+			if (!/^\d{6}$/.test(code)) {
+				return { ok: false, status: 422, message: 'Enter the 6-digit code from your email.' };
+			}
+			return parseAuthResponse(await post('/mfa/email/verify', { code }));
+		},
+		async pollLoginApproval(): Promise<AuthResult> {
+			return parseAuthResponse(await post('/mfa/email/status', {}));
+		},
+		async resendLoginCode(): Promise<AuthResult> {
+			return parseAuthResponse(await post('/mfa/email/resend', {}));
 		},
 		async register(request: RegisterRequest): Promise<AuthResult> {
 			const error = registrationValidationMessage(request);

@@ -82,6 +82,18 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=
 
+      - name: Base images from mirror.gcr.io under the names the Dockerfile uses
+        # public.ecr.aws caps anonymous data per runner IP ("429 Data limit exceeded", runs
+        # 39148078981 and its re-run), and a re-run lands on the same cap. mirror.gcr.io serves the
+        # same Docker Official Images; tagged locally, the docker-driver build uses them and asks
+        # neither ECR nor Docker Hub. Caveat: the registries move a tag independently, so right
+        # after an upstream release the mirror can lag a digest behind.
+        run: |
+          docker pull -q mirror.gcr.io/library/nginx:1.27-alpine
+          docker tag mirror.gcr.io/library/nginx:1.27-alpine public.ecr.aws/docker/library/nginx:1.27-alpine
+          docker pull -q mirror.gcr.io/library/node:22-alpine
+          docker tag mirror.gcr.io/library/node:22-alpine node:22-alpine
+
       - name: Build and push web image
         uses: docker/build-push-action@v6
         with:

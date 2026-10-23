@@ -27,11 +27,15 @@
 // hop count is immune to client-side XFF prepending (extra spoofed entries only
 // grow the left side, never shifting the trusted tail).
 
+import { isIPv6 } from 'node:net';
+
 export function normalizeIp(value) {
 	let ip = String(value ?? '').trim().toLowerCase();
 	if (!ip) return '';
-	// IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) -> 127.0.0.1
-	if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+	// [2001:db8::1] is how a URL or a proxy writes an IPv6 host; the bucket must not see it as another client.
+	if (ip.startsWith('[') && ip.endsWith(']')) ip = ip.slice(1, -1);
+	// IPv4-mapped IPv6 (::ffff:127.0.0.1, or the long 0:0:0:0:0:ffff:127.0.0.1) -> 127.0.0.1
+	ip = ip.replace(/^(?:::|(?:0{1,4}:){5})ffff:(?=\d+\.\d+\.\d+\.\d+$)/, '');
 	// strip a trailing :port from bare IPv4 (1.2.3.4:5678 -> 1.2.3.4); leave IPv6 alone
 	if (/^\d{1,3}(\.\d{1,3}){3}:\d+$/.test(ip)) ip = ip.slice(0, ip.lastIndexOf(':'));
 	return ip;
@@ -72,4 +76,20 @@ export function deriveClientIp(request, options = {}) {
 	// upstream at worst — fail safe, never fail open.
 	if (index < 0) return chain[0];
 	return chain[index] ?? remote ?? 'unknown';
+}
+
+// The key a per-IP limit counts under. An IPv6 subscriber is handed a whole /64, so keying on
+// the full address lets one client rotate through 2^64 buckets and never be limited.
+// Caveat: a /64 can be shared (one ISP prefix, a campus), so those users share one allowance;
+// that over-throttles, never under-throttles. A malformed value is returned as it came.
+// Caveat: only the dotted IPv4-mapped spellings are folded; the hex spelling (::ffff:102:304) keeps its own /64 bucket.
+export function ipBucket(ip) {
+	const address = normalizeIp(String(ip ?? '').split('%')[0]);
+	if (!isIPv6(address)) return address || String(ip ?? '');
+	const [head, tail] = address.split('::');
+	const headGroups = head ? head.split(':') : [];
+	const tailGroups = tail ? tail.split(':') : [];
+	const missing = address.includes('::') ? 8 - headGroups.length - tailGroups.length : 0;
+	const groups = [...headGroups, ...Array(missing).fill('0'), ...tailGroups];
+	return `${groups.slice(0, 4).map((group) => group.padStart(4, '0')).join(':')}::/64`;
 }

@@ -19,7 +19,6 @@ It holds **server-only secrets** that must never reach a browser or a static sit
 | `SERVICE_ROLE_KEY` | privileged BaaS/Postgres ops (bypasses row security) |
 | `OSIONOS_BRIDGE_SHARED_SECRET` | minting the osionos session that links account → app |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile verification |
-| `SMTP_*` | sending verification / alert emails |
 
 These are **injected at runtime** (env / Vault) — the image bakes none of them
 (verified: no `.env` in the image). The browser only ever sees the public anon key
@@ -45,12 +44,11 @@ docker run -d --name auth-gateway -p 8787:8787 \
   -e OSIONOS_BRIDGE_SHARED_SECRET=... \
   -e TURNSTILE_SECRET_KEY=... \
   -e AUTH_LINK_SIGNING_KEY=...   # dedicated, >= 32 characters; signs verify/reset links \
-  -e SMTP_HOST=... -e SMTP_PORT=... -e SMTP_USER=... -e SMTP_PASS=... -e EMAIL_FROM=... \
   track-binocle/prismatica-auth-gateway:local
 ```
 
 Talks to: BaaS/Kong (auth + service-role DB ops), the osionos-bridge (session
-mint), Cloudflare Turnstile, and SMTP.
+mint), Cloudflare Turnstile, and grobase `/email/v1/send` (the only mail sender; the gateway has no SMTP settings).
 
 ## Key dependencies
 

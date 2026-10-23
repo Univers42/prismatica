@@ -21,7 +21,7 @@ map $uri $oo_cache_control {
 # URL of theirs out of any Referer header (verdict B, C2). $oo_referrer_policy is lowercase,
 # so the ^OO_ envsubst filter leaves it to nginx.
 map $uri $oo_referrer_policy {
-    ~^/auth/(confirm|reset-password)(/|$)  "no-referrer";
+    ~^/auth/(confirm|reset-password|approve)(/|$)  "no-referrer";
     default                                "strict-origin-when-cross-origin";
 }
 

@@ -1,0 +1,277 @@
+---
+import StudioNetworkFigure from './StudioNetworkFigure.astro';
+import { STEPS as steps, ASSISTANT_PROMPT as assistantPrompt } from '../../../data/studio-network';
+---
+
+<div class="studio-net" data-studio-net>
+	<figure class="studio-net__figure">
+		<StudioNetworkFigure />
+		<ul class="studio-net__legend" aria-hidden="true">
+			<li><span class="studio-net__swatch studio-net__swatch--org"></span>Organisation</li>
+			<li><span class="studio-net__swatch studio-net__swatch--team"></span>Sales team</li>
+			<li><span class="studio-net__swatch studio-net__swatch--public"></span>Public space</li>
+		</ul>
+		<figcaption class="studio-net__prompt" data-studio-prompt>
+			<span>{assistantPrompt}</span>
+		</figcaption>
+	</figure>
+
+	<ol class="studio-net__steps">
+		{steps.map((step) => (
+			<li class="studio-net__step" data-step-id={step.id}>
+				<div class="studio-net__step-body">
+					<h3>{step.title}</h3>
+					<p>{step.body}</p>
+				</div>
+			</li>
+		))}
+	</ol>
+</div>
+
+<script>
+	// The reading band picks the step the reader is on and the figure then shows
+	// that step's slice of the network. When no step is in the band the last
+	// slice stays (data-step remains, data-live drops) instead of flipping back.
+	import { observeReadingBand } from '../../../lib/reading-band';
+	import { STUDIO_STEP_EVENT } from '../../../data/mascot-lines';
+
+	function initStudioStory() {
+		const root = document.querySelector<HTMLElement>('[data-studio-net]');
+		if (!root) return;
+		const steps = [...root.querySelectorAll<HTMLElement>('.studio-net__step')];
+		// Stagger index per ray is set from script: without JS nothing staggers
+		// and no beam ever waits before drawing.
+		root.querySelectorAll<HTMLElement>('.studio-net__ray').forEach((ray, i) => {
+			ray.style.setProperty('--ray-i', String(i % 8));
+		});
+
+		const apply = (active: HTMLElement | null) => {
+			for (const step of steps) {
+				if (step === active) step.setAttribute('aria-current', 'step');
+				else step.removeAttribute('aria-current');
+			}
+			if (active) {
+				root.setAttribute('data-step', active.getAttribute('data-step-id') ?? '');
+				root.setAttribute('data-live', '');
+				// The dock listens for this so it speaks the assistant prompt when
+				// the reader reaches the assistant step.
+				document.dispatchEvent(
+					new CustomEvent(STUDIO_STEP_EVENT, { detail: active.getAttribute('data-step-id') }),
+				);
+			} else {
+				root.removeAttribute('data-live');
+			}
+		};
+
+		// The band moves with the layout: beside the steps on desktop, under the
+		// sticky figure on mobile.
+		// Caveat: the mobile band assumes the sticky figure covers the top half
+		// of the viewport; other figure heights can mark the step it is hiding.
+		const wide = matchMedia('(min-width: 1024px)');
+		const desktopBand = '-45% 0px -50% 0px';
+		const mobileBand = '-73% 0px -25% 0px';
+		const bind = (band: string) => observeReadingBand(steps, apply, band);
+		let stop = bind(wide.matches ? desktopBand : mobileBand);
+		wide.addEventListener('change', () => {
+			stop();
+			stop = bind(wide.matches ? desktopBand : mobileBand);
+		});
+	}
+
+	initStudioStory();
+</script>
+
+<style is:global>
+	/* One canvas pinned beside the steps: the reading band picks the step,
+	   data-step selects the slice. State values sit outside the motion gate so
+	   reduced-motion visitors still get every state change, instantly. */
+
+	/* Block flow keeps the figure's containing block as tall as the whole story,
+	   which is what lets position: sticky travel on mobile too. */
+	.studio-net { position: relative; }
+
+	.studio-net__figure { position: sticky; top: 4.75rem; z-index: 1; height: min(42svh, 360px); box-sizing: border-box; margin: 0; padding: 0.75rem 0.75rem 3rem; background: var(--system-surface); border: 1px solid var(--system-border); border-radius: var(--system-radius-lg); overflow: hidden; }
+
+	.studio-net__svg { display: block; width: 100%; height: 100%; font-family: var(--system-font-sans); }
+	.studio-net__prompt { position: absolute; left: 0.85rem; right: 0.85rem; bottom: 0.6rem; box-sizing: border-box; margin: 0; color: var(--system-text-muted); font-family: var(--system-font-mono); font-size: 0.8rem; line-height: 1.35; }
+	/* Ellipsis lives on the span so the clip-path hides it with the text; a
+	   stray "..." used to survive at the figure's corner. */
+	/* Wraps to two lines on phones: the prompt is the point of the assistant step, so it is never cut. */
+	.studio-net__prompt span { display: block; }
+
+	.studio-net__legend { position: absolute; right: 0.85rem; bottom: 0.6rem; left: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; padding: 0; list-style: none; font-size: 0.75rem; color: var(--system-text-muted); }
+	.studio-net__legend li { display: flex; align-items: center; gap: 0.4rem; }
+	.studio-net__swatch { width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box; flex: none; }
+	.studio-net__swatch--org { background: var(--brand-palette-secondary); }
+	.studio-net__swatch--team { background: var(--brand-palette-primary); }
+	.studio-net__swatch--public { border: 2px solid var(--brand-palette-warm); }
+
+	.studio-net__steps { display: grid; gap: 2rem; margin: 0; padding: 0; list-style: none; }
+	.studio-net__step {
+		display: grid;
+		align-content: center;
+		box-sizing: border-box;
+		min-height: 46svh;
+		padding: 1rem 1rem 1rem 1.2rem;
+		color: var(--system-text-muted);
+	}
+	.studio-net__step-body { position: relative; }
+	/* No data-step (no JS) means no step is active: keep every step readable. */
+	.studio-net:not([data-step]) .studio-net__step,
+	.studio-net__step[aria-current='step'] { color: var(--system-text-strong); }
+	.studio-net__step h3 { margin: 0 0 0.5rem; font-size: 1.25rem; color: inherit; }
+	.studio-net__step p { max-width: 38ch; margin: 0; color: inherit; }
+
+	/* The 3px rule hugs the step body and grows top-down on activation. */
+	.studio-net__step-body::before {
+		content: '';
+		position: absolute;
+		left: -1rem;
+		top: 0;
+		bottom: 0;
+		width: 3px;
+		border-radius: 2px;
+		background: var(--brand-palette-primary);
+		scale: 1 0;
+		transform-origin: top;
+	}
+	.studio-net__step[aria-current='step'] .studio-net__step-body::before { scale: 1 1; }
+
+	.studio-net__orbit { fill: none; stroke: var(--system-border); stroke-width: 1.5; stroke-dasharray: 4 10; }
+	.studio-net__orbit-shape { fill: none; stroke: var(--system-border-strong); stroke-width: 1.5; }
+	.studio-net__org-ring { fill: none; stroke: var(--brand-palette-secondary); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+	.studio-net__beam { fill: none; stroke: var(--brand-palette-primary); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+	.studio-net__packet { fill: none; stroke: var(--brand-palette-primary); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 0.04 0.96; stroke-dashoffset: 0; }
+	.studio-net__hub circle {
+		fill: color-mix(in srgb, var(--brand-palette-primary) 12%, var(--system-surface));
+		stroke: var(--brand-palette-primary);
+		stroke-width: 2;
+	}
+	.studio-net__hub-label { fill: var(--system-text-strong); font-size: 19px; font-weight: 700; }
+	.studio-net__pill {
+		fill: color-mix(in srgb, var(--brand-palette-primary) 8%, var(--system-surface));
+		stroke: var(--system-border-strong);
+		stroke-width: 1.5;
+	}
+	.studio-net__dot {
+		fill: color-mix(in srgb, var(--brand-palette-secondary) 18%, var(--system-surface));
+		stroke: var(--brand-palette-secondary);
+		stroke-width: 1.5;
+	}
+	.studio-net__label { fill: var(--system-text-strong); font-size: 22px; }
+	/* Halos: rays, the ring and the hub never cut through label text. */
+	.studio-net__hub-label,
+	.studio-net__label { paint-order: stroke; stroke: var(--system-surface); stroke-width: 6px; stroke-linejoin: round; }
+
+	/* State values. With no data-step (no JS) nothing here matches. */
+	.studio-net[data-step] .studio-net__beam,
+	.studio-net[data-step] .studio-net__org-ring { stroke-dashoffset: 1; }
+	/* The legend shares the figure's bottom slot with the prompt, so it shows only in the spaces step. */
+	.studio-net:not([data-step='spaces']) .studio-net__legend { opacity: 0; }
+
+	.studio-net[data-step='engines'] .studio-net__rays > .studio-net__ray:nth-child(-n + 8 of .studio-net__ray) .studio-net__beam { stroke-dashoffset: 0; }
+	.studio-net[data-step='engines'] .studio-net__node--app { opacity: 0.15; scale: 0.6; }
+	.studio-net[data-step='engines'] .studio-net__rays > .studio-net__ray:nth-child(n + 9 of .studio-net__ray) { opacity: 0.15; }
+	.studio-net[data-step='engines'] .studio-net__rays > .studio-net__ray:nth-child(n + 9 of .studio-net__ray) .studio-net__packet { opacity: 0; }
+
+	.studio-net[data-step='apps'] .studio-net__rays > .studio-net__ray .studio-net__beam { stroke-dashoffset: 0; }
+	.studio-net[data-step='apps'] .studio-net__node--app { opacity: 1; scale: 1; }
+	.studio-net[data-step='apps'] .studio-net__rays > .studio-net__ray:nth-child(-n + 8 of .studio-net__ray) { opacity: 0.5; }
+
+	.studio-net[data-step='spaces'] .studio-net__org-ring { stroke-dashoffset: 0; }
+	.studio-net[data-step='spaces'] .studio-net__rays > .studio-net__ray .studio-net__beam { stroke-dashoffset: 0; }
+	.studio-net[data-step='spaces'] :is(.studio-net__node, .studio-net__rays > .studio-net__ray):not([data-team]) { opacity: 0.22; }
+	.studio-net[data-step='spaces'] .studio-net__rays > .studio-net__ray:not([data-team]) .studio-net__beam { stroke-dasharray: 0.02 0.02; }
+	.studio-net[data-step='spaces'] .studio-net__rays > .studio-net__ray:not([data-team]) .studio-net__packet { opacity: 0; }
+	/* Public space members glow warm so the subset reads inside the team. */
+	.studio-net[data-step='spaces'] .studio-net__node[data-public] .studio-net__pill,
+	.studio-net[data-step='spaces'] .studio-net__node[data-public] .studio-net__dot { stroke: var(--brand-palette-warm); stroke-width: 3; }
+
+	.studio-net[data-step='assistant'] .studio-net__rays > .studio-net__ray .studio-net__beam { stroke-dashoffset: 0; }
+	.studio-net[data-step='assistant'] .studio-net__org-ring { stroke-dashoffset: 0; opacity: 0.18; }
+	.studio-net[data-step='assistant'] .studio-net__node:not([data-pick]),
+	.studio-net[data-step='assistant'] .studio-net__rays > .studio-net__ray:not([data-pick]) { opacity: 0.18; }
+	.studio-net[data-step='assistant'] .studio-net__rays > .studio-net__ray[data-pick] .studio-net__beam { stroke-width: 3.4; }
+
+	/* The prompt sweep only plays for the assistant step; other steps hide it. */
+	.studio-net[data-step]:not([data-step='assistant']) .studio-net__prompt span { clip-path: inset(0 100% 0 0); }
+	.studio-net[data-step='assistant'] .studio-net__prompt span { clip-path: inset(0); }
+
+	@media (prefers-reduced-motion: no-preference) {
+		:root:not(.motion-paused) .studio-net .studio-net__node {
+			transition: opacity 420ms var(--ease-premium), scale 420ms var(--ease-premium);
+		}
+		:root:not(.motion-paused) .studio-net .studio-net__ray,
+		:root:not(.motion-paused) .studio-net .studio-net__hub,
+		:root:not(.motion-paused) .studio-net .studio-net__legend,
+		:root:not(.motion-paused) .studio-net .studio-net__packet { transition: opacity 420ms var(--ease-premium); }
+		/* Beam draws carry the stagger from --ray-i; the un-draw inherits the
+		   same index, so a step change re-plays in reverse. */
+		:root:not(.motion-paused) .studio-net .studio-net__beam {
+			--beam-delay: calc(var(--ray-i, 0) * 60ms);
+			transition: opacity 420ms var(--ease-premium), stroke-dashoffset 680ms var(--ease-premium) var(--beam-delay);
+		}
+		:root:not(.motion-paused) .studio-net .studio-net__org-ring {
+			transition: opacity 420ms var(--ease-premium), stroke-dashoffset 680ms var(--ease-premium);
+		}
+		:root:not(.motion-paused) .studio-net .studio-net__prompt span { transition: clip-path 900ms var(--ease-premium); }
+		:root:not(.motion-paused) .studio-net .studio-net__step-body::before { transition: scale 420ms var(--ease-premium); }
+		/* Packets only flow while a step is actively being read. */
+		:root:not(.motion-paused) .studio-net[data-live] .studio-net__packet {
+			animation-name: studio-net-packet-run;
+			animation-duration: 2.6s;
+			animation-timing-function: linear;
+			animation-fill-mode: both;
+			animation-iteration-count: infinite;
+			animation-delay: calc(var(--ray-i, 0) * -325ms);
+		}
+
+		@keyframes studio-net-packet-run {
+			from { stroke-dashoffset: 1; }
+			to { stroke-dashoffset: 0; }
+		}
+	}
+
+	/* Scroll-linked backdrop: orbits turn and corner shapes drift across the
+	   whole story scroll (the .studio-net box itself is the timeline). */
+	@supports (animation-timeline: view()) {
+		@media (prefers-reduced-motion: no-preference) {
+			:root:not(.motion-paused) .studio-net {
+				view-timeline-name: --studio-net;
+			}
+			:root:not(.motion-paused) .studio-net__orbit {
+				animation-name: studio-net-orbit-spin;
+				animation-duration: auto;
+				animation-timing-function: linear;
+				animation-fill-mode: both;
+				animation-timeline: --studio-net;
+				animation-range: cover;
+				transform-origin: 320px 320px;
+				transform-box: view-box;
+			}
+			:root:not(.motion-paused) .studio-net__orbit-shape {
+				animation-name: studio-net-orbit-drift;
+				animation-duration: auto;
+				animation-timing-function: linear;
+				animation-fill-mode: both;
+				animation-timeline: --studio-net;
+				animation-range: cover;
+			}
+
+			@keyframes studio-net-orbit-spin {
+				from { rotate: 0deg; }
+				to { rotate: 40deg; }
+			}
+			@keyframes studio-net-orbit-drift {
+				from { translate: 0 0; }
+				to { translate: 0 -40px; }
+			}
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.studio-net { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 2.5rem; align-items: start; }
+		.studio-net__figure { top: 6rem; height: min(76vh, 620px); padding: 1rem 1rem 2.5rem; }
+		.studio-net__step { min-height: 72vh; padding: 0 1.5rem 0 1.4rem; }
+	}
+</style>

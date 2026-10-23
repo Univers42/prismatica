@@ -8,6 +8,8 @@ import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
 import { bindPasswordToggles } from './password-toggle';
 import { type AccountMailKind, isAccountMailKind, showAccountMailForm, showAuthForm } from './portal-account-mail';
+import { loginCodeMarkup, bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
+import { loginApproveMarkup, bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 
 export type PortalMode = 'start' | 'connect' | AccountMailKind;
 
@@ -220,6 +222,8 @@ function createPortalMarkup(mode: PortalMode): string {
 							</button>
 						</div>
 					</form>
+					${loginCodeMarkup()}
+					${loginApproveMarkup()}
 				</div>
 			</section>
 		</dialog>
@@ -646,7 +650,44 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 }
 
 // Resolves to the email-only form to show next, when the answer calls for one.
-async function processPortalLogin(elements: PortalFormElements, turnstileToken: string): Promise<AccountMailKind | undefined> {
+async function completePortalLogin(sessionToken: string | undefined, email: string): Promise<void> {
+	if (sessionToken) {
+		setAccessToken(sessionToken);
+		await syncStoredConsents(sessionToken, email);
+	}
+	const osionosBridge = sessionToken
+		? await authClient.osionosSession(sessionToken).catch(() => null)
+		: null;
+	if (osionosBridge?.ok && osionosBridge.redirectUrl) {
+		const redirectUrl = osionosBridge.redirectUrl;
+		if (!isTrustedOsionosRedirect(redirectUrl)) {
+			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
+			notify({
+				kind: 'error',
+				title: 'Workspace redirect blocked',
+				message: 'The osionos workspace link did not match the expected app origin.',
+				duration: 8000,
+			});
+			announce('Workspace redirect blocked for safety.');
+			return;
+		}
+		notify({
+			kind: 'success',
+			title: 'Opening osionos',
+			message: 'Your private osionos workspace is ready.',
+			duration: 2500,
+		});
+		announce('Opening your osionos workspace.');
+		globalThis.setTimeout(() => {
+			globalThis.location.assign(redirectUrl);
+		}, 700);
+		return;
+	}
+	notify({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
+	globalThis.setTimeout(() => closePortal(), 1200);
+}
+
+async function processPortalLogin(portal: HTMLElement, elements: PortalFormElements, turnstileToken: string): Promise<AccountMailKind | undefined> {
 	const authenticated = await authClient.signIn({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken });
 	const message = humanAuthMessage(authenticated.message);
 	if (!authenticated.ok) {
@@ -691,42 +732,17 @@ async function processPortalLogin(elements: PortalFormElements, turnstileToken: 
 		});
 		return;
 	}
-	if (authenticated.accessToken) {
-		setAccessToken(authenticated.accessToken);
-		await syncStoredConsents(authenticated.accessToken, elements.email.value.trim());
-	}
-	const osionosBridge = authenticated.accessToken
-		? await authClient.osionosSession(authenticated.accessToken).catch(() => null)
-		: null;
-	if (osionosBridge?.ok && osionosBridge.redirectUrl) {
-		const redirectUrl = osionosBridge.redirectUrl;
-		if (!isTrustedOsionosRedirect(redirectUrl)) {
-			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
-			notify({
-				kind: 'error',
-				title: 'Workspace redirect blocked',
-				message: 'The osionos workspace link did not match the expected app origin.',
-				duration: 8000,
-			});
-			announce('Workspace redirect blocked for safety.');
-			return;
-		}
-		notify({
-			kind: 'success',
-			title: 'Opening osionos',
-			message: 'Your private osionos workspace is ready.',
-			duration: 2500,
-		});
-		announce('Opening your osionos workspace.');
-		globalThis.setTimeout(() => {
-			globalThis.location.assign(redirectUrl);
-		}, 700);
+	if (authenticated.mfaRequired === 'email_approve') {
+		showLoginApproveStep(portal, elements.form, authenticated.match);
 		return;
 	}
-	notify({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
-	globalThis.setTimeout(() => closePortal(), 1200);
+	if (authenticated.mfaRequired === 'email_otp') {
+		showLoginCodeStep(portal, elements.form);
+		return;
+	}
+	await completePortalLogin(authenticated.accessToken, elements.email.value.trim());
+	return;
 }
-
 async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElements, offerAccountMail: (kind: AccountMailKind) => void): Promise<void> {
 	const isRegister = portal.dataset.authMode === 'register';
 	const turnstileToken = validatePortalAuth(portal, elements, isRegister);
@@ -735,7 +751,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 	let next: AccountMailKind | undefined;
 	try {
 		if (isRegister) await processPortalRegistration(elements, turnstileToken);
-		else next = await processPortalLogin(elements, turnstileToken);
+		else next = await processPortalLogin(portal, elements, turnstileToken);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Authentication failed.';
 		elements.error.textContent = humanAuthMessage(message);
@@ -881,6 +897,22 @@ export function openPortal(mode: PortalMode): void {
 
 	elements.form.addEventListener('submit', (event) => {
 		event.preventDefault();
+
+	elements.form.addEventListener('submit', (event) => {
+		event.preventDefault();
+		void submitPortalLogin(portal, elements, offerAccountMail);
+	});
+
+	bindLoginCodeStep(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
+	});
+	bindLoginApproveStep(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
+	});
 		const kind = portal.dataset.portalMode;
 		void (isAccountMailKind(kind) ? submitAccountMail(portal, elements, kind) : submitPortalLogin(portal, elements, applyAccountMailMode));
 	});
