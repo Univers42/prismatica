@@ -126,12 +126,13 @@ describe('Portal approval waiting step', () => {
 	it('keeps waiting and says why when the code cannot be sent', async () => {
 		gateway({
 			'/login': () => json(200, { mfa_required: 'email_approve', match: 42 }),
+			'/mfa/email/status': () => json(202, { pending: true }),
 			'/mfa/email/resend': () => json(429, { error: 'otp_resend_limit', message: 'No more codes can be sent for this sign-in. Sign in again.' }),
 		});
 		await signIn();
 		step().querySelector<HTMLButtonElement>('[data-login-approve-code]')?.click();
-		await vi.advanceTimersByTimeAsync(0);
-		expect(step().querySelector('[data-login-approve-error]')?.textContent).toMatch(/No more codes/);
+		// useAuth retries HTTP 429 with backoff before returning the gateway's error.
+		await vi.waitFor(() => expect(step().querySelector('[data-login-approve-error]')?.textContent).toMatch(/No more codes/), { timeout: 5000 });
 		expect(step().hidden).toBe(false);
 	});
 
@@ -144,6 +145,18 @@ describe('Portal approval waiting step', () => {
 		step().querySelector<HTMLButtonElement>('[data-login-approve-cancel]')?.click();
 		await vi.advanceTimersByTimeAsync(60_000);
 		expect(passwordForm().hidden).toBe(false);
+		expect(calls(fetchMock, '/mfa/email/status')).toBe(0);
+	});
+
+	it('closing the portal stops pending approval polling', async () => {
+		const fetchMock = gateway({
+			'/login': () => json(200, { mfa_required: 'email_approve', match: 42 }),
+			'/mfa/email/status': () => json(202, { pending: true }),
+		});
+		await signIn();
+		closePortal();
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(document.querySelector('.portal')).toBeNull();
 		expect(calls(fetchMock, '/mfa/email/status')).toBe(0);
 	});
 });

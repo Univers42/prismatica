@@ -53,6 +53,7 @@ export function clearAccessToken(): void {
 const authClient = useAuth();
 let portalPreviousFocus: HTMLElement | null = null;
 let portalReleaseFocusTrap: (() => void) | null = null;
+let portalReleaseApproval: (() => void) | undefined;
 
 // The one value scripts/auth-gateway.mjs (verifyTurnstile) admits under TURNSTILE_BYPASS_LOCAL.
 const LOCAL_TURNSTILE_TOKEN = 'localhost-turnstile-token';
@@ -804,6 +805,8 @@ export function closePortal(): void {
 	if (!portal) return;
 	portalReleaseFocusTrap?.();
 	portalReleaseFocusTrap = null;
+	portalReleaseApproval?.();
+	portalReleaseApproval = undefined;
 	if (portal instanceof HTMLDialogElement && portal.open) {
 		portal.close();
 	}
@@ -811,6 +814,7 @@ export function closePortal(): void {
 	document.body.classList.remove('portal-open');
 	portalPreviousFocus?.focus({ preventScroll: true });
 	portalPreviousFocus = null;
+	portal.remove();
 }
 
 export function openPortal(mode: PortalMode): void {
@@ -829,12 +833,10 @@ export function openPortal(mode: PortalMode): void {
 
 	if (portal instanceof HTMLDialogElement) {
 		portal.addEventListener('close', () => {
-			document.body.classList.remove('portal-open');
-			portalPreviousFocus?.focus({ preventScroll: true });
-			portalPreviousFocus = null;
+			if (portal.isConnected) closePortal();
 		}, { once: true });
 		portal.addEventListener('click', (event) => {
-			if (event.target === portal) portal.close();
+			if (event.target === portal) closePortal();
 		});
 		try {
 			portal.showModal();
@@ -895,24 +897,19 @@ export function openPortal(mode: PortalMode): void {
 
 	portal.querySelector('[data-portal-action="forgot-password"]')?.addEventListener('click', () => applyAccountMailMode('recovery'));
 
-	elements.form.addEventListener('submit', (event) => {
-		event.preventDefault();
-
-	elements.form.addEventListener('submit', (event) => {
-		event.preventDefault();
-		void submitPortalLogin(portal, elements, offerAccountMail);
-	});
-
 	bindLoginCodeStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
-	bindLoginApproveStep(portal, {
+	portalReleaseApproval = bindLoginApproveStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
+
+	elements.form.addEventListener('submit', (event) => {
+		event.preventDefault();
 		const kind = portal.dataset.portalMode;
 		void (isAccountMailKind(kind) ? submitAccountMail(portal, elements, kind) : submitPortalLogin(portal, elements, applyAccountMailMode));
 	});
