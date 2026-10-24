@@ -10,13 +10,13 @@
  * revokes the GoTrue session and deletes it.
  */
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from 'node:crypto';
+import { bumpCounter, claimOnce, CODE_TTL_SEC, isLoginCode, MAX_WRONG_CODES } from './code-custody.mjs';
 
+export { isLoginCode, MAX_WRONG_CODES };
 export const TICKET_COOKIE = 'prismatica_mfa';
-export const TICKET_TTL_SEC = 600;
-export const MAX_WRONG_CODES = 5;
+export const TICKET_TTL_SEC = CODE_TTL_SEC;
 export const MAX_RESENDS = 3;
 const COOKIE_ATTRIBUTES = 'HttpOnly; SameSite=Strict; Secure; Path=/api/auth/mfa';
-const CODE = /^\d{6}$/;
 const TICKET = /^[A-Za-z0-9_-]{43}$/;
 const INFO = 'prismatica-login-ticket-v1';
 
@@ -32,10 +32,6 @@ export function clearTicketCookie() {
 export function ticketFrom(cookieHeader) {
 	const raw = String(cookieHeader ?? '').split(';').map((part) => part.trim()).find((part) => part.startsWith(`${TICKET_COOKIE}=`))?.slice(TICKET_COOKIE.length + 1) ?? '';
 	return TICKET.test(raw) ? raw : '';
-}
-
-export function isLoginCode(value) {
-	return typeof value === 'string' && CODE.test(value);
 }
 
 export const ticketId = (ticket) => createHash('sha256').update(ticket).digest('hex');
@@ -110,7 +106,7 @@ export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resen
 	// The claim is never forgotten (it expires with the ticket's TTL): the code path and the approval
 	// path can both reach here with one loaded record, and only the first may redeem the refresh token.
 	async function release(record) {
-		if ((await store.incrWithTtl(`otp:release:${record.id}`, TICKET_TTL_SEC)) !== 1) {
+		if (!(await claimOnce(store, `otp:release:${record.id}`, TICKET_TTL_SEC))) {
 			return { status: 401, body: { error: 'otp_ticket_invalid', message: 'Sign in again.' }, clearTicket: true };
 		}
 		const refreshToken = unseal(key, record.id, record.sealed);
@@ -157,7 +153,7 @@ export function createLoginOtp({ store, otp, sessions, gotrue, signingKey, resen
 			if (!isLoginCode(code)) return { status: 422, body: { error: 'otp_malformed', message: 'Enter the 6-digit code.' } };
 			const outcome = await otp.verify(record.email, code);
 			if (outcome === 'ok') return release(record);
-			if (outcome === 'invalid' && (await store.incrWithTtl(`otp:wrong:${record.id}`, TICKET_TTL_SEC)) < MAX_WRONG_CODES) {
+			if (outcome === 'invalid' && (await bumpCounter(store, `otp:wrong:${record.id}`, TICKET_TTL_SEC)) < MAX_WRONG_CODES) {
 				audit('login_otp_failed', { email: record.email });
 				return { status: 401, body: { error: 'otp_invalid', message: 'That code is not right.' } };
 			}
