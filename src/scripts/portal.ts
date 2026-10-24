@@ -12,6 +12,7 @@ import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
 import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 import { createPortalMarkup } from './portal-markup';
+import { devTurnstileToken } from '../lib/dev-turnstile';
 
 export type PortalMode = 'start' | 'connect';
 
@@ -64,18 +65,23 @@ const authClient = useAuth();
 let portalPreviousFocus: HTMLElement | null = null;
 let portalReleaseFocusTrap: (() => void) | null = null;
 
-// The one value scripts/auth-gateway.mjs (verifyTurnstile) admits under TURNSTILE_BYPASS_LOCAL.
-const LOCAL_TURNSTILE_TOKEN = 'localhost-turnstile-token';
-
 export function readTurnstileToken(portal: HTMLElement): string {
 	const token = portal.querySelector('[data-turnstile-token]');
 	if (token instanceof HTMLInputElement && token.value) {
 		return token.value;
 	}
 	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key' || !import.meta.env.PUBLIC_TURNSTILE_SITE_KEY) {
-		return LOCAL_TURNSTILE_TOKEN;
+		return devTurnstileToken();
 	}
 	return '';
+}
+
+// A Turnstile token is single-use: every submit needs its own solve.
+export function resetTurnstile(portal: HTMLElement): void {
+	const tokenInput = portal.querySelector('[data-turnstile-token]');
+	if (tokenInput instanceof HTMLInputElement) tokenInput.value = devTurnstileToken();
+	const widgetId = portal.querySelector<HTMLElement>('[data-turnstile-slot]')?.dataset.turnstileWidgetId;
+	if (widgetId) globalThis.turnstile?.reset?.(widgetId);
 }
 
 export function mountTurnstile(portal: HTMLElement): void {
@@ -85,7 +91,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 	if (!sitekey || sitekey === 'local-dev-turnstile-key') {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
-			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
+			tokenInput.value = devTurnstileToken();
 		}
 		return;
 	}
@@ -514,6 +520,7 @@ function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFor
 
 async function submitPortalResendVerification(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
 	const result = await authClient.resendVerification({ email: elements.email.value.trim(), turnstileToken: readTurnstileToken(portal) });
+	resetTurnstile(portal);
 	const succeeded = result.ok;
 	elements.error.textContent = succeeded ? 'A new confirmation link is on its way. Check your inbox.' : humanAuthMessage(result.message);
 	elements.error.removeAttribute('hidden');
@@ -540,6 +547,7 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 		elements.error.removeAttribute('hidden');
 		notifyWithMascot({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} finally {
+		resetTurnstile(portal);
 		setPortalSubmitBusy(elements.submitButton, false, false);
 	}
 }
@@ -750,6 +758,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 		elements.error.removeAttribute('hidden');
 		notifyWithMascot({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
 	} finally {
+		resetTurnstile(portal);
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}
 }

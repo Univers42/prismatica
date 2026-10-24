@@ -16,8 +16,10 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { loadEnv } from 'vite';
+import { assertTurnstileSiteKey } from './src/lib/turnstile-site-key-guard.mjs';
 
 const env = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
+assertTurnstileSiteKey({ siteUrl: env.PUBLIC_SITE_URL, siteKey: env.PUBLIC_TURNSTILE_SITE_KEY });
 const authGatewayTarget = env.AUTH_GATEWAY_TARGET ?? `http://localhost:${env.AUTH_GATEWAY_PORT ?? 8787}`;
 const baasGatewayTarget = env.BAAS_GATEWAY_TARGET ?? 'http://localhost:8000';
 const defaultCertDir = resolve(process.cwd(), '../../apps/baas/certs');

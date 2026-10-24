@@ -53,6 +53,20 @@ describe('Portal Script Module', () => {
 		expect(readTurnstileToken(portal)).toBe('localhost-turnstile-token');
 	});
 
+	it('sends no token outside DEV when no Turnstile site key is set', () => {
+		openPortal('start');
+		const portal = document.querySelector<HTMLElement>('#portal');
+		if (!portal) throw new Error('no portal');
+		const input = document.querySelector<HTMLInputElement>('[data-turnstile-token]');
+		if (input) input.value = '';
+		vi.stubEnv('DEV', false);
+		try {
+			expect(readTurnstileToken(portal)).toBe('');
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
 	it('marks the active mode button pressed after a switch', () => {
 		openPortal('start');
 		document.querySelector<HTMLButtonElement>('[data-auth-switch="login"]')?.click();
