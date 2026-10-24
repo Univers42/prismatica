@@ -7,6 +7,7 @@ import { authConfig } from '../lib/auth-config';
 import { APP_GLYPH_PATHS } from '../data/app-glyphs';
 import { loginApproveMarkup } from './portal-login-approve';
 import { loginCodeMarkup } from './portal-login-code';
+import { signInCodeMarkup } from './portal-signin-code';
 import type { PortalMode } from './portal';
 
 // Mirrors components/brand/PrismaticaLogo.astro (decorative variant).
@@ -116,10 +117,12 @@ export function createPortalMarkup(mode: PortalMode): string {
 								<input type="hidden" name="turnstileToken" data-turnstile-token />
 							</div>
 							<output class="portal-form-error" aria-live="assertive" role="alert" hidden></output>
+							<button class="portal-link-action portal-login-only" type="button" data-portal-action="email-code">Email me a sign-in code instead</button>
 							<button class="portal-link-action" type="button" data-resend-verification hidden>Send a new link</button>
 							<button class="portal-cta" type="submit" data-auth-submit>${quick ? 'Sign in' : 'Create workspace account'}</button>
 						</form>
 						${loginCodeMarkup()}
+						${signInCodeMarkup()}
 						${loginApproveMarkup()}
 					</div>
 				</section>

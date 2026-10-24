@@ -10,11 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-const CLOUDFLARE_TURNSTILE_TEST_SITE_KEYS = new Set([
-	'1x00000000000000000000AA',
-	'2x00000000000000000000AB',
-	'3x00000000000000000000FF',
-]);
+import { CLOUDFLARE_TURNSTILE_TEST_SITE_KEYS } from './turnstile-site-key-guard.mjs';
 
 const rawTurnstileSiteKey = String(import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '').trim();
 const rawRequireEmailVerification = String(import.meta.env.PUBLIC_AUTH_REQUIRE_EMAIL_VERIFICATION ?? import.meta.env.AUTH_REQUIRE_EMAIL_VERIFICATION ?? 'true').trim().toLowerCase();

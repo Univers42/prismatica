@@ -238,3 +238,63 @@ describe('the password-changed notice', () => {
 		expect(await deps.store.get(addressBucketKey('ines@arlet.test'))).toBe('3');
 	});
 });
+
+describe('the sign-in code request', () => {
+	const issue = vi.fn(async (email: string) => (email === 'ines@arlet.test' ? '482913' : ''));
+
+	it('answers the same 202 at once for a known, an unknown and a malformed address, doing no lookup first', async () => {
+		const { mail, deps, api } = setup({ signInCodes: { issue } });
+		const known = await mail.requestSignInCode('ines@arlet.test');
+		const unknown = await mail.requestSignInCode('nobody@arlet.test');
+		const malformed = await mail.requestSignInCode('not-an-address');
+		const tooLong = await mail.requestSignInCode(`${'a'.repeat(250)}@arlet.test`);
+		expect(known).toEqual({ status: 202, body: ACCOUNT_MAIL_ACCEPTED });
+		for (const other of [unknown, malformed, tooLong]) expect(other).toEqual(known);
+		expect(lookups(deps, api) + issue.mock.calls.length).toBe(0);
+		expect(deps.queue.push).toHaveBeenCalledTimes(2);
+	});
+
+	it('mails the code, and only the code, once the job runs; an address with no code gets no mail', async () => {
+		issue.mockClear();
+		const { mail, deps } = setup({ signInCodes: { issue } });
+		await mail.requestSignInCode('ines@arlet.test');
+		await mail.requestSignInCode('nobody@arlet.test');
+		await deps.queue.runAll();
+		expect(deps.mailer.send).toHaveBeenCalledTimes(1);
+		const sent = deps.mailer.send.mock.calls[0][0];
+		expect(sent).toMatchObject({ to: 'ines@arlet.test', subject: 'Your sign-in code' });
+		expect(sent.text).toContain('482913');
+		expect(sent.html).toContain('482913');
+		expect(`${sent.text}${sent.html}`).not.toMatch(/https?:\/\/(?!prismatica\.example)|token_hash|action_link|href="[^"]*(verify|confirm|reset)/);
+	});
+
+	it('does not look the address up when its domain cannot receive mail', async () => {
+		issue.mockClear();
+		const { mail, deps } = setup({ signInCodes: { issue }, isDeliverable: vi.fn(async () => false) });
+		await mail.requestSignInCode('ines@arlet.test');
+		await deps.queue.runAll();
+		expect(issue).not.toHaveBeenCalled();
+		expect(deps.mailer.send).not.toHaveBeenCalled();
+	});
+
+	it('has its own bucket per kind: 3 codes an hour, and neither spends the recovery bucket nor the reverse', async () => {
+		const { mail, deps } = setup({ signInCodes: { issue } });
+		for (let index = 0; index < 4; index += 1) await mail.requestSignInCode('ines@arlet.test');
+		expect(deps.queue.push).toHaveBeenCalledTimes(3);
+		await mail.requestRecovery('ines@arlet.test');
+		await mail.requestRecovery('ines@arlet.test');
+		await mail.requestRecovery('ines@arlet.test');
+		expect(deps.queue.push).toHaveBeenCalledTimes(6);
+		expect(await deps.store.get(addressBucketKey('ines@arlet.test', 'signin-code'))).toBe('4');
+		expect(await deps.store.get(addressBucketKey('ines@arlet.test'))).toBe('3');
+		expect(addressBucketKey('ines@arlet.test', 'signin-code')).not.toBe(addressBucketKey('ines@arlet.test', 'recovery'));
+		expect(addressBucketKey('ines@arlet.test', 'recovery')).toBe(addressBucketKey('ines@arlet.test'));
+	});
+
+	it('mails nothing and throws nothing when no code issuer is wired', async () => {
+		const { mail, deps } = setup();
+		await mail.requestSignInCode('ines@arlet.test');
+		await deps.queue.runAll();
+		expect(deps.mailer.send).not.toHaveBeenCalled();
+	});
+});

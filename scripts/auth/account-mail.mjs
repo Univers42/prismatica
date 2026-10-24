@@ -12,6 +12,8 @@
  * /register also checks the signup allowlist (signup-allowlist.mjs): a refused address gets the
  * accepted answer and nothing else happens. /recover and /resend only mail existing accounts and are not gated.
  *
+ * The sign-in code (otp-signin.mjs) is a fourth kind with its own bucket, same limit.
+ *
  * Caveat: the bucket counts requests, not mails: an attacker who knows an address can spend
  * its 3 per hour, and the owner's own request then sends nothing (stated in DECISIONS, C7).
  */
@@ -22,8 +24,11 @@ export const REGISTER_ACCEPTED = Object.freeze({ message: 'Check your inbox to f
 export const ADDRESS_MAIL_LIMIT = 3;
 export const ADDRESS_MAIL_WINDOW_SEC = 3_600;
 
-export function addressBucketKey(email) {
-	return `rl:account-mail:${keyHash(normalizeEmail(email))}`;
+// The sign-in code has its own bucket: asking for a code must not spend the 3 recovery mails an
+// address gets, nor the reverse. The three older kinds keep the key they always had.
+export function addressBucketKey(email, kind) {
+	const scope = kind === 'signin-code' ? 'otp:' : '';
+	return `rl:account-mail:${scope}${keyHash(normalizeEmail(email))}`;
 }
 
 /** GoTrue's hashed_token, flat or under `properties`; '' when absent. Never the action_link. */
@@ -37,9 +42,9 @@ function isEmailTaken(result) {
 	return result.status === 422 && (result.body?.error_code === 'email_exists' || /already (been )?registered|already exists/i.test(text));
 }
 
-export function createAccountMail({ store, queue, gotrue, mailer, render, links, siteUrl, profiles, isDeliverable, audit, newsletterOptIn, signupAllowed = () => true }) {
+export function createAccountMail({ store, queue, gotrue, mailer, render, links, siteUrl, profiles, isDeliverable, audit, newsletterOptIn, signupAllowed = () => true, signInCodes = { issue: async () => '' } }) {
 	async function accept(kind, email, job) {
-		const count = await store.incrWithTtl(addressBucketKey(email), ADDRESS_MAIL_WINDOW_SEC);
+		const count = await store.incrWithTtl(addressBucketKey(email, kind), ADDRESS_MAIL_WINDOW_SEC);
 		if (count > ADDRESS_MAIL_LIMIT) {
 			audit('account_mail_throttled', { email, kind });
 			return;
@@ -63,6 +68,14 @@ export function createAccountMail({ store, queue, gotrue, mailer, render, links,
 		if (!links.configured || !(await isDeliverable(email))) return;
 		const url = signedLink('recovery', email, await gotrue.generateLink({ type: 'recovery', email }), 'password_recovery_link_failed');
 		if (url) await sendMessage(email, 'resetPassword', { link: url, expiresIn: links.expiresIn('recovery') }, 'password_recovery_email_sent');
+	}
+
+	// The lookup, the code and the mail all run after the 202; an address with no confirmed user
+	// gets no code and no mail, and the caller cannot tell (D-028 spirit, same answer).
+	async function signInCodeJob(email) {
+		if (!(await isDeliverable(email))) return;
+		const code = await signInCodes.issue(email);
+		if (code) await sendMessage(email, 'signInCode', { code, expiresIn: '10 minutes' }, 'signin_code_email_sent');
 	}
 
 	// No password and no metadata: generate_link must not overwrite what the user chose at
@@ -90,6 +103,12 @@ export function createAccountMail({ store, queue, gotrue, mailer, render, links,
 		async requestRecovery(rawEmail) {
 			const email = normalizeEmail(rawEmail);
 			if (EMAIL_REGEX.test(email)) await accept('recovery', email, () => recoveryJob(email));
+			return { status: 202, body: ACCOUNT_MAIL_ACCEPTED };
+		},
+
+		async requestSignInCode(rawEmail) {
+			const email = normalizeEmail(rawEmail);
+			if (email.length <= 254 && EMAIL_REGEX.test(email)) await accept('signin-code', email, () => signInCodeJob(email));
 			return { status: 202, body: ACCOUNT_MAIL_ACCEPTED };
 		},
 

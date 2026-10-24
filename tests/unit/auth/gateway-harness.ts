@@ -13,7 +13,7 @@ export type Hit = { method: string; path: string; body: string; apikey?: string 
 export type Gateway = { base: string; logs: () => string };
 
 export const hits: Hit[] = [];
-export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, auditDelayMs: 0, existingEmails: [] as string[] };
+export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, auditDelayMs: 0, existingEmails: [] as string[], users: {} as Record<string, string | null>, magicEmail: '', lookupDelayMs: 0 };
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
 let kongPort = 0;
@@ -61,7 +61,20 @@ function fakeKong() {
 				if (parsed.code === '888888') return send(429, { error: 'too_many_attempts' });
 				return send(401, { error: 'invalid_code' });
 			}
-			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: 'd'.repeat(56) });
+			if (path.startsWith('/auth/v1/admin/generate_link')) {
+				if (parsed.type === 'magiclink') upstream.magicEmail = String(parsed.email);
+				return send(200, { hashed_token: 'd'.repeat(56) });
+			}
+			// The admin user list behind the code sign-in; `upstream.users` maps address -> email_confirmed_at.
+			if (path.startsWith('/auth/v1/admin/users') && request.method === 'GET') {
+				const filter = new URL(path, 'https://x').searchParams.get('filter') ?? '';
+				const users = Object.entries(upstream.users).filter(([email]) => email.includes(filter)).map(([email, confirmed]) => ({ id: `id-${email}`, email, email_confirmed_at: confirmed }));
+				const answer = () => send(200, { users });
+				return upstream.lookupDelayMs > 0 ? setTimeout(answer, upstream.lookupDelayMs) : answer();
+			}
+			if (path === '/auth/v1/verify' && parsed.type === 'magiclink') {
+				return send(200, { access_token: 'at-code', refresh_token: 'rt-code', token_type: 'bearer', expires_in: 3600, user: { id: 'u1', email: upstream.magicEmail } });
+			}
 			if (path.startsWith('/rest/v1/users') && request.method === 'GET') {
 				const taken = upstream.existingEmails.some((email) => decodeURIComponent(path).includes(`email=eq.${email}`));
 				return send(200, taken ? [{ id: 'p1' }] : []);

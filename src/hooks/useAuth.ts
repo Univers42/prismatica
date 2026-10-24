@@ -206,6 +206,14 @@ export function useAuth(options: AuthClientOptions = {}) {
 		body: JSON.stringify(body),
 	}, maxRetries);
 
+	// The sign-in code routes answer 429 for "too many codes" and "locked": waiting and retrying cannot help.
+	const postOnce = async (path: string, body: Record<string, unknown>): Promise<Response> => fetchWithBackoff(`${gatewayUrl}${path}`, {
+		method: 'POST',
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		credentials: 'include',
+		body: JSON.stringify(body),
+	}, 0);
+
 	return {
 		validateEmail,
 		validatePassword,
@@ -238,6 +246,24 @@ export function useAuth(options: AuthClientOptions = {}) {
 		async recover(request: RecoverRequest): Promise<AuthResult> {
 			const error = accountMailRequestMessage(request);
 			return error ? { ok: false, status: 422, message: error } : parseAuthResponse(await post('/recover', request));
+		},
+		async requestSignInCode(request: RecoverRequest): Promise<AuthResult> {
+			if (!validateEmail(request.email)) {
+				return { ok: false, status: 422, message: 'Use a valid email address.' };
+			}
+			if (!request.turnstileToken) {
+				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
+			}
+			return parseAuthResponse(await postOnce('/otp/request', request));
+		},
+		async verifySignInCode(request: RecoverRequest & { code: string }): Promise<AuthResult> {
+			if (!/^\d{6}$/.test(request.code)) {
+				return { ok: false, status: 422, message: 'Enter the 6-digit code from your email.' };
+			}
+			if (!request.turnstileToken) {
+				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
+			}
+			return parseAuthResponse(await postOnce('/otp/verify', request));
 		},
 		async resendVerification(request: RecoverRequest): Promise<AuthResult> {
 			const error = accountMailRequestMessage(request);

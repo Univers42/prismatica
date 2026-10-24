@@ -70,3 +70,55 @@ describe('createGotrueApi', () => {
 		expect(calls).toHaveLength(0);
 	});
 });
+
+describe('findUserByEmail', () => {
+	const confirmed = { id: 'u1', email: 'Ines@Arlet.test', email_confirmed_at: '2026-10-01T00:00:00Z' };
+
+	it('asks the admin list with the service key and the filter, and matches the address exactly, ignoring case', async () => {
+		const { calls, fetchImpl } = recorder(200, { users: [{ id: 'x', email: 'bines@arlet.test', email_confirmed_at: 'y' }, confirmed] });
+		const user = await createGotrueApi({ ...base, fetch: fetchImpl }).findUserByEmail(' INES@arlet.test ');
+		expect(user).toEqual(confirmed);
+		expect(calls[0].url).toBe('http://kong:8000/auth/v1/admin/users?page=1&per_page=50&filter=ines%40arlet.test');
+		expect(calls[0].init.method).toBe('GET');
+		expect(calls[0].init.headers).toMatchObject({ apikey: 'service', authorization: 'Bearer service' });
+	});
+
+	it.each([
+		['an unconfirmed user', { users: [{ ...confirmed, email_confirmed_at: null }] }],
+		['a blank confirmation', { users: [{ ...confirmed, email_confirmed_at: '' }] }],
+		['only a substring match', { users: [{ ...confirmed, email: 'xines@arlet.test' }] }],
+		['an empty list', { users: [] }],
+		['a body without a list', {}],
+	])('answers null for %s', async (_label, body) => {
+		const { fetchImpl } = recorder(200, body);
+		expect(await createGotrueApi({ ...base, fetch: fetchImpl }).findUserByEmail('ines@arlet.test')).toBeNull();
+	});
+
+	it('answers null, not a throw, when GoTrue refuses or is down', async () => {
+		expect(await createGotrueApi({ ...base, fetch: recorder(500).fetchImpl }).findUserByEmail('ines@arlet.test')).toBeNull();
+		expect(await createGotrueApi({ ...base, fetch: vi.fn(async () => { throw new Error('down'); }) }).findUserByEmail('ines@arlet.test')).toBeNull();
+	});
+
+	it('pages on when GoTrue ignores the filter, and stops after a short page', async () => {
+		const fullPage = Array.from({ length: 50 }, (_, index) => ({ id: `u${index}`, email: `u${index}@arlet.test`, email_confirmed_at: 'y' }));
+		const fetchImpl = vi.fn<typeof fetch>(async (url) => {
+			const page = Number(new URL(String(url)).searchParams.get('page'));
+			return new Response(JSON.stringify({ users: page === 1 ? fullPage : [confirmed] }), { status: 200 });
+		});
+		expect(await createGotrueApi({ ...base, fetch: fetchImpl }).findUserByEmail('ines@arlet.test')).toEqual(confirmed);
+		expect(fetchImpl).toHaveBeenCalledTimes(2);
+	});
+
+	it('gives up after 5 full pages rather than scanning forever', async () => {
+		const fullPage = Array.from({ length: 50 }, (_, index) => ({ id: `u${index}`, email: `u${index}@arlet.test`, email_confirmed_at: 'y' }));
+		const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ users: fullPage }), { status: 200 }));
+		expect(await createGotrueApi({ ...base, fetch: fetchImpl }).findUserByEmail('ines@arlet.test')).toBeNull();
+		expect(fetchImpl).toHaveBeenCalledTimes(5);
+	});
+
+	it('does not call GoTrue at all when no service key is configured', async () => {
+		const { calls, fetchImpl } = recorder();
+		expect(await createGotrueApi({ ...base, serviceKey: '', fetch: fetchImpl }).findUserByEmail('ines@arlet.test')).toBeNull();
+		expect(calls).toHaveLength(0);
+	});
+});

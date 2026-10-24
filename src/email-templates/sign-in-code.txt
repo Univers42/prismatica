@@ -1,0 +1,11 @@
+Your sign-in code
+
+Use this code to sign in to the Prismatica account {{email}}:
+
+{{code}}
+
+The code works once and expires in {{expiresIn}}. Type it on the page where you asked for it. We never ask for it anywhere else.
+
+This was not you? Ignore this message; nothing happens unless the code is entered. Consider changing your password.
+
+Prismatica - {{siteUrl}}

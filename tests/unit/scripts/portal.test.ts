@@ -49,6 +49,15 @@ describe('Portal Script Module', () => {
 		expect(confirm?.required).toBe(false);
 	});
 
+	it('offers the email sign-in code in sign-in mode only, with its step form present', () => {
+		openPortal('connect');
+		const trigger = document.querySelector<HTMLElement>('[data-portal-action="email-code"]');
+		expect(trigger?.hidden).toBe(false);
+		expect(document.querySelector('form.portal-signin-code')).not.toBeNull();
+		document.querySelector<HTMLElement>('[data-auth-switch="register"]')?.click();
+		expect(trigger?.hidden).toBe(true);
+	});
+
 	it('opens in sign-up mode with the sign-up fields shown and required', () => {
 		openPortal('start');
 		const portal = document.querySelector<HTMLElement>('#portal');
@@ -65,6 +74,20 @@ describe('Portal Script Module', () => {
 		// scripts/auth-gateway.mjs verifyTurnstile: TURNSTILE_BYPASS_LOCAL admits only this value.
 		expect(document.querySelector<HTMLInputElement>('[data-turnstile-token]')?.value).toBe('localhost-turnstile-token');
 		expect(readTurnstileToken(portal)).toBe('localhost-turnstile-token');
+	});
+
+	it('sends no token outside DEV when no Turnstile site key is set', () => {
+		openPortal('start');
+		const portal = document.querySelector<HTMLElement>('#portal');
+		if (!portal) throw new Error('no portal');
+		const input = document.querySelector<HTMLInputElement>('[data-turnstile-token]');
+		if (input) input.value = '';
+		vi.stubEnv('DEV', false);
+		try {
+			expect(readTurnstileToken(portal)).toBe('');
+		} finally {
+			vi.unstubAllEnvs();
+		}
 	});
 
 	it('marks the active mode button pressed after a switch', () => {

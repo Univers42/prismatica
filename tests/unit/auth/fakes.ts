@@ -6,10 +6,10 @@ export const ok = (body: Record<string, any> = {}): Result => ({ ok: true, statu
 export const fail = (status: number, body: Record<string, any> = {}): Result => ({ ok: false, status, body });
 
 /** A GoTrue double: every method is a vi.fn answering `ok({})` unless a test overrides it. */
-export function fakeGotrue(overrides: Partial<Record<string, (...args: any[]) => Promise<Result>>> = {}) {
-	const names = ['verify', 'refresh', 'logout', 'updatePassword', 'generateLink', 'listFactors', 'mfaChallenge', 'mfaVerify'];
+export function fakeGotrue(overrides: Partial<Record<string, (...args: any[]) => Promise<any>>> = {}) {
+	const names = ['verify', 'refresh', 'logout', 'updatePassword', 'generateLink', 'listFactors', 'mfaChallenge', 'mfaVerify', 'findUserByEmail'];
 	const api: Record<string, ReturnType<typeof vi.fn>> = {};
-	for (const name of names) api[name] = vi.fn(overrides[name] ?? (async () => ok({})));
+	for (const name of names) api[name] = vi.fn(overrides[name] ?? (async () => (name === 'findUserByEmail' ? null : ok({}))));
 	const totalCalls = () => names.reduce((sum, name) => sum + api[name].mock.calls.length, 0);
 	return { api, totalCalls };
 }

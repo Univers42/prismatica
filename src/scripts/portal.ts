@@ -9,7 +9,9 @@ import { readStorage } from '../lib/storage';
 import { bindPasswordToggles } from './password-toggle';
 import { type AccountMailKind, isAccountMailKind, showAccountMailForm, showAuthForm } from './portal-account-mail';
 import { loginCodeMarkup, bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
+import { bindSignInCode, signInCodeMarkup } from './portal-signin-code';
 import { loginApproveMarkup, bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
+import { devTurnstileToken } from '../lib/dev-turnstile';
 
 export type PortalMode = 'start' | 'connect' | AccountMailKind;
 
@@ -55,18 +57,23 @@ let portalPreviousFocus: HTMLElement | null = null;
 let portalReleaseFocusTrap: (() => void) | null = null;
 let portalReleaseApproval: (() => void) | undefined;
 
-// The one value scripts/auth-gateway.mjs (verifyTurnstile) admits under TURNSTILE_BYPASS_LOCAL.
-const LOCAL_TURNSTILE_TOKEN = 'localhost-turnstile-token';
-
 export function readTurnstileToken(portal: HTMLElement): string {
 	const token = portal.querySelector('[data-turnstile-token]');
 	if (token instanceof HTMLInputElement && token.value) {
 		return token.value;
 	}
 	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key' || !import.meta.env.PUBLIC_TURNSTILE_SITE_KEY) {
-		return LOCAL_TURNSTILE_TOKEN;
+		return devTurnstileToken();
 	}
 	return '';
+}
+
+// A Turnstile token is single-use: every submit needs its own solve.
+export function resetTurnstile(portal: HTMLElement): void {
+	const tokenInput = portal.querySelector('[data-turnstile-token]');
+	if (tokenInput instanceof HTMLInputElement) tokenInput.value = devTurnstileToken();
+	const widgetId = portal.querySelector<HTMLElement>('[data-turnstile-slot]')?.dataset.turnstileWidgetId;
+	if (widgetId) globalThis.turnstile?.reset?.(widgetId);
 }
 
 export function mountTurnstile(portal: HTMLElement): void {
@@ -76,7 +83,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 	if (!sitekey || sitekey === 'local-dev-turnstile-key') {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
-			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
+			tokenInput.value = devTurnstileToken();
 		}
 		return;
 	}
@@ -215,6 +222,9 @@ function createPortalMarkup(mode: PortalMode): string {
 							${quick ? 'Sign in' : 'Create workspace account'}
 						</button>
 						<div class="portal-alt-actions">
+							<button class="portal-link-action portal-login-only portal-auth-only" type="button" data-portal-action="email-code">
+								Email me a sign-in code instead
+							</button>
 							<button class="portal-link-action portal-auth-only" type="button" data-portal-action="forgot-password">
 								Forgot password?
 							</button>
@@ -224,6 +234,7 @@ function createPortalMarkup(mode: PortalMode): string {
 						</div>
 					</form>
 					${loginCodeMarkup()}
+					${signInCodeMarkup()}
 					${loginApproveMarkup()}
 				</div>
 			</section>
@@ -567,6 +578,7 @@ async function submitAccountMail(portal: HTMLElement, elements: PortalFormElemen
 		elements.error.textContent = humanAuthMessage(error instanceof Error ? error.message : 'Could not send the email.');
 		elements.error.removeAttribute('hidden');
 	} finally {
+		resetTurnstile(portal);
 		if (button) {
 			button.textContent = label;
 			button.disabled = !hasValidEmailFormat(email);
@@ -759,6 +771,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 		elements.error.removeAttribute('hidden');
 		notify({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
 	} finally {
+		resetTurnstile(portal);
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}
 	if (next) offerAccountMail(next);
@@ -790,6 +803,9 @@ function syncAuthModeVisibility(portal: HTMLElement, mode: 'login' | 'register')
 				el.hidden = !isRegister;
 			}
 		}
+	});
+	portal.querySelectorAll<HTMLElement>('.portal-login-only').forEach((el) => {
+		el.hidden = isRegister;
 	});
 }
 
@@ -902,6 +918,15 @@ export function openPortal(mode: PortalMode): void {
 		passwordForm: elements.form,
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
+
+	bindSignInCode(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		email: () => elements.email.value.trim(),
+		turnstileToken: () => readTurnstileToken(portal),
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
+	});
+
 	portalReleaseApproval = bindLoginApproveStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
