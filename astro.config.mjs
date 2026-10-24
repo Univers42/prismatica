@@ -17,6 +17,8 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import { loadEnv } from 'vite';
 import { assertTurnstileSiteKey } from './src/lib/turnstile-site-key-guard.mjs';
+import { createHash } from 'node:crypto';
+import { NOINDEX_PREFIXES } from './src/data/noindex.mjs';
 
 const env = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
 assertTurnstileSiteKey({ siteUrl: env.PUBLIC_SITE_URL, siteKey: env.PUBLIC_TURNSTILE_SITE_KEY });
@@ -39,6 +41,10 @@ function localHttpsConfig() {
 		cert: readFileSync(devHttpsCert),
 	};
 }
+
+// The pre-paint script is inlined verbatim by Layout.astro, so its hash is computed from the
+// same file here and the CSP can stay free of 'unsafe-inline'.
+const prepaintHash = `sha256-${createHash('sha256').update(readFileSync(resolve(process.cwd(), 'src/scripts/prepaint.js'))).digest('base64')}`;
 
 function devContentSecurityPolicy() {
 	return [
@@ -64,7 +70,7 @@ export default defineConfig({
 	// Canonical origin for sitemap + <link rel="canonical">. Override per
 	// environment with PUBLIC_SITE_URL (compose sets it; prod sets the real domain).
 	site: env.PUBLIC_SITE_URL ?? 'https://localhost:4322',
-	integrations: [sitemap()],
+	integrations: [sitemap({ filter: (page) => !NOINDEX_PREFIXES.some((prefix) => new URL(page).pathname.startsWith(prefix)) })],
 	devToolbar: { enabled: false },
 	redirects: {
 		'/docs': '/docs/',
@@ -113,7 +119,7 @@ export default defineConfig({
 				"trusted-types prismatica-static-markup",
 				"require-trusted-types-for 'script'",
 			],
-			scriptDirective: { resources: ["'self'", 'https://challenges.cloudflare.com'] },
+			scriptDirective: { resources: ["'self'", 'https://challenges.cloudflare.com'], hashes: [prepaintHash] },
 			// No inline style= attributes remain in live pages, so style-src needs
 			// only 'self' (external CSS) + Astro's per-page <style> hashes — no
 			// 'unsafe-inline'. scripts/audit/csp-check.mjs guards this.

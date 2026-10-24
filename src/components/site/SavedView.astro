@@ -1,0 +1,181 @@
+---
+// Section 4's drawing (V4): six deals filter into a saved view, open deals over €5,000, largest
+// first. The deals are the demo dataset's own (groot scripts/demo, seed 42). HTML, like V2, so
+// the text scales, themes and reads aloud. The finished drawing is the default: the cards that
+// do not match are dimmed and the view is filled. With motion welcome and JavaScript on,
+// scripts/saved-view.ts plays the filter once when half of it is on screen (PLAN §6.2); nothing
+// is ever hidden, the before frame only dims the view.
+const deals = [
+	{ title: 'Kitchen refit', company: 'Bouchon Gaspard', stage: 'Qualified', amount: 17570, open: true },
+	{ title: 'Terrace bar fit-out', company: 'Le Jardin de Fourvière', stage: 'Won', amount: 48880, open: false },
+	{ title: 'Central kitchen modernisation', company: 'Résidence Les Tilleuls', stage: 'Proposal', amount: 42500, open: true },
+	{ title: 'Banquet kitchen extension', company: 'Hôtel Perrache Rive', stage: 'Won', amount: 4920, open: false },
+	{ title: 'Tray-line refrigeration', company: 'Cantine Gerland Campus', stage: 'Lost', amount: 59200, open: false },
+	{ title: 'Room-service pantry refit', company: 'Hôtel Vaise Gare', stage: 'Proposal', amount: 14040, open: true },
+];
+const euros = (amount: number): string => `€${amount.toLocaleString('en-GB')}`;
+const matches = (deal: (typeof deals)[number]): boolean => deal.open && deal.amount > 5000;
+const view = deals.filter(matches).sort((a, b) => b.amount - a.amount);
+---
+
+<figure class="v4" data-saved-view>
+	<ul class="v4__deals" aria-label="All deals">
+		{deals.map((deal) => (
+			<li class="v4__card" data-out={matches(deal) ? undefined : ''}>
+				<span class="v4__title">{deal.title}</span>
+				<span class="v4__meta">{deal.company} · {deal.stage} · {euros(deal.amount)}</span>
+			</li>
+		))}
+	</ul>
+	<div class="v4__view">
+		<div class="v4__chips" aria-label="Saved view filters">
+			<span class="v4__chip">Stage is open</span>
+			<span class="v4__chip">Amount &gt; €5,000</span>
+			<span class="v4__chip">Largest first</span>
+		</div>
+		<ol class="v4__rows" aria-label="Saved view: open deals over €5,000, largest first">
+			{view.map((deal) => (
+				<li class="v4__row">
+					<span class="v4__title">{deal.company}</span>
+					<span class="v4__amount">{euros(deal.amount)}</span>
+				</li>
+			))}
+		</ol>
+	</div>
+	<figcaption class="visually-hidden">Six deals, of which the three still open and over €5,000 fill a saved view, largest first; the won, lost and small ones stay out.</figcaption>
+</figure>
+
+<style>
+	.v4 {
+		margin: 0 auto;
+		width: min(100%, 52rem);
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+		gap: var(--space-5);
+		align-items: start;
+	}
+
+	.v4__deals,
+	.v4__rows {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		gap: var(--space-2);
+	}
+
+	.v4__card,
+	.v4__row,
+	.v4__view {
+		max-width: none;
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--radius-m);
+	}
+
+	.v4__card {
+		display: grid;
+		gap: 2px;
+		padding: var(--space-2) var(--space-3);
+	}
+
+	/* Out of the view, but still readable: opacity would take the text under 4.5:1 (axe
+	   color-contrast, 6 nodes in st3). Graphite on paper is 6.66:1 (D-017). */
+	.v4__card[data-out] {
+		background: transparent;
+		border-style: dashed;
+	}
+
+	.v4__card[data-out] .v4__title,
+	.v4__card[data-out] .v4__meta {
+		color: var(--graphite);
+	}
+
+	.v4__view {
+		display: grid;
+		gap: var(--space-3);
+		padding: var(--space-4);
+		border-color: var(--ink);
+		border-top: 3px solid var(--signal);
+		box-shadow: var(--shadow-1);
+	}
+
+	.v4__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.v4__chip {
+		padding: 2px var(--space-3);
+		border: 1px solid var(--graphite);
+		border-radius: var(--radius-pill);
+		font-size: var(--step--1);
+	}
+
+	.v4__row {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+		padding: var(--space-2) var(--space-3);
+	}
+
+	.v4__title {
+		font-weight: 600;
+	}
+
+	.v4__meta,
+	.v4__amount {
+		color: var(--graphite);
+		font-size: var(--step--1);
+	}
+
+	.v4[data-armed] .v4__card[data-out] {
+		background: var(--raised);
+		border-style: solid;
+	}
+
+	.v4[data-armed] .v4__card[data-out] .v4__title {
+		color: inherit;
+	}
+
+	.v4[data-armed] .v4__row {
+		color: var(--graphite);
+		background: transparent;
+		border-style: dashed;
+		transform: translateY(calc(-1 * var(--space-3)));
+	}
+
+	.v4[data-play] .v4__card[data-out] {
+		background: transparent;
+		border-style: dashed;
+		transition: background-color 400ms ease-out;
+	}
+
+	.v4[data-play] .v4__card[data-out] .v4__title {
+		color: var(--graphite);
+		transition: color 400ms ease-out;
+	}
+
+	.v4[data-play] .v4__row {
+		color: var(--ink);
+		background: var(--raised);
+		border-style: solid;
+		transform: none;
+		transition:
+			color 400ms ease-out,
+			background-color 400ms ease-out,
+			transform 400ms ease-out;
+		transition-delay: calc(400ms + var(--i, 0) * 140ms);
+	}
+
+	/* The stagger index comes from position: the site's CSP (style-src without 'unsafe-inline')
+	   blocks a style="--i: n" attribute. */
+	.v4__row:nth-child(2) {
+		--i: 1;
+	}
+
+	.v4__row:nth-child(3) {
+		--i: 2;
+	}
+</style>

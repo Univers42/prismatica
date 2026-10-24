@@ -1,0 +1,72 @@
+---
+// V1, the one orchestrated moment (PLAN §2.5, motion M1): six department lines enter from the
+// left, meet at one point and leave as a single beam that ends on the hero capture's frame. It
+// is the name (a prism run backwards) and the story (separate departments, one record).
+// Only transform is animated, once, on load. The animation exists only under
+// prefers-reduced-motion: no-preference; otherwise this is the finished drawing.
+import { DEPARTMENTS } from '../../data/departments';
+
+const rows = DEPARTMENTS.map((d, i) => ({ ...d, y: 8 + i * 16 }));
+const meet = { x: 360, y: 48 };
+---
+
+<svg class="convergence" viewBox="0 0 1200 96" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+	{rows.map((d, i) => (
+		<path
+			class="convergence__line"
+			d={`M0 ${d.y} C ${meet.x * 0.55} ${d.y}, ${meet.x * 0.7} ${meet.y}, ${meet.x} ${meet.y}`}
+			stroke={d.hue}
+			data-step={i}
+		/>
+	))}
+	<path class="convergence__beam" d={`M${meet.x} ${meet.y} H1200`} />
+</svg>
+
+<style>
+	.convergence {
+		width: 100%;
+		height: clamp(3rem, 6vw, 6rem);
+		overflow: visible;
+	}
+
+	.convergence__line,
+	.convergence__beam {
+		fill: none;
+		stroke-width: 2;
+		vector-effect: non-scaling-stroke;
+		transform-box: view-box;
+		transform-origin: 0 50%;
+	}
+
+	.convergence__beam {
+		stroke: var(--signal);
+		stroke-width: 3;
+		transform-origin: 30% 50%;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.convergence__line {
+			animation: draw 640ms var(--ease-out) both;
+		}
+
+		.convergence__line[data-step='1'] { animation-delay: 60ms; }
+		.convergence__line[data-step='2'] { animation-delay: 120ms; }
+		.convergence__line[data-step='3'] { animation-delay: 180ms; }
+		.convergence__line[data-step='4'] { animation-delay: 240ms; }
+		.convergence__line[data-step='5'] { animation-delay: 300ms; }
+
+		.convergence__beam {
+			animation: draw 240ms var(--ease-out) 660ms both;
+		}
+	}
+
+	@keyframes draw {
+		from {
+			transform: scaleX(0);
+		}
+
+		to {
+			transform: scaleX(1);
+		}
+	}
+</style>

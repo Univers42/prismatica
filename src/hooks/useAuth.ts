@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 import { authConfig } from '../lib/auth-config';
+import type { SignedLink } from '../lib/auth-link';
 
 const EMAIL_ATEXT = "A-Za-z0-9!#$%&'*+/=?^_`{|}~-";
 const EMAIL_LOCAL_PART = String.raw`(?:[${EMAIL_ATEXT}]+(?:\.[${EMAIL_ATEXT}]+)*|"[^"\r\n]+")`;
@@ -43,17 +44,24 @@ export type RecoverRequest = {
 	turnstileToken: string;
 };
 
+export type ResetPasswordRequest = { password: string; code?: string } & (SignedLink | { reset_ticket: string });
+
 export type AuthResult = {
 	ok: boolean;
 	status: number;
 	message: string;
+	/** The gateway's machine-readable reason (`mfa_required`, `link_expired`, …). */
 	code?: string;
+	/** The email-approval machine state the gateway returns: 'email_approve' waits for a device
+	 *  approval, 'email_otp' wants the 6-digit code from the mail (scripts/portal-login-*.ts). */
 	mfaRequired?: string;
 	/** The 2-digit number the waiting browser shows while the sign-in is approved elsewhere. */
 	match?: number;
 	pending?: boolean;
 	accessToken?: string;
 	expiresIn?: number;
+	/** Continues a reset after `mfa_required` or a refused password (scripts/auth/link-flows.mjs). */
+	resetTicket?: string;
 };
 
 export type OsionosBridgeResult = {
@@ -63,17 +71,6 @@ export type OsionosBridgeResult = {
 	redirectUrl?: string;
 	expiresIn?: number;
 	workspaceId?: string;
-};
-
-export type AvailabilityFieldResult = {
-	checked: boolean;
-	available: boolean | null;
-	message: string;
-};
-
-export type AvailabilityResult = {
-	email: AvailabilityFieldResult;
-	username: AvailabilityFieldResult;
 };
 
 type AuthClientOptions = {
@@ -160,6 +157,7 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 		pending: payload.pending === true ? true : undefined,
 		accessToken: typeof payload.access_token === 'string' ? payload.access_token : undefined,
 		expiresIn: typeof payload.expires_in === 'number' ? payload.expires_in : undefined,
+		resetTicket: typeof payload.reset_ticket === 'string' ? payload.reset_ticket : undefined,
 	};
 }
 
@@ -178,12 +176,10 @@ async function parseOsionosBridgeResponse(response: Response): Promise<OsionosBr
 	};
 }
 
-async function parseAvailabilityResponse(response: Response): Promise<AvailabilityResult> {
-	const payload = await response.json().catch(() => ({})) as Partial<AvailabilityResult>;
-	return {
-		email: payload.email ?? { checked: false, available: null, message: 'Email availability could not be checked.' },
-		username: payload.username ?? { checked: false, available: null, message: 'Username availability could not be checked.' },
-	};
+function accountMailRequestMessage(request: RecoverRequest): string | null {
+	if (!validateEmail(request.email)) return 'Use a valid email address.';
+	if (!request.turnstileToken) return 'Complete the anti-abuse check.';
+	return null;
 }
 
 async function fetchWithBackoff(url: string, init: RequestInit, maxRetries: number): Promise<Response> {
@@ -210,7 +206,7 @@ export function useAuth(options: AuthClientOptions = {}) {
 		body: JSON.stringify(body),
 	}, maxRetries);
 
-	// The login-code routes answer 429 for "too many codes" and "locked": waiting and retrying cannot help.
+	// The sign-in code routes answer 429 for "too many codes" and "locked": waiting and retrying cannot help.
 	const postOnce = async (path: string, body: Record<string, unknown>): Promise<Response> => fetchWithBackoff(`${gatewayUrl}${path}`, {
 		method: 'POST',
 		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -221,20 +217,6 @@ export function useAuth(options: AuthClientOptions = {}) {
 	return {
 		validateEmail,
 		validatePassword,
-		async availability(email: string, username: string): Promise<AvailabilityResult> {
-			const params = new URLSearchParams();
-			if (email.trim()) {
-				params.set('email', email.trim());
-			}
-			if (username.trim()) {
-				params.set('username', username.trim());
-			}
-			return parseAvailabilityResponse(await fetchWithBackoff(`${gatewayUrl}/availability?${params}`, {
-				method: 'GET',
-				headers: { Accept: 'application/json' },
-				credentials: 'include',
-			}, maxRetries));
-		},
 		async signIn(request: AuthRequest): Promise<AuthResult> {
 			const error = validationMessage(request, 'login');
 			if (error) {
@@ -246,13 +228,13 @@ export function useAuth(options: AuthClientOptions = {}) {
 			if (!/^\d{6}$/.test(code)) {
 				return { ok: false, status: 422, message: 'Enter the 6-digit code from your email.' };
 			}
-			return parseAuthResponse(await postOnce('/mfa/email/verify', { code }));
+			return parseAuthResponse(await post('/mfa/email/verify', { code }));
 		},
 		async pollLoginApproval(): Promise<AuthResult> {
-			return parseAuthResponse(await postOnce('/mfa/email/status', {}));
+			return parseAuthResponse(await post('/mfa/email/status', {}));
 		},
 		async resendLoginCode(): Promise<AuthResult> {
-			return parseAuthResponse(await postOnce('/mfa/email/resend', {}));
+			return parseAuthResponse(await post('/mfa/email/resend', {}));
 		},
 		async register(request: RegisterRequest): Promise<AuthResult> {
 			const error = registrationValidationMessage(request);
@@ -262,13 +244,8 @@ export function useAuth(options: AuthClientOptions = {}) {
 			return parseAuthResponse(await post('/register', request));
 		},
 		async recover(request: RecoverRequest): Promise<AuthResult> {
-			if (!validateEmail(request.email)) {
-				return { ok: false, status: 422, message: 'Use a valid email address.' };
-			}
-			if (!request.turnstileToken) {
-				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
-			}
-			return parseAuthResponse(await post('/recover', request));
+			const error = accountMailRequestMessage(request);
+			return error ? { ok: false, status: 422, message: error } : parseAuthResponse(await post('/recover', request));
 		},
 		async requestSignInCode(request: RecoverRequest): Promise<AuthResult> {
 			if (!validateEmail(request.email)) {
@@ -289,13 +266,14 @@ export function useAuth(options: AuthClientOptions = {}) {
 			return parseAuthResponse(await postOnce('/otp/verify', request));
 		},
 		async resendVerification(request: RecoverRequest): Promise<AuthResult> {
-			if (!validateEmail(request.email)) {
-				return { ok: false, status: 422, message: 'Use a valid email address.' };
-			}
-			if (!request.turnstileToken) {
-				return { ok: false, status: 422, message: 'Complete the anti-abuse check.' };
-			}
-			return parseAuthResponse(await post('/resend-verification', request));
+			const error = accountMailRequestMessage(request);
+			return error ? { ok: false, status: 422, message: error } : parseAuthResponse(await post('/resend-verification', request));
+		},
+		async verifyEmail(link: SignedLink): Promise<AuthResult> {
+			return parseAuthResponse(await post('/verify', link));
+		},
+		async resetPassword(request: ResetPasswordRequest): Promise<AuthResult> {
+			return parseAuthResponse(await post('/reset-password', request));
 		},
 		async refresh(): Promise<AuthResult> {
 			return parseAuthResponse(await post('/refresh', {}));

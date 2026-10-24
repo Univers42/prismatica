@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
+import { openPortal, closePortal, readTurnstileToken } from '../../../src/scripts/portal';
+import { bindPasswordToggles } from '../../../src/scripts/password-toggle';
 
 describe('Portal Script Module', () => {
 	beforeEach(() => {
@@ -9,6 +10,19 @@ describe('Portal Script Module', () => {
 	afterEach(() => {
 		closePortal();
 		document.body.innerHTML = '';
+	});
+
+	it('binds password toggles only inside the given root, once per call', () => {
+		const field = (id: string): string => `<div class="field" id="${id}"><input type="password" /><button type="button" data-password-toggle></button></div>`;
+		document.body.innerHTML = field('a') + field('b');
+		const [a, b] = ['a', 'b'].map((id) => document.getElementById(id)!);
+		bindPasswordToggles(a);
+		bindPasswordToggles(b);
+		a.querySelector('button')!.click();
+		b.querySelector('button')!.click();
+		// One listener each: a second binding of the same toggle would flip the field back.
+		expect(a.querySelector('input')!.type).toBe('text');
+		expect(b.querySelector('input')!.type).toBe('text');
 	});
 
 	it('opens portal and adds modal dialog to body', () => {
@@ -33,6 +47,15 @@ describe('Portal Script Module', () => {
 		expect(portal?.dataset.authMode).toBe('login');
 		expect(confirm?.closest<HTMLElement>('.portal-register-only')?.hidden).toBe(true);
 		expect(confirm?.required).toBe(false);
+	});
+
+	it('offers the email sign-in code in sign-in mode only, with its step form present', () => {
+		openPortal('connect');
+		const trigger = document.querySelector<HTMLElement>('[data-portal-action="email-code"]');
+		expect(trigger?.hidden).toBe(false);
+		expect(document.querySelector('form.portal-signin-code')).not.toBeNull();
+		document.querySelector<HTMLElement>('[data-auth-switch="register"]')?.click();
+		expect(trigger?.hidden).toBe(true);
 	});
 
 	it('opens in sign-up mode with the sign-up fields shown and required', () => {
@@ -91,28 +114,6 @@ describe('Portal Script Module', () => {
 		expect(meter?.querySelector('.password-meter__label')?.textContent).not.toBe('');
 	});
 
-	it('names password strength in words, never the internal level id', () => {
-		openPortal('start');
-		const password = document.querySelector<HTMLInputElement>('#portal-password')!;
-		const label = () => document.querySelector('.password-meter__label')?.textContent ?? '';
-		password.value = 'x';
-		password.dispatchEvent(new Event('input'));
-		password.value = '';
-		password.dispatchEvent(new Event('input'));
-		expect(label()).toBe('Enter a strong password');
-		password.value = 'Abcdefgh12!x';
-		password.dispatchEvent(new Event('input'));
-		expect(['weak', 'fair', 'good', 'strong']).not.toContain(label());
-		expect(label()).toMatch(/password|Weak|Fair/);
-	});
-
-	it('labels the dialog with its visible, mode-aware title', () => {
-		openPortal('connect');
-		const title = document.getElementById(document.querySelector('#portal')?.getAttribute('aria-labelledby') ?? '');
-		expect(title?.textContent).toBe('Open your workspace');
-		expect(title?.getAttribute('aria-hidden')).toBeNull();
-	});
-
 	it('binds password toggle buttons to switch input type', () => {
 		document.body.innerHTML = `
 			<div class="field">
@@ -136,151 +137,79 @@ describe('Portal Script Module', () => {
 		expect(input?.type).toBe('password');
 		expect(button?.getAttribute('aria-pressed')).toBe('false');
 	});
-
-	it('shows the gateway message and a "Send a new link" button after 403 email_not_confirmed, and resends through the gateway', async () => {
-		const message = 'Confirm your email first \u2014 check your inbox, or send a new link.';
-		const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => (String(url).endsWith('/login')
-			? new Response(JSON.stringify({ error: 'email_not_confirmed', message }), { status: 403 })
-			: new Response(JSON.stringify({ message: 'ok' }), { status: 202 })));
-		vi.stubGlobal('fetch', fetchMock);
-		try {
-			openPortal('connect');
-			const email = document.querySelector<HTMLInputElement>('#portal-email');
-			const password = document.querySelector<HTMLInputElement>('#portal-password');
-			if (!email || !password) throw new Error('no fields');
-			email.value = 'ines@arlet.test';
-			password.value = 'Abcdefgh12!';
-			const resend = document.querySelector<HTMLButtonElement>('[data-resend-verification]');
-			expect(resend?.hidden).toBe(true);
-			document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
-			await vi.waitFor(() => expect(resend?.hidden).toBe(false));
-			expect(document.querySelector('.portal-form-error')?.textContent).toBe(message);
-			resend?.click();
-			await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/resend-verification'))).toBe(true));
-			const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/resend-verification'));
-			expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ email: 'ines@arlet.test' });
-		} finally {
-			vi.unstubAllGlobals();
-		}
-	});
 });
 
-describe('Portal login code step', () => {
+describe('account mail from the portal (POST /api/auth/recover and /resend-verification)', () => {
+	const ACCEPTED = 'If an account can receive mail at that address, a message is on its way. Check your inbox.';
+	let fetchMock: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		document.body.innerHTML = '';
+		fetchMock = vi.fn(async () => new Response(JSON.stringify({ message: ACCEPTED }), { status: 202 }));
+		vi.stubGlobal('fetch', fetchMock);
+	});
+
 	afterEach(() => {
 		closePortal();
-		document.body.innerHTML = '';
 		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
 	});
 
-	function gateway(routes: Record<string, () => Response>) {
-		const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-			const route = Object.keys(routes).find((suffix) => String(url).endsWith(suffix));
-			return route ? routes[route]() : new Response('{}', { status: 200 });
-		});
-		vi.stubGlobal('fetch', fetchMock);
-		return fetchMock;
+	const passwordHidden = () => Boolean(document.querySelector('#portal-password')?.closest('[hidden]'));
+	const submitLabel = () => document.querySelector('[data-auth-submit]')?.textContent?.trim();
+
+	async function requestFor(email: string) {
+		const field = document.querySelector<HTMLInputElement>('#portal-email')!;
+		field.value = email;
+		field.dispatchEvent(new Event('input'));
+		document.querySelector('form.portal-login')!.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		return { url, body: JSON.parse(String(init.body)) };
 	}
 
-	const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
-
-	async function signInIntoCodeStep() {
+	it('"Forgot password?" turns sign-in into a reset request that posts the email to /recover', async () => {
 		openPortal('connect');
-		document.querySelector<HTMLInputElement>('#portal-email')!.value = 'ines@arlet.test';
-		document.querySelector<HTMLInputElement>('#portal-password')!.value = 'Abcdefgh12!';
-		document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
-		await vi.waitFor(() => expect(document.querySelector<HTMLElement>('form.portal-login-code')?.hidden).toBe(false));
-	}
+		document.querySelector<HTMLButtonElement>('[data-portal-action="forgot-password"]')!.click();
+		expect(passwordHidden()).toBe(true);
+		expect(submitLabel()).toBe('Send reset link');
+		const sent = await requestFor('ines@arlet.example.com');
+		expect(sent.url).toMatch(/\/recover$/);
+		expect(sent.body).toEqual({ email: 'ines@arlet.example.com', turnstileToken: 'localhost-turnstile-token' });
+	});
 
-	const codeForm = () => document.querySelector<HTMLFormElement>('form.portal-login-code')!;
-	const codeInput = () => document.querySelector<HTMLInputElement>('#portal-login-code')!;
-	const codeError = () => document.querySelector<HTMLElement>('[data-login-code-error]')!;
+	it('opens straight into a new confirmation link request that posts to /resend-verification', async () => {
+		openPortal('resend');
+		expect(passwordHidden()).toBe(true);
+		expect(submitLabel()).toBe('Send a new link');
+		const sent = await requestFor('ines@arlet.example.com');
+		expect(sent.url).toMatch(/\/resend-verification$/);
+	});
 
-	it('ships the code step hidden, as an accessible one-time-code field', () => {
+	it('shows the gateway answer, which reads the same whether or not the account exists', async () => {
+		openPortal('recovery');
+		await requestFor('nobody@arlet.example.com');
+		await vi.waitFor(() => expect(document.querySelector('[data-auth-note]')?.textContent).toBe(ACCEPTED));
+	});
+
+	it('a sign-in refused for an unconfirmed email turns into the new-link form, email kept', async () => {
+		fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Email not confirmed' }), { status: 400 }));
 		openPortal('connect');
-		expect(codeForm().hidden).toBe(true);
-		const input = codeInput();
-		expect(input.getAttribute('inputmode')).toBe('numeric');
-		expect(input.getAttribute('autocomplete')).toBe('one-time-code');
-		expect(input.getAttribute('pattern')).toBe(String.raw`\d{6}`);
-		expect(input.maxLength).toBe(6);
-		expect(codeForm().querySelector('label[for="portal-login-code"]')?.textContent).toBeTruthy();
-		expect(codeError().getAttribute('aria-live')).toBe('polite');
-		expect(codeForm().querySelector('[data-login-code-resend]')?.textContent).toBe('Resend code');
-		expect(codeForm().querySelector('[data-login-code-cancel]')?.textContent).toBe('Cancel');
+		const email = document.querySelector<HTMLInputElement>('#portal-email')!;
+		const password = document.querySelector<HTMLInputElement>('#portal-password')!;
+		email.value = 'ines@arlet.example.com';
+		password.value = 'Arlet!2026x';
+		document.querySelector('form.portal-login')!.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(submitLabel()).toBe('Send a new link'));
+		expect(passwordHidden()).toBe(true);
+		expect(email.value).toBe('ines@arlet.example.com');
 	});
 
-	it('swaps the password form for the code step when login answers mfa_required, with no token kept', async () => {
-		gateway({ '/login': () => json(200, { mfa_required: 'email_otp' }) });
-		await signInIntoCodeStep();
-		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(true);
-	});
-
-	it('posts the code to the verify route and continues with the session it returns', async () => {
-		// The bridge answers an untrusted redirect on purpose: the hand-off is reached and stops there.
-		vi.spyOn(console, 'error').mockImplementation(() => undefined);
-		const fetchMock = gateway({
-			'/login': () => json(200, { mfa_required: 'email_otp' }),
-			'/mfa/email/verify': () => json(200, { access_token: 'at-1', expires_in: 3600 }),
-			'/osionos-session': () => json(200, { redirectUrl: 'https://evil.example/x' }),
-		});
-		await signInIntoCodeStep();
-		codeInput().value = '123456';
-		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
-		await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/osionos-session'))).toBe(true));
-		const verify = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/mfa/email/verify'));
-		expect(JSON.parse(String(verify?.[1]?.body))).toEqual({ code: '123456' });
-		expect((verify?.[1] as RequestInit).credentials).toBe('include');
-		const bridge = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/osionos-session'));
-		expect((bridge?.[1]?.headers as Record<string, string>).Authorization).toBe('Bearer at-1');
-	});
-
-	it('refuses a malformed code in the browser without calling the gateway', async () => {
-		const fetchMock = gateway({ '/login': () => json(200, { mfa_required: 'email_otp' }) });
-		await signInIntoCodeStep();
-		codeInput().value = '12ab';
-		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
-		await vi.waitFor(() => expect(codeError().hidden).toBe(false));
-		expect(codeError().textContent).toMatch(/6-digit/);
-		expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/mfa/email/verify'))).toBe(false);
-	});
-
-	it('keeps the step open on a wrong code and shows the gateway message in the live region', async () => {
-		gateway({
-			'/login': () => json(200, { mfa_required: 'email_otp' }),
-			'/mfa/email/verify': () => json(401, { error: 'otp_invalid', message: 'That code is not right.' }),
-		});
-		await signInIntoCodeStep();
-		codeInput().value = '000000';
-		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
-		await vi.waitFor(() => expect(codeError().textContent).toBe('That code is not right.'));
-		expect(codeForm().hidden).toBe(false);
-	});
-
-	it('returns to the password form with the message when the code expired', async () => {
-		gateway({
-			'/login': () => json(200, { mfa_required: 'email_otp' }),
-			'/mfa/email/verify': () => json(410, { error: 'otp_expired', message: 'The code expired. Sign in again.' }),
-		});
-		await signInIntoCodeStep();
-		codeInput().value = '999999';
-		codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
-		await vi.waitFor(() => expect(codeForm().hidden).toBe(true));
-		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(false);
-		expect(document.querySelector('form.portal-login .portal-form-error')?.textContent).toBe('The code expired. Sign in again.');
-	});
-
-	it('resends through the gateway and says so; Cancel returns to the password form', async () => {
-		const fetchMock = gateway({
-			'/login': () => json(200, { mfa_required: 'email_otp' }),
-			'/mfa/email/resend': () => json(200, { sent: true }),
-		});
-		await signInIntoCodeStep();
-		codeForm().querySelector<HTMLButtonElement>('[data-login-code-resend]')?.click();
-		await vi.waitFor(() => expect(codeError().textContent).toBe('A new code is on its way.'));
-		expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/mfa/email/resend'))).toBe(true);
-		codeForm().querySelector<HTMLButtonElement>('[data-login-code-cancel]')?.click();
-		expect(codeForm().hidden).toBe(true);
-		expect(document.querySelector<HTMLElement>('form.portal-login')?.hidden).toBe(false);
-		expect(codeInput().value).toBe('');
+	it('"Back to sign in" brings the password field back', () => {
+		openPortal('recovery');
+		document.querySelector<HTMLButtonElement>('.portal-mail-only[data-auth-switch="login"]')!.click();
+		expect(passwordHidden()).toBe(false);
+		expect(submitLabel()).toBe('Sign in');
 	});
 });
+

@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-export const POLICY_VERSION = '1.1.0';
-export const POLICY_LAST_UPDATED = '2026-10-01';
+export const POLICY_VERSION = '1.2.0';
+export const POLICY_LAST_UPDATED = '2026-10-15';
 
 export const DATA_CONTROLLER = {
 	name: 'dlesieur',
@@ -25,6 +25,5 @@ export const LEGAL_LINKS = [
 	{ href: '/legal/data-rights/', label: 'Data Rights' },
 ] as const;
 
-export const CONSENT_STORAGE_KEY = 'prismatica-consent-v1';
 export const NEWSLETTER_INTENT_KEY = 'prismatica-newsletter-intent-v1';
 export const CSRF_STORAGE_KEY = 'prismatica-csrf-token-v1';

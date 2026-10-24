@@ -5,7 +5,7 @@
 // again on the way back up; its screen runs the live workspace demo. The
 // tablet and phone screens are MediaSlots, so real captures drop in from
 // src/data/media-shots.ts.
-import PrismaticaLogo from '../../brand/PrismaticaLogo.astro';
+import favicon from '../../../assets/brand/favicon.svg';
 import MediaSlot from '../../ui/MediaSlot.astro';
 import AppSketch from './AppSketch.astro';
 import HeroWorkspace from './HeroWorkspace.astro';
@@ -18,7 +18,7 @@ import '../../../styles/components/_devices-laptop.scss';
 	<span class="devices__horizon" data-horizon aria-hidden="true"></span>
 
 	<div class="tablet">
-		<MediaSlot shot={MEDIA_SHOTS.tablet}><AppSketch name="board" /></MediaSlot>
+		<MediaSlot shot={MEDIA_SHOTS.tablet} sizes="30vw"><AppSketch name="board" /></MediaSlot>
 	</div>
 
 	<div class="laptop">
@@ -39,7 +39,7 @@ import '../../../styles/components/_devices-laptop.scss';
 					</div>
 				</div>
 				<div class="laptop__back" aria-hidden="true">
-					<PrismaticaLogo class="laptop__logo" decorative />
+					<img class="laptop__logo" src={favicon.src} width="32" height="32" alt="" />
 				</div>
 			</div>
 		</div>

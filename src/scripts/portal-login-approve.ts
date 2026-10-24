@@ -44,7 +44,7 @@ export function showLoginApproveStep(portal: HTMLElement, passwordForm: HTMLForm
 	beginPolling();
 }
 
-export function bindLoginApproveStep(portal: HTMLElement, hooks: ApproveHooks): void {
+export function bindLoginApproveStep(portal: HTMLElement, hooks: ApproveHooks): (() => void) | undefined {
 	const step = portal.querySelector<HTMLElement>('section.portal-login-approve');
 	const error = step?.querySelector<HTMLElement>('[data-login-approve-error]');
 	if (!step || !error) return;
@@ -99,4 +99,9 @@ export function bindLoginApproveStep(portal: HTMLElement, hooks: ApproveHooks): 
 	});
 
 	step.querySelector('[data-login-approve-cancel]')?.addEventListener('click', () => leave(''));
+
+	return () => {
+		stopPolling();
+		beginPolling = () => undefined;
+	};
 }
