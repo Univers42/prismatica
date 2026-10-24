@@ -68,6 +68,15 @@ describe('verify: the right code', () => {
 		expect(api.verify).toHaveBeenCalledWith('magiclink', HASH);
 	});
 
+	it('removes the stored code once it has made a session', async () => {
+		const { otp, store } = setup();
+		const code = await otp.issue(EMAIL);
+		const live = () => [...(store as any).map.keys()].filter((key: string) => /^signin-code:[0-9a-f]+$/.test(key));
+		expect(live()).toHaveLength(1);
+		await otp.verify(EMAIL, code);
+		expect(live()).toHaveLength(0);
+	});
+
 	it('is single use: the same code twice, one after the other, is refused the second time', async () => {
 		const { otp } = setup();
 		const code = await otp.issue(EMAIL);

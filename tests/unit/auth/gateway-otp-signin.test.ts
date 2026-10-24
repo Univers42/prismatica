@@ -61,6 +61,15 @@ describe('sign-in by emailed code', () => {
 		expect(JSON.parse(hitsTo('/auth/v1/admin/generate_link').at(-1)!.body)).toEqual({ type: 'magiclink', email: EMAIL });
 	});
 
+	it('schedules the new-sign-in security alert after a code sign-in, as login does', async () => {
+		const EMAIL = person();
+		const code = await mailedCode(EMAIL);
+		const alerts = () => hitsTo('/email/v1/send').filter((hit) => JSON.parse(hit.body).subject === 'Security alert: new Prismatica sign-in').length;
+		const before = alerts();
+		expect((await verify(EMAIL, code)).status).toBe(200);
+		await waitFor(() => alerts() > before);
+	});
+
 	it('answers a known, an unknown and an unconfirmed address with the identical 202 and mails only the known one', async () => {
 		const EMAIL = person();
 		upstream.users['pending@arlet.test'] = null;
