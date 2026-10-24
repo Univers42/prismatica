@@ -21,13 +21,13 @@
  * Every refusal is one answer (`SIGNIN_CODE_INVALID`), so the response never says whether the
  * address exists, the code was wrong, spent, expired or locked. The attempt counters are bumped
  * BEFORE the comparison: 5 tries per code (a new request makes a new code and a new counter) and
- * 5 per address per window (a new request does not reset it). Past either, the code is deleted.
+ * 5 per address per ADDRESS_WINDOW_SEC (a new request does not reset it). Past either, the code is deleted.
  *
  * Caveat: the user lookup (GoTrue admin list + exact compare) and `verify(magiclink)` are
  * checked against a fake only; whether the real GoTrue honours the `filter` and yields a session
  * is verified on the live stack. The 1-in-a-million blind guess is bounded by the caps, not
  * removed. With the memory store a restart drops codes and counters together (a code can only
- * die early). A caller who knows an address can burn its 5 address tries and lock it for CODE_TTL_SEC.
+ * die early). A caller who knows an address can burn its 5 address tries and lock it for ADDRESS_WINDOW_SEC.
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import { bumpCounter, claimOnce, CODE_TTL_SEC, hashCode, isLoginCode, MAX_WRONG_CODES, sameCode } from './code-custody.mjs';
@@ -37,9 +37,13 @@ import { EMAIL_REGEX, keyHash, normalizeEmail } from './identity.mjs';
 export const SIGNIN_CODE_INVALID = Object.freeze({ error: 'signin_code_invalid', message: 'That code is not right or has expired. Request a new one.' });
 const INFO = 'prismatica-signin-code-v1';
 const MAX_EMAIL_LENGTH = 254;
+// The address budget outlives any one code: 3 code requests/h x 5 tries would otherwise renew it
+// every CODE_TTL_SEC. A new request neither resets nor shortens this window.
+const ADDRESS_WINDOW_SEC = 3600;
 
 const recordKey = (email) => `signin-code:${keyHash(email)}`;
 const addressKey = (email) => `signin-code:addr:${keyHash(email)}`;
+const decoyKey = (email, kind) => `signin-code:decoy:${kind}:${keyHash(email)}`;
 const triesKey = (email, generation) => `signin-code:tries:${keyHash(email)}:${generation}`;
 const usedKey = (email, generation) => `signin-code:used:${keyHash(email)}:${generation}`;
 
@@ -78,9 +82,15 @@ export function createOtpSignin({ store, gotrue, signingKey, audit }) {
 		const email = signInAddress(rawEmail);
 		if (!email || !isLoginCode(rawCode) || !signingKey) return { status: 401, body: SIGNIN_CODE_INVALID };
 		const stored = await store.get(recordKey(email));
-		if (!stored) return refuse('no_code', email);
+		if (!stored) {
+			// Same store round trips and one hash as a wrong guess, so latency does not say whether a code is pending.
+			await bumpCounter(store, decoyKey(email, 'addr'), CODE_TTL_SEC);
+			await bumpCounter(store, decoyKey(email, 'tries'), CODE_TTL_SEC);
+			hashCode({ signingKey, info: INFO, email, code: rawCode });
+			return refuse('no_code', email);
+		}
 		const [generation, expected] = stored.split('.');
-		const addressTries = await bumpCounter(store, addressKey(email), CODE_TTL_SEC);
+		const addressTries = await bumpCounter(store, addressKey(email), ADDRESS_WINDOW_SEC);
 		const codeTries = await bumpCounter(store, triesKey(email, generation), CODE_TTL_SEC);
 		if (addressTries > MAX_WRONG_CODES || codeTries > MAX_WRONG_CODES) {
 			await store.del(recordKey(email));

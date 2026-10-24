@@ -1,8 +1,15 @@
 // @vitest-environment node
 // The passwordless code sign-in's custody: issue, attempt caps, single use, TTL, the hand-off to GoTrue.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as custody from '../../../scripts/auth/code-custody.mjs';
 import { createOtpSignin, SIGNIN_CODE_INVALID } from '../../../scripts/auth/otp-signin.mjs';
 import { fakeGotrue, memoryStore, ok } from './fakes';
+
+// Spies that still call through, so a test can count hashing and comparing.
+vi.mock('../../../scripts/auth/code-custody.mjs', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('../../../scripts/auth/code-custody.mjs')>();
+	return { ...actual, hashCode: vi.fn(actual.hashCode), sameCode: vi.fn(actual.sameCode) };
+});
 
 const KEY = 'otp-signin-test-signing-key-0123456789abcdef';
 const EMAIL = 'ines@arlet.test';
@@ -212,5 +219,65 @@ describe('the code stays out of every trace', () => {
 		const right = await otp.verify(EMAIL, code);
 		expect(JSON.stringify([audit.mock.calls, wrong, right])).not.toContain(code);
 		expect(audit.mock.calls.map((call) => call[0])).toContain('signin_code_verified');
+	});
+});
+
+describe('the address guess budget outlives the code', () => {
+	const T0 = '2026-10-24T10:00:00Z';
+	const at = (seconds: number) => vi.setSystemTime(new Date(Date.parse(T0) + seconds * 1000));
+
+	async function lockAddress() {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		at(0);
+		const ctx = setup();
+		const first = await ctx.otp.issue(EMAIL);
+		for (let i = 0; i < 5; i += 1) await ctx.otp.verify(EMAIL, wrongFor(first));
+		return ctx;
+	}
+
+	it('a new code 601 s later does not reset it: guesses 6-10 are refused without a comparison', async () => {
+		const { otp } = await lockAddress();
+		at(601);
+		const second = await otp.issue(EMAIL);
+		vi.mocked(custody.sameCode).mockClear();
+		for (let i = 0; i < 4; i += 1) expect(await otp.verify(EMAIL, wrongFor(second))).toEqual(REFUSED);
+		expect(await otp.verify(EMAIL, second)).toEqual(REFUSED);
+		expect(custody.sameCode).not.toHaveBeenCalled();
+	});
+
+	it('is back after 3601 s', async () => {
+		const { otp } = await lockAddress();
+		at(3601);
+		const third = await otp.issue(EMAIL);
+		expect((await otp.verify(EMAIL, third)).status).toBe(200);
+	});
+});
+
+describe('verify costs the same whether or not a code is pending', () => {
+	async function cost(email: string, requestCode: boolean) {
+		const { otp, store } = setup();
+		const code = requestCode ? await otp.issue(EMAIL) : '000000';
+		const calls = { get: vi.spyOn(store, 'get'), set: vi.spyOn(store, 'set'), del: vi.spyOn(store, 'del'), incr: vi.spyOn(store, 'incrWithTtl') };
+		vi.mocked(custody.hashCode).mockClear();
+		const answer = await otp.verify(email, wrongFor(code));
+		expect(answer).toEqual(REFUSED);
+		const counts = Object.values(calls).map((spy) => spy.mock.calls.length);
+		return { counts, hashes: vi.mocked(custody.hashCode).mock.calls.length };
+	}
+
+	it('an unknown address, a known one without a code and a wrong guess on a live code do the same work', async () => {
+		const unknown = await cost('nobody@arlet.test', false);
+		const noCode = await cost(EMAIL, false);
+		const wrong = await cost(EMAIL, true);
+		expect(wrong.hashes).toBe(1);
+		expect(unknown).toEqual(wrong);
+		expect(noCode).toEqual(wrong);
+	});
+
+	it('the no-code path does not spend the address\'s real guess budget', async () => {
+		const { otp } = setup();
+		for (let i = 0; i < 8; i += 1) await otp.verify(EMAIL, '123456');
+		const code = await otp.issue(EMAIL);
+		expect((await otp.verify(EMAIL, code)).status).toBe(200);
 	});
 });
