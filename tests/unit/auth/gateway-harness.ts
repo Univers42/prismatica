@@ -67,7 +67,7 @@ function fakeKong() {
 			}
 			// The admin user list behind the code sign-in; `upstream.users` maps address -> email_confirmed_at.
 			if (path.startsWith('/auth/v1/admin/users') && request.method === 'GET') {
-				const filter = new URL(path, 'http://x').searchParams.get('filter') ?? '';
+				const filter = new URL(path, 'https://x').searchParams.get('filter') ?? '';
 				const users = Object.entries(upstream.users).filter(([email]) => email.includes(filter)).map(([email, confirmed]) => ({ id: `id-${email}`, email, email_confirmed_at: confirmed }));
 				const answer = () => send(200, { users });
 				return upstream.lookupDelayMs > 0 ? setTimeout(answer, upstream.lookupDelayMs) : answer();
