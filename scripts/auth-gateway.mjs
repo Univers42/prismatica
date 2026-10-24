@@ -18,6 +18,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises';
 import { createClient, MiniBaasError } from '@grobase/js';
 import { createAccountMail, REGISTER_ACCEPTED } from './auth/account-mail.mjs';
+import { createOtpSignin } from './auth/otp-signin.mjs';
 import { createGotrueApi } from './auth/gotrue-api.mjs';
 import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
@@ -87,14 +88,14 @@ const config = {
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
 // Caveat: exempt means the gateway sends that address no mail and signs it unverified; baas
-// /auth/v1/recover and /otp still mail it through GoTrue's own SMTP, so whoever reads the inbox
-// owns the account. Never admin, nothing private in it; guards.mjs refuses a malformed list at boot.
+// /auth/v1/recover still mails it through GoTrue's own SMTP, so whoever reads the inbox
+// owns the account. (/otp and /magiclink are not reachable through the site any more.) Never admin, nothing private in it; guards.mjs refuses a malformed list at boot.
 const verificationExempt = parseVerificationExempt(config.verificationExempt).addresses;
 config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LINK_SIGNING_KEY;
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
 // otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30, signinCodeRequest: 12, signinCodeVerify: 10 };
 const RATE_WINDOWS_SEC = { otpResend: 3600 };
 // Open signup swaps the per-minute register allowance for an hourly one: a mail cannon needs volume.
 if (config.signupOpen && config.registerHourlyLimit > 0) {
@@ -475,6 +476,7 @@ const mailQueue = createWorkQueue({
 });
 
 const gotrue = createGotrueApi({ baseUrl: config.baasUrl, anonKey: config.anonKey, serviceKey: config.serviceKey });
+const otpSignin = createOtpSignin({ store, gotrue, signingKey: config.linkSigningKey, audit: flowAudit });
 
 const accountMail = createAccountMail({
 	store,
@@ -498,6 +500,7 @@ const accountMail = createAccountMail({
 	// Open signup proves an address for the account only; the newsletter keeps its own allowlist rule.
 	newsletterOptIn: (email) => (newsletterAllowed(email) ? requestNewsletterOptIn(null, email) : undefined),
 	signupAllowed,
+	signInCodes: otpSignin,
 });
 
 const linkFlows = createLinkFlows({
@@ -554,7 +557,7 @@ function registrationProfile(payload) {
 	};
 }
 
-async function protectedAction(request, response, action, handler) {
+async function protectedAction(request, response, action, handler, auditAction = action) {
 	const ip = clientIp(request);
 	const retryAfter = await rateLimit(ip, action);
 	if (retryAfter) {
@@ -564,7 +567,7 @@ async function protectedAction(request, response, action, handler) {
 	const payload = await readJson(request);
 	const validTurnstile = await verifyTurnstile(String(payload.turnstileToken ?? ''), ip);
 	if (!validTurnstile) {
-		await audit(`${action}_turnstile_failed`, request, { email: payload.email });
+		await audit(`${auditAction}_turnstile_failed`, request, { email: payload.email });
 		json(response, 403, { message: 'Anti-abuse verification failed.' });
 		return;
 	}
@@ -802,6 +805,25 @@ async function handleRecover(request, response) {
 		const result = await accountMail.requestRecovery(payload.email);
 		json(response, result.status, result.body);
 	});
+}
+
+// Caveat: where AUTH_TURNSTILE_OPTIONAL is set (the public Funnel stack, ADR 0018), Turnstile on
+// these two routes is advisory. There the defence is code custody (attempt caps, TTL, single use,
+// otp-signin.mjs) plus the per-kind address bucket and the per-IP limits above.
+async function handleOtpRequest(request, response) {
+	await protectedAction(request, response, 'signinCodeRequest', async (payload) => {
+		const result = await accountMail.requestSignInCode(payload.email);
+		json(response, result.status, result.body);
+	}, 'otp_request');
+}
+
+async function handleOtpVerify(request, response) {
+	await protectedAction(request, response, 'signinCodeVerify', async (payload) => {
+		const result = await otpSignin.verify(payload.email, payload.code);
+		const headers = result.refreshToken ? { 'set-cookie': refreshCookie(result.refreshToken) } : {};
+		if (result.status === 200) scheduleLoginAlert(request, result.email, 'success');
+		json(response, result.status, result.body, headers);
+	}, 'otp_verify');
 }
 
 async function handleResendVerification(request, response) {
@@ -1060,6 +1082,8 @@ const routes = new Map([
 	['POST /api/auth/register', handleRegister],
 	['POST /api/auth/login', handleLogin],
 	['POST /api/auth/recover', handleRecover],
+	['POST /api/auth/otp/request', handleOtpRequest],
+	['POST /api/auth/otp/verify', handleOtpVerify],
 	['POST /api/auth/resend-verification', handleResendVerification],
 	['POST /api/auth/verify', handleVerify],
 	['POST /api/auth/reset-password', handleResetPassword],

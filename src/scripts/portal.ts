@@ -10,6 +10,7 @@ import { readStorage } from '../lib/storage';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
+import { bindSignInCode } from './portal-signin-code';
 import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 import { createPortalMarkup } from './portal-markup';
 import { devTurnstileToken } from '../lib/dev-turnstile';
@@ -790,6 +791,9 @@ function syncAuthModeVisibility(portal: HTMLElement, mode: 'login' | 'register')
 			}
 		}
 	});
+	portal.querySelectorAll<HTMLElement>('.portal-login-only').forEach((el) => {
+		el.hidden = isRegister;
+	});
 }
 
 function syncAuthModeInputs(controls: AuthModeControls, mode: 'login' | 'register'): void {
@@ -898,6 +902,14 @@ export function openPortal(mode: PortalMode): void {
 	bindLoginCodeStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
+		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
+	});
+
+	bindSignInCode(portal, {
+		auth: authClient,
+		passwordForm: elements.form,
+		email: () => elements.email.value.trim(),
+		turnstileToken: () => readTurnstileToken(portal),
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
 

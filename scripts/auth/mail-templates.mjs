@@ -13,6 +13,7 @@ export const MESSAGES = Object.freeze({
 	passwordChanged: { file: 'password-changed', subject: 'Your password was changed' },
 	accountExists: { file: 'account-exists', subject: 'You already have an account' },
 	approveSignIn: { file: 'approve-sign-in', subject: 'Sign-in request' },
+	signInCode: { file: 'sign-in-code', subject: 'Your sign-in code' },
 });
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z][\w]*)\s*\}\}/g;
