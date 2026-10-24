@@ -20,7 +20,7 @@ const USER = { id: 'u1', email: EMAIL, email_confirmed_at: '2026-10-01T00:00:00Z
 describe.skipIf(!URL_ENV)('code sign-in against a real Redis', () => {
 	let store: InstanceType<typeof RedisStore>;
 	beforeAll(async () => {
-		store = new RedisStore(URL_ENV, { logger: {} });
+		store = new RedisStore(URL_ENV);
 		for (let i = 0; i < 100 && !store.connected; i += 1) await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(store.connected).toBe(true);
 	});
