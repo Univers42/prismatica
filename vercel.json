@@ -15,7 +15,7 @@
   "rewrites": [
     { "source": "/api/auth/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/auth/:path*" },
     { "source": "/api/newsletter/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/newsletter/:path*" },
-    { "source": "/auth/:path*", "destination": "https://baas.tail10f2ea.ts.net/auth/:path*" },
+    { "source": "/auth/:path((?!.*%)(?!v1/(?:otp|magiclink)/?$).*)", "destination": "https://baas.tail10f2ea.ts.net/auth/:path" },
     { "source": "/query/:path*", "destination": "https://baas.tail10f2ea.ts.net/query/:path*" },
     { "source": "/storage/:path*", "destination": "https://baas.tail10f2ea.ts.net/storage/:path*" }
   ],
