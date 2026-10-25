@@ -2,6 +2,7 @@ import { insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/
 import { authConfig } from '../lib/auth-config';
 import { isOAuthProviderEnabled, oauthProviders, oauthProviderLabel, type OAuthProvider } from '../lib/oauth-providers';
 import { createBrowserBaasClient } from '../lib/baas-client';
+import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
 import { notify } from './notifications';
@@ -103,29 +104,6 @@ export function mountTurnstile(portal: HTMLElement): void {
 	container.dataset.turnstileWidgetId = widgetId;
 }
 
-export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
-	try {
-		const parsed = new URL(redirectUrl, window.location.origin);
-		const allowed = [
-			window.location.origin,
-			import.meta.env.PUBLIC_OSIONOS_APP_URL,
-			'https://app.osionos.com',
-			'http://localhost:3000',
-			'http://localhost:4321',
-			'http://localhost:4322',
-		].filter(Boolean);
-		return allowed.some((origin) => {
-			try {
-				return new URL(origin).origin === parsed.origin;
-			} catch {
-				return false;
-			}
-		});
-	} catch {
-		return false;
-	}
-}
-
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const newsletterIntent = readStorage(NEWSLETTER_INTENT_KEY);
 	if (newsletterIntent && email) {
@@ -139,20 +117,21 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 
 const OAUTH_PENDING_KEY = 'prismatica.oauth.pending';
 
-function generatePkceVerifier(): string {
-	const bytes = new Uint8Array(32);
-	globalThis.crypto.getRandomValues(bytes);
+function base64Url(bytes: Uint8Array): string {
 	let binary = '';
 	for (const byte of bytes) binary += String.fromCharCode(byte);
 	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
+function generatePkceVerifier(): string {
+	const bytes = new Uint8Array(32);
+	globalThis.crypto.getRandomValues(bytes);
+	return base64Url(bytes);
+}
+
 async function sha256Base64Url(value: string): Promise<string> {
 	const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
-	const bytes = new Uint8Array(digest);
-	let binary = '';
-	for (const byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+	return base64Url(new Uint8Array(digest));
 }
 
 export async function handleOAuthSignIn(provider: OAuthProvider): Promise<void> {

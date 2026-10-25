@@ -16,10 +16,10 @@ import Layout from '../../layouts/Layout.astro';
 		</section>
 	</main>
 	<script>
-		import { useAuth } from '../../hooks/useAuth';
+		import { authConfig } from '../../lib/auth-config';
 		import { handleOAuthCallback } from '../../scripts/auth-callback';
 
 		const root = document.querySelector<HTMLElement>('[data-auth-callback]');
-		if (root) void handleOAuthCallback(root, useAuth(), window.location, window.history);
+		if (root) void handleOAuthCallback(root, { gatewayUrl: authConfig.gatewayUrl }, window.location, window.history);
 	</script>
 </Layout>

@@ -11,7 +11,7 @@
 /* ************************************************************************** */
 
 import { authConfig } from '../lib/auth-config';
-import { isTrustedOsionosRedirect } from '../scripts/portal';
+import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 import { oauthProviders } from '../lib/oauth-providers';
 
 const PENDING_KEY = 'prismatica.oauth.pending';
@@ -23,7 +23,6 @@ type PendingFlow = { verifier: string; provider: string; createdAt: number };
 type OAuthClient = {
 	gatewayUrl?: string;
 	oauthSession?: (code: string, verifier: string) => Promise<Record<string, unknown> & { ok?: boolean; status?: number }>;
-	osionosSession?: (token: string) => Promise<Record<string, unknown> & { ok?: boolean; status?: number }>;
 };
 
 type CallbackResult = {
@@ -37,15 +36,6 @@ type CallbackResult = {
 type LocationLike = Pick<Location, 'pathname' | 'search' | 'hash'>;
 type HistoryLike = Pick<History, 'state' | 'replaceState'>;
 
-function ensureNoReferrerMeta(): void {
-	if (typeof document === 'undefined') return;
-	if (document.querySelector('meta[name="referrer"]')) return;
-	const meta = document.createElement('meta');
-	meta.setAttribute('name', 'referrer');
-	meta.setAttribute('content', 'no-referrer');
-	document.head.appendChild(meta);
-}
-
 function report(root: HTMLElement, state: string, message: string): void {
 	const status = root.querySelector('[data-auth-status]');
 	if (status) {
@@ -56,7 +46,6 @@ function report(root: HTMLElement, state: string, message: string): void {
 
 function errorCodeMessage(code: string | null): string {
 	if (code === 'provider_email_needs_verification') return 'Your provider email needs verification before you can sign in.';
-	if (!code) return 'Sign-in was refused by the provider.';
 	return 'Sign-in was refused by the provider.';
 }
 
@@ -109,24 +98,7 @@ async function exchangeCode(code: string, verifier: string, client: OAuthClient)
 	return parseCallbackResult(payload, response);
 }
 
-async function handleCallback(...args: unknown[]): Promise<void> {
-	let root: HTMLElement;
-	let client: OAuthClient = {};
-	let location: LocationLike;
-	let history: HistoryLike;
-	if (args.length === 1 && args[0] && typeof args[0] === 'object' && 'root' in (args[0] as Record<string, unknown>)) {
-		const opts = args[0] as Record<string, unknown>;
-		root = opts.root as HTMLElement;
-		client = (opts.client as OAuthClient) ?? {};
-		location = (opts.location as LocationLike) ?? (globalThis.location as LocationLike);
-		history = (opts.history as HistoryLike) ?? (globalThis.history as HistoryLike);
-	} else {
-		root = args[0] as HTMLElement;
-		client = (args[1] as OAuthClient) ?? {};
-		location = (args[2] as LocationLike) ?? (globalThis.location as LocationLike);
-		history = (args[3] as HistoryLike) ?? (globalThis.history as HistoryLike);
-	}
-	ensureNoReferrerMeta();
+export async function handleOAuthCallback(root: HTMLElement, client: OAuthClient, location: LocationLike, history: HistoryLike): Promise<void> {
 	if (oauthProviders.length === 0) {
 		report(root, 'refused', 'Sign-in with a provider is not available right now.');
 		return;
@@ -134,10 +106,7 @@ async function handleCallback(...args: unknown[]): Promise<void> {
 	const params = new URLSearchParams(location.search);
 	const code = params.get('code');
 	const errorCode = params.get('error_code') ?? params.get('error');
-	// 1. readQuery
-	// 2. replaceState
 	history.replaceState(history.state, '', location.pathname);
-	// 3. readVerifier (after URL cleaned)
 	if (errorCode && !code) {
 		report(root, 'refused', errorCodeMessage(errorCode));
 		return;
@@ -155,15 +124,12 @@ async function handleCallback(...args: unknown[]): Promise<void> {
 		report(root, 'refused', 'This sign-in attempt has expired. Try again.');
 		return;
 	}
-	// 4. fetch
 	try {
 		const result = await exchangeCode(code, pending.verifier, client);
 		if (result.ok) {
 			if (result.redirectUrl) {
 				if (!isTrustedOsionosRedirect(result.redirectUrl)) {
-					report(root, 'blocked', 'The osionos workspace link did not match the expected app origin.');
-					const status = root.querySelector('[data-auth-status]');
-					if (status) status.textContent = 'Workspace redirect blocked';
+					report(root, 'blocked', 'Workspace redirect blocked: the osionos workspace link did not match the expected app origin.');
 					return;
 				}
 				globalThis.setTimeout(() => {
@@ -183,14 +149,3 @@ async function handleCallback(...args: unknown[]): Promise<void> {
 		report(root, 'unavailable', 'The sign-in service did not answer. Try again in a minute.');
 	}
 }
-
-// Aliases for differing test/import conventions.
-export const handleOAuthCallback = handleCallback;
-export const bindCallbackPage = handleCallback;
-export const mountCallbackPage = handleCallback;
-export const completeOAuthCallback = handleCallback;
-export const processOAuthCallback = handleCallback;
-export const oauthCallback = handleCallback;
-export const runCallback = handleCallback;
-export const completeOAuthSignIn = handleCallback;
-export default handleCallback;
