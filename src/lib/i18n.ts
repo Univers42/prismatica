@@ -1,10 +1,16 @@
 import { normalizeLocale } from './locale';
 
+/**
+ * Supported locale codes for the application.
+ */
 export type SupportedLocale = 'en' | 'es' | 'ar';
 
 export const SUPPORTED_LOCALES: readonly SupportedLocale[] = ['en', 'es', 'ar'];
 export const DEFAULT_LOCALE: SupportedLocale = 'en';
 
+/**
+ * UI string definitions used across the application.
+ */
 export interface UIStrings {
   readonly a11y: {
     readonly skipToContent: string;
@@ -83,6 +89,14 @@ export const DICTIONARY: TranslationDictionary = {
   },
 };
 
+/**
+ * Translates a localized string key for a given locale.
+ * Performs case-insensitive locale normalization and falls back to default locale.
+ * @param locale - The locale string (e.g. 'en', 'es', 'ar', 'pt-BR')
+ * @param key - The dot-separated translation key (e.g. 'a11y.skipToContent')
+ * @param params - Optional params for interpolation (e.g. { name: 'Alice' })
+ * @returns The translated string value
+ */
 export function t(
   locale: string,
   key: string,
