@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Signing in · Prismatica" description="Completing your Prismatica sign-in." noindex referrerPolicy="no-referrer">
+	<main id="main-content" class="auth-page" data-auth-callback>
+		<section class="auth-card" aria-labelledby="callback-title">
+			<p class="label">Sign in</p>
+			<h1 id="callback-title">Completing your sign-in…</h1>
+			<p data-auth-status role="status">Finishing up…</p>
+			<noscript><p>Signing in needs JavaScript, which is off in this browser. Turn it on and try again.</p></noscript>
+			<div class="auth-card__actions">
+				<a class="button button--primary" href="/" data-auth-home>Go to the homepage</a>
+			</div>
+		</section>
+	</main>
+	<script>
+		import { authConfig } from '../../lib/auth-config';
+		import { handleOAuthCallback } from '../../scripts/auth-callback';
+
+		const root = document.querySelector<HTMLElement>('[data-auth-callback]');
+		if (root) void handleOAuthCallback(root, { gatewayUrl: authConfig.gatewayUrl }, window.location, window.history);
+	</script>
+</Layout>

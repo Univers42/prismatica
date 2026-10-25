@@ -1,5 +1,8 @@
 import { insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
+import { isOAuthProviderEnabled, oauthProviders, oauthProviderLabel, type OAuthProvider } from '../lib/oauth-providers';
+import { createBrowserBaasClient } from '../lib/baas-client';
+import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
 import { notify } from './notifications';
@@ -108,29 +111,6 @@ export function mountTurnstile(portal: HTMLElement): void {
 	container.dataset.turnstileWidgetId = widgetId;
 }
 
-export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
-	try {
-		const parsed = new URL(redirectUrl, window.location.origin);
-		const allowed = [
-			window.location.origin,
-			import.meta.env.PUBLIC_OSIONOS_APP_URL,
-			'https://app.osionos.com',
-			'http://localhost:3000',
-			'http://localhost:4321',
-			'http://localhost:4322',
-		].filter(Boolean);
-		return allowed.some((origin) => {
-			try {
-				return new URL(origin).origin === parsed.origin;
-			} catch {
-				return false;
-			}
-		});
-	} catch {
-		return false;
-	}
-}
-
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const newsletterIntent = readStorage(NEWSLETTER_INTENT_KEY);
 	if (newsletterIntent && email) {
@@ -139,6 +119,51 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ email }),
 		}).catch(() => undefined);
+	}
+}
+
+const OAUTH_PENDING_KEY = 'prismatica.oauth.pending';
+
+function base64Url(bytes: Uint8Array): string {
+	let binary = '';
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function generatePkceVerifier(): string {
+	const bytes = new Uint8Array(32);
+	globalThis.crypto.getRandomValues(bytes);
+	return base64Url(bytes);
+}
+
+async function sha256Base64Url(value: string): Promise<string> {
+	const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+	return base64Url(new Uint8Array(digest));
+}
+
+export async function handleOAuthSignIn(provider: OAuthProvider): Promise<void> {
+	if (!isOAuthProviderEnabled(provider)) {
+		console.warn(`OAuth provider is not enabled: ${provider}`);
+		return;
+	}
+	const verifier = generatePkceVerifier();
+	const challenge = await sha256Base64Url(verifier);
+	const client = createBrowserBaasClient();
+	const gotrueProvider = provider === 'fortytwo' ? 'custom:fortytwo' : provider;
+	const scopes = provider === 'github' ? 'read:user user:email' : provider === 'fortytwo' ? 'public' : undefined;
+	const { url } = client.auth.signInWithOAuth({
+		provider: gotrueProvider as never,
+		redirectTo: `${globalThis.location.origin}/auth/callback`,
+		scopes,
+		queryParams: { code_challenge: challenge, code_challenge_method: 's256' },
+	});
+	try {
+		globalThis.sessionStorage.setItem(OAUTH_PENDING_KEY, JSON.stringify({ verifier, provider, createdAt: Date.now() }));
+	} catch {
+		// sessionStorage may be unavailable; the callback will refuse without a pending flow.
+	}
+	if (typeof globalThis.location?.assign === 'function') {
+		globalThis.location.assign(url);
 	}
 }
 
@@ -218,6 +243,9 @@ function createPortalMarkup(mode: PortalMode): string {
 							<input type="hidden" name="turnstileToken" data-turnstile-token />
 						</div>
 						<output class="portal-form-error" aria-live="assertive" role="alert" hidden></output>
+						<div class="portal-oauth portal-login-only" data-oauth-providers data-oauth-container>
+							${oauthProviders.map((provider) => `<button type="button" class="button button--secondary button--full portal-oauth__button" data-oauth-provider="${provider}" data-oauth="${provider}">Continue with ${oauthProviderLabel(provider)}</button>`).join('')}
+						</div>
 						<button class="button button--primary button--full" type="submit" data-auth-submit>
 							${quick ? 'Sign in' : 'Create workspace account'}
 						</button>
@@ -804,8 +832,8 @@ function syncAuthModeVisibility(portal: HTMLElement, mode: 'login' | 'register')
 			}
 		}
 	});
-	portal.querySelectorAll<HTMLElement>('.portal-login-only').forEach((el) => {
-		el.hidden = isRegister;
+	portal.querySelectorAll('.portal-login-only').forEach((el) => {
+		if (el instanceof HTMLElement) el.hidden = isRegister;
 	});
 }
 
@@ -864,6 +892,13 @@ export function openPortal(mode: PortalMode): void {
 	mountTurnstile(portal);
 	const elements = portalFormElements(portal);
 	if (!elements) return;
+
+	portal.querySelectorAll<HTMLButtonElement>('[data-oauth-provider]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const provider = button.dataset.oauthProvider as OAuthProvider;
+			void handleOAuthSignIn(provider);
+		});
+	});
 
 	const refreshPortalValidation = (): void => {
 		updatePortalSubmitAvailability(portal, elements);

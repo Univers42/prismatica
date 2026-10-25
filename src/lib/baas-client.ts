@@ -35,3 +35,11 @@ export const createPublicBaasClient = (accessToken?: string) => {
 export async function fetchSeededUsers(limit = 3): Promise<BaaSUser[]> {
 	return createPublicBaasClient().from<BaaSUser>('users').select({ columns: 'id,username,email', limit });
 }
+
+export function createBrowserBaasClient() {
+	return createClient({
+		url: typeof location !== 'undefined' ? location.origin : '',
+		anonKey: baasConfig.anonKey,
+		persistSession: false,
+	});
+}
