@@ -55,6 +55,8 @@ const developmentCsp = [
 	"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
 	"connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
 ].join('; ');
+// CI's deploy job polls for this to know production serves the commit it just gated.
+const buildSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'local';
 ---
 
 <!doctype html>
@@ -80,6 +82,7 @@ const developmentCsp = [
 		<meta name="twitter:image" content={socialImageUrl} />
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
 
+		<meta name="prismatica-build" content={buildSha} />
 		<meta name="prismatica-csp-mode" content={isDev ? 'development' : 'production'} />
 		{isDev && <meta http-equiv="Content-Security-Policy" content={developmentCsp} />}
 		<link rel="icon" type="image/svg+xml" href={favicon.src} />

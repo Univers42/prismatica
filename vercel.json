@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "astro",
+  "git": { "deploymentEnabled": { "main": false } },
   "installCommand": "pnpm install --no-frozen-lockfile || true",
   "buildCommand": "pnpm exec astro build",
   "outputDirectory": "dist",
