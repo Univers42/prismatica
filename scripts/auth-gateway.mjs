@@ -1001,7 +1001,7 @@ async function mintOsionosSession(request, response, options = {}) {
 	// An unknown provider date is not dropped: it makes the recency rule fail closed.
 	const nonEmailDates = nonEmailIdentities.map((identity) => Date.parse(typeof identity?.created_at === 'string' ? identity.created_at : ''));
 	const datesKnown = nonEmailDates.every((value) => Number.isFinite(value));
-	const earliest = datesKnown && nonEmailDates.length > 0 ? Math.min(...nonEmailDates) : NaN;
+	const earliest = datesKnown && nonEmailDates.length > 0 ? Math.min(...nonEmailDates) : Number.NaN;
 	const confirmedBeforeIdentities = datesKnown && Number.isFinite(confirmedAt) && Number.isFinite(earliest) && confirmedAt <= earliest;
 	const allowed = datesKnown && (identities.length === 1 || (allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
 
