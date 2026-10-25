@@ -8,6 +8,11 @@ describe('oauth-providers', () => {
 		expect(parseOAuthProviders('google, github, fortytwo')).toEqual(['google', 'github', 'fortytwo']);
 	});
 
+	it('lowercases provider names after trimming', async () => {
+		const { parseOAuthProviders } = await import('../../../src/lib/oauth-providers');
+		expect(parseOAuthProviders('Google, GITHUB')).toEqual(['google', 'github']);
+	});
+
 	it('ignores unknown providers with a warning', async () => {
 		const { parseOAuthProviders } = await import('../../../src/lib/oauth-providers');
 		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

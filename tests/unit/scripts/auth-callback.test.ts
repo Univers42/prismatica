@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -9,6 +9,10 @@ describe('auth callback', () => {
 		sessionStorage.clear();
 		localStorage.clear();
 		document.body.innerHTML = '<main data-auth-callback><p data-auth-status></p></main>';
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	it('cleans the URL before fetching', async () => {
@@ -22,6 +26,7 @@ describe('auth callback', () => {
 		sessionStorage.setItem('prismatica.oauth.pending', JSON.stringify({ verifier: 'v', provider: 'google', createdAt: Date.now() }));
 		await handleOAuthCallback(root, { gatewayUrl: '/api/auth' } as never, location as never, history as never);
 		expect(history.replaceState).toHaveBeenCalledWith(null, '', '/auth/callback');
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
 	it('reads the pending flow once and deletes it', async () => {
@@ -62,9 +67,68 @@ describe('auth callback', () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it('carries a no-referrer meta in callback.astro', () => {
-		const source = readFileSync(resolve(process.cwd(), 'src/pages/auth/callback.astro'), 'utf8');
-		expect(source).toMatch(/<meta[^>]*name="referrer"[^>]*content="no-referrer"[^>]*>/);
+	it('strips the URL on the dark path with 0 storage reads and 0 fetches', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', '');
+		const { handleOAuthCallback } = await import('../../../src/scripts/auth-callback');
+		const root = document.querySelector<HTMLElement>('[data-auth-callback]')!;
+		const history = { state: null, replaceState: vi.fn() };
+		const location = { pathname: '/auth/callback', search: '?code=abc', hash: '#access_token=t' };
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+		const getItem = vi.spyOn(sessionStorage, 'getItem');
+		await handleOAuthCallback(root, { gatewayUrl: '/api/auth' } as never, location as never, history as never);
+		expect(history.replaceState).toHaveBeenCalledWith(null, '', '/auth/callback');
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(getItem).not.toHaveBeenCalled();
+	});
+
+	it('strips a populated access_token hash before fetch and never sends or stores it', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google');
+		const { handleOAuthCallback } = await import('../../../src/scripts/auth-callback');
+		const root = document.querySelector<HTMLElement>('[data-auth-callback]')!;
+		const order: string[] = [];
+		const history = { state: null, replaceState: vi.fn(() => { order.push('replaceState'); }) };
+		const location = { pathname: '/auth/callback', search: '?code=abc', hash: '#access_token=leaked-token' };
+		const fetchMock = vi.fn(async () => {
+			order.push('fetch');
+			return new Response(JSON.stringify({ ok: true }), { status: 200 });
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		sessionStorage.setItem('prismatica.oauth.pending', JSON.stringify({ verifier: 'v', provider: 'google', createdAt: Date.now() }));
+		const sessionWrite = vi.spyOn(sessionStorage, 'setItem');
+		const localWrite = vi.spyOn(localStorage, 'setItem');
+		await handleOAuthCallback(root, { gatewayUrl: '/api/auth' } as never, location as never, history as never);
+		expect(history.replaceState).toHaveBeenCalledWith(null, '', '/auth/callback');
+		expect(order.indexOf('replaceState')).toBeLessThan(order.indexOf('fetch'));
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+		expect(url).not.toContain('leaked-token');
+		expect(String(init.body)).not.toContain('leaked-token');
+		const stored = [...Object.keys(sessionStorage), ...Object.keys(localStorage)]
+			.map((key) => `${sessionStorage.getItem(key) ?? ''}${localStorage.getItem(key) ?? ''}`)
+			.join(' ');
+		expect(stored).not.toContain('leaked-token');
+		expect([...sessionWrite.mock.calls, ...localWrite.mock.calls].flat().join(' ')).not.toContain('leaked-token');
+	});
+
+	it('renders the referrer policy meta in <head> through the Layout prop', () => {
+		const layout = readFileSync(resolve(process.cwd(), 'src/layouts/Layout.astro'), 'utf8');
+		const headStart = layout.indexOf('<head>');
+		const headEnd = layout.indexOf('</head>', headStart);
+		expect(headStart).toBeGreaterThan(-1);
+		expect(headEnd).toBeGreaterThan(headStart);
+		const head = layout.slice(headStart, headEnd);
+		const metaIndex = head.indexOf('<meta name="referrer"');
+		expect(metaIndex).toBeGreaterThan(-1);
+		expect(head).toContain('content={referrerPolicy}');
+		const firstAsset = Math.min(
+			...[head.indexOf('<link'), head.indexOf('<script')].filter((index) => index >= 0),
+		);
+		expect(metaIndex).toBeLessThan(firstAsset);
+
+		const callback = readFileSync(resolve(process.cwd(), 'src/pages/auth/callback.astro'), 'utf8');
+		expect(callback).toMatch(/<Layout[^>]*referrerPolicy="no-referrer"/);
+		expect(callback).not.toMatch(/<meta[^>]*name="referrer"/);
 	});
 
 	it('refuses a stale flow without fetching', async () => {
@@ -143,6 +207,21 @@ describe('auth callback', () => {
 		await handleOAuthCallback(root, { gatewayUrl: '/api/auth' } as never, location as never, history as never);
 		expect(fetchMock).not.toHaveBeenCalled();
 		expect(root.querySelector('[data-auth-status]')?.textContent).toContain('provider email needs verification');
+		expect(sessionStorage.getItem('prismatica.oauth.pending')).toBeNull();
+	});
+
+	it('deletes the pending flow when the code is missing without fetching', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google');
+		const { handleOAuthCallback } = await import('../../../src/scripts/auth-callback');
+		const root = document.querySelector<HTMLElement>('[data-auth-callback]')!;
+		const history = { state: null, replaceState: vi.fn() };
+		const location = { pathname: '/auth/callback', search: '?state=abc', hash: '' };
+		const fetchMock = vi.fn();
+		vi.stubGlobal('fetch', fetchMock);
+		sessionStorage.setItem('prismatica.oauth.pending', JSON.stringify({ verifier: 'v', provider: 'google', createdAt: Date.now() }));
+		await handleOAuthCallback(root, { gatewayUrl: '/api/auth' } as never, location as never, history as never);
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(sessionStorage.getItem('prismatica.oauth.pending')).toBeNull();
 	});
 
 	it('proves replaceState happens before the pending-flow read and before fetch', async () => {

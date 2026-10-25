@@ -14,6 +14,7 @@ type Props = {
 	image?: string;
 	noindex?: boolean;
 	bare?: boolean;
+	referrerPolicy?: string;
 	jsonLd?: Record<string, unknown>[];
 };
 
@@ -23,6 +24,7 @@ const {
 	image,
 	noindex = false,
 	bare = false,
+	referrerPolicy,
 	jsonLd = [],
 } = Astro.props;
 
@@ -64,6 +66,7 @@ const developmentCsp = [
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		{referrerPolicy && <meta name="referrer" content={referrerPolicy} />}
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)" />

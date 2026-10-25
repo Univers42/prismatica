@@ -285,8 +285,10 @@ describe('portal handleOAuthSignIn', () => {
 			expect(url.searchParams.get('code_challenge_method')).toBe('s256');
 			const pendingRaw = sessionStorage.getItem('prismatica.oauth.pending');
 			expect(pendingRaw).not.toBeNull();
-			const pending = JSON.parse(pendingRaw as string) as { verifier: string };
+			const pending = JSON.parse(pendingRaw as string) as { verifier: string; provider: string };
 			expect(pending.verifier).toHaveLength(43);
+			expect(pending.provider).toBe(provider);
+			expect(url.href).not.toContain(pending.verifier);
 			expect(url.searchParams.get('code_challenge')).toBe(await sha256Base64Url(pending.verifier));
 			if (scopes) expect(url.searchParams.get('scopes')).toBe(scopes);
 			else expect(url.searchParams.get('scopes')).toBeNull();

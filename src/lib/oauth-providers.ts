@@ -28,7 +28,7 @@ export function parseOAuthProviders(raw: unknown): OAuthProvider[] {
 	if (raw == null) return [];
 	const values = String(raw)
 		.split(',')
-		.map((value) => value.trim())
+		.map((value) => value.trim().toLowerCase())
 		.filter((value) => value.length > 0);
 	const result: OAuthProvider[] = [];
 	for (const value of values) {

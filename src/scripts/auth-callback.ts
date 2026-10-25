@@ -22,7 +22,6 @@ type PendingFlow = { verifier: string; provider: string; createdAt: number };
 
 type OAuthClient = {
 	gatewayUrl?: string;
-	oauthSession?: (code: string, verifier: string) => Promise<Record<string, unknown> & { ok?: boolean; status?: number }>;
 };
 
 type CallbackResult = {
@@ -78,16 +77,6 @@ function parseCallbackResult(payload: unknown, response?: Response): CallbackRes
 
 async function exchangeCode(code: string, verifier: string, client: OAuthClient): Promise<CallbackResult> {
 	const gatewayUrl = (client.gatewayUrl ?? authConfig.gatewayUrl ?? '/api/auth').replace(/\/$/, '');
-	if (typeof client.oauthSession === 'function') {
-		const result = await client.oauthSession(code, verifier);
-		return {
-			ok: result.ok === true,
-			status: typeof result.status === 'number' ? result.status : 200,
-			message: typeof result.message === 'string' ? result.message : undefined,
-			code: typeof result.code === 'string' ? result.code : undefined,
-			redirectUrl: typeof result.redirectUrl === 'string' ? result.redirectUrl : undefined,
-		};
-	}
 	const response = await fetch(`${gatewayUrl}/oauth-session`, {
 		method: 'POST',
 		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -99,14 +88,15 @@ async function exchangeCode(code: string, verifier: string, client: OAuthClient)
 }
 
 export async function handleOAuthCallback(root: HTMLElement, client: OAuthClient, location: LocationLike, history: HistoryLike): Promise<void> {
+	const params = new URLSearchParams(location.search);
+	history.replaceState(history.state, '', location.pathname);
 	if (oauthProviders.length === 0) {
 		report(root, 'refused', 'Sign-in with a provider is not available right now.');
 		return;
 	}
-	const params = new URLSearchParams(location.search);
+	const pending = readPendingFlow();
 	const code = params.get('code');
 	const errorCode = params.get('error_code') ?? params.get('error');
-	history.replaceState(history.state, '', location.pathname);
 	if (errorCode && !code) {
 		report(root, 'refused', errorCodeMessage(errorCode));
 		return;
@@ -115,7 +105,6 @@ export async function handleOAuthCallback(root: HTMLElement, client: OAuthClient
 		report(root, 'refused', 'This sign-in link is missing its code. Try again.');
 		return;
 	}
-	const pending = readPendingFlow();
 	if (!pending) {
 		report(root, 'refused', 'This sign-in attempt has already been used or expired. Try again.');
 		return;
