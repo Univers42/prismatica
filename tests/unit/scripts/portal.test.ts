@@ -190,3 +190,53 @@ describe('account mail from the portal (POST /api/auth/recover and /resend-verif
 	});
 });
 
+describe('portal OAuth buttons', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('renders no OAuth buttons when PUBLIC_OAUTH_PROVIDERS is unset', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', '');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		expect(document.querySelectorAll('[data-oauth-provider]').length).toBe(0);
+		closePortal();
+	});
+
+	it('renders one button per enabled provider', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google,github');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		const providers = Array.from(document.querySelectorAll<HTMLElement>('[data-oauth-provider]')).map((el) => el.dataset.oauthProvider);
+		expect(providers).toEqual(['google', 'github']);
+		closePortal();
+	});
+
+	it('ignores unknown providers', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google,apple');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		const providers = Array.from(document.querySelectorAll<HTMLElement>('[data-oauth-provider]')).map((el) => el.dataset.oauthProvider);
+		expect(providers).toEqual(['google']);
+		expect(warn).toHaveBeenCalled();
+		closePortal();
+		warn.mockRestore();
+	});
+
+	it('hides OAuth buttons in register mode', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('start');
+		const container = document.querySelector<HTMLElement>('[data-oauth-container]');
+		expect(container?.hidden).toBe(true);
+		closePortal();
+	});
+});
+
