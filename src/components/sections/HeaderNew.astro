@@ -1,6 +1,13 @@
 ---
 import Button from '../ui/Button.astro';
 import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
+import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale } = Astro.props;
 
 const navItems = [
 	{ href: '#apps',      label: 'Apps' },
@@ -26,6 +33,7 @@ const navItems = [
 		</nav>
 
 		<div class="header-new__actions">
+			<LanguageSwitcher currentLocale={locale} />
 			<button
 				id="theme-toggle"
 				class="header-new__theme"
@@ -61,6 +69,7 @@ const navItems = [
 			))}
 		</ul>
 		<div class="header-new__drawer-actions">
+			<LanguageSwitcher currentLocale={locale} />
 			<button
 				class="header-new__theme header-new__theme--drawer"
 				type="button"
