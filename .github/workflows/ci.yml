@@ -41,7 +41,7 @@ jobs:
   #   main, v* tags → production  https://prismatica-eta.vercel.app
   #   develop       → beta        https://prismatica-beta.vercel.app (unlisted, noindex)
   deploy-vercel:
-    name: 🚀 Deploy to Vercel (${{ github.ref == 'refs/heads/develop' && 'beta' || 'production' }})
+    name: 🚀 Deploy to Vercel
     needs: [quality-gate]
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
