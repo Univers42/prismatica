@@ -48,3 +48,4 @@ docker compose up -d --build
 - Successful login creates an osionos bridge session and redirects to `https://localhost:3001`.
 
 The complete operating guide is [../../docs/howtouse.md](../../docs/howtouse.md).
+
