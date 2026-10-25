@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isRtlLocale, getLocaleDirection, normalizeLocale, DEFAULT_RTL_LOCALES } from '../../../src/lib/locale';
-import type { Direction } from '../../../src/lib/locale';
+import { isRtlLocale, getLocaleDirection, normalizeLocale } from '../../../src/lib/locale';
 
 describe('isRtlLocale', () => {
   it('returns true for Arabic', () => {
@@ -37,6 +36,10 @@ describe('isRtlLocale', () => {
 
   it('returns true with custom RTL list syr', () => {
     expect(isRtlLocale('syr', ['syr'])).toBe(true);
+  });
+
+  it('returns true for uppercase custom RTL list SYR', () => {
+    expect(isRtlLocale('syr', ['SYR'])).toBe(true);
   });
 });
 
@@ -86,5 +89,9 @@ describe('normalizeLocale', () => {
 
   it('falls back to default on empty string', () => {
     expect(normalizeLocale('', config)).toBe('en');
+  });
+
+  it('preserves configured locale casing pt-br -> pt-BR', () => {
+    expect(normalizeLocale('pt-br', { defaultLocale: 'en', supportedLocales: ['en', 'pt-BR'] })).toBe('pt-BR');
   });
 });

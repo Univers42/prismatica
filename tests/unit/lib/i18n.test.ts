@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { t, SUPPORTED_LOCALES, DEFAULT_LOCALE, DICTIONARY } from '../../../src/lib/i18n';
+import { t } from '../../../src/lib/i18n';
 
 describe('i18n', () => {
   describe('t lookup', () => {
