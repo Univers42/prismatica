@@ -190,3 +190,120 @@ describe('account mail from the portal (POST /api/auth/recover and /resend-verif
 	});
 });
 
+describe('portal OAuth buttons', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	it('renders no OAuth buttons when PUBLIC_OAUTH_PROVIDERS is unset', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', '');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		expect(document.querySelectorAll('[data-oauth-provider]').length).toBe(0);
+		closePortal();
+	});
+
+	it('renders one button per enabled provider', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google,github');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		const providers = Array.from(document.querySelectorAll<HTMLElement>('[data-oauth-provider]')).map((el) => el.dataset.oauthProvider);
+		expect(providers).toEqual(['google', 'github']);
+		closePortal();
+	});
+
+	it('ignores unknown providers', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google,apple');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('connect');
+		const providers = Array.from(document.querySelectorAll<HTMLElement>('[data-oauth-provider]')).map((el) => el.dataset.oauthProvider);
+		expect(providers).toEqual(['google']);
+		expect(warn).toHaveBeenCalled();
+		closePortal();
+		warn.mockRestore();
+	});
+
+	it('hides OAuth buttons in register mode', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google');
+		const { openPortal, closePortal } = await import('../../../src/scripts/portal');
+		openPortal('start');
+		const container = document.querySelector<HTMLElement>('[data-oauth-container]');
+		expect(container?.hidden).toBe(true);
+		closePortal();
+	});
+});
+
+describe('portal handleOAuthSignIn', () => {
+	async function sha256Base64Url(value: string): Promise<string> {
+		const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+		const bytes = new Uint8Array(digest);
+		let binary = '';
+		for (const byte of bytes) binary += String.fromCharCode(byte);
+		return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+	}
+
+	beforeEach(() => {
+		vi.resetModules();
+		vi.unstubAllGlobals();
+		sessionStorage.clear();
+		document.body.innerHTML = '';
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = '';
+		sessionStorage.clear();
+	});
+
+	it('assigns a PKCE authorize URL for each enabled provider', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google,github,fortytwo');
+		const portalMod = await import('../../../src/scripts/portal');
+		const { openPortal, closePortal } = portalMod;
+		openPortal('connect');
+		for (const [provider, expectedProvider, scopes] of [
+			['google', 'google', undefined],
+			['github', 'github', 'read:user user:email'],
+			['fortytwo', 'custom:fortytwo', 'public'],
+		] as const) {
+			sessionStorage.clear();
+			const assign = vi.fn();
+			(globalThis as unknown as { location: { assign: typeof assign; origin: string } }).location.assign = assign;
+			const button = document.querySelector<HTMLButtonElement>(`[data-oauth-provider="${provider}"]`);
+			expect(button).not.toBeNull();
+			button?.click();
+			await vi.waitFor(() => expect(assign).toHaveBeenCalled());
+			const url = new URL(assign.mock.calls[0][0] as string);
+			expect(url.pathname.endsWith('/auth/v1/authorize')).toBe(true);
+			expect(url.searchParams.get('provider')).toBe(expectedProvider);
+			expect(url.searchParams.get('redirect_to')).toBe(`${window.location.origin}/auth/callback`);
+			expect(url.searchParams.get('code_challenge_method')).toBe('s256');
+			const pendingRaw = sessionStorage.getItem('prismatica.oauth.pending');
+			expect(pendingRaw).not.toBeNull();
+			const pending = JSON.parse(pendingRaw as string) as { verifier: string };
+			expect(pending.verifier).toHaveLength(43);
+			expect(url.searchParams.get('code_challenge')).toBe(await sha256Base64Url(pending.verifier));
+			if (scopes) expect(url.searchParams.get('scopes')).toBe(scopes);
+			else expect(url.searchParams.get('scopes')).toBeNull();
+		}
+		closePortal();
+	});
+
+	it('does nothing for a disabled provider', async () => {
+		vi.stubEnv('PUBLIC_OAUTH_PROVIDERS', 'google');
+		const { handleOAuthSignIn } = await import('../../../src/scripts/portal');
+		const assign = vi.fn();
+		(globalThis as unknown as { location: { assign: typeof assign } }).location.assign = assign;
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+		await handleOAuthSignIn('github' as never);
+		expect(assign).not.toHaveBeenCalled();
+		expect(sessionStorage.getItem('prismatica.oauth.pending')).toBeNull();
+		warn.mockRestore();
+	});
+});
+

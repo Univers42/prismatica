@@ -141,6 +141,11 @@ export default defineConfig({
 				'X-Prismatica-CSP-Mode': 'development',
 			},
 			proxy: {
+				'/auth': {
+					target: baasGatewayTarget,
+					changeOrigin: true,
+					secure: false,
+				},
 				'/api/auth': {
 					target: authGatewayTarget,
 					changeOrigin: true,
