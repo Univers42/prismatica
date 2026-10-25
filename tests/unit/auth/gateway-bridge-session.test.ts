@@ -29,7 +29,7 @@ function fakeBridge() {
 function userKong() {
 	return http.createServer((request, response) => {
 		response.writeHead(200, { 'content-type': 'application/json' });
-		response.end(JSON.stringify({ id: 'u1', email: userEmail, email_confirmed_at: confirmedAt, user_metadata: { username: 'ines' } }));
+		response.end(JSON.stringify({ id: 'u1', email: userEmail, email_confirmed_at: confirmedAt, identities: [{ provider: 'email', identity_data: { email_verified: true }, created_at: '2026-10-01T00:00:00Z' }], user_metadata: { username: 'ines' } }));
 	});
 }
 

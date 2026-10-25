@@ -43,6 +43,7 @@ export function createGotrueApi({ baseUrl, anonKey, serviceKey, fetch: fetchImpl
 	return {
 		verify: (type, tokenHash) => call('/auth/v1/verify', { body: { type, token_hash: tokenHash } }),
 		refresh: (refreshToken) => call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: refreshToken } }),
+		exchangePkce: (authCode, codeVerifier) => call('/auth/v1/token?grant_type=pkce', { body: { auth_code: authCode, code_verifier: codeVerifier } }),
 		logout: (accessToken, scope) => call(`/auth/v1/logout?scope=${scope}`, { bearer: accessToken }),
 		updatePassword: (accessToken, password) => call('/auth/v1/user', { method: 'PUT', body: { password }, bearer: accessToken }),
 		generateLink: (input) => call('/auth/v1/admin/generate_link', { body: input, admin: true }),
