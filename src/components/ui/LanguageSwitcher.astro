@@ -1,0 +1,98 @@
+---
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, t, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale, isRtlLocale } from '../../lib/locale';
+
+export type Props = {
+	readonly currentLocale?: string;
+	readonly class?: string;
+};
+
+const { currentLocale = DEFAULT_LOCALE, class: className = '' } = Astro.props;
+
+const activeLocale = normalizeLocale(currentLocale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
+
+export const LOCALE_LABELS: Record<SupportedLocale, { nativeName: string; labelKey: string }> = {
+	en: { nativeName: 'English', labelKey: 'en' },
+	es: { nativeName: 'Español', labelKey: 'es' },
+	ar: { nativeName: 'العربية', labelKey: 'ar' },
+};
+---
+
+<nav class={`lang-switcher ${className}`.trim()} aria-label={t(activeLocale, 'a11y.languageSwitcher')}>
+	<ul class="lang-switcher__list" role="list">
+		{SUPPORTED_LOCALES.map((locale) => {
+			const isActive = locale === activeLocale;
+			return (
+				<li>
+					<a
+						href={`?lang=${locale}`}
+						class={['lang-switcher__link', isActive && 'is-active'].filter(Boolean).join(' ')}
+						lang={locale}
+						dir={isRtlLocale(locale) ? 'rtl' : 'ltr'}
+						aria-current={isActive ? 'true' : undefined}
+					>
+						{LOCALE_LABELS[locale].nativeName}
+						{isActive && (
+							<span class="sr-only">({t(activeLocale, 'a11y.currentLanguage')})</span>
+						)}
+					</a>
+				</li>
+			);
+		})}
+	</ul>
+</nav>
+
+<style is:global>
+	.lang-switcher {
+		display: inline-flex;
+		gap: 0.5rem;
+		padding-inline: 0.5rem;
+		margin-inline: 0;
+		inset-inline: auto;
+	}
+
+	.lang-switcher__list {
+		display: inline-flex;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0;
+	}
+
+	.lang-switcher__link {
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.5rem 0.75rem;
+		border-radius: var(--system-radius-sm);
+		font-family: var(--system-font-sans);
+		font-size: 0.88rem;
+		font-weight: 500;
+		line-height: 1.1;
+		text-decoration: none;
+		color: var(--system-text-strong);
+		gap: 0.25rem;
+	}
+
+	.lang-switcher__link.is-active {
+		color: var(--system-action-bg);
+	}
+
+	.lang-switcher__link:focus-visible {
+		outline: 2px solid var(--osio-accent, #cc785c);
+		outline-offset: 2px;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		border: 0;
+	}
+</style>

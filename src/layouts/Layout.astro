@@ -2,6 +2,8 @@
 import '../styles/main.scss';
 import favicon from '../assets/brand/favicon.svg';
 import { authConfig } from '../lib/auth-config';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, t, type SupportedLocale } from '../lib/i18n';
+import { normalizeLocale, getLocaleDirection } from '../lib/locale';
 
 type Props = {
 	title?: string;
@@ -9,6 +11,7 @@ type Props = {
 	image?: string;
 	canonical?: string;
 	noindex?: boolean;
+	locale?: string;
 };
 
 const {
@@ -17,7 +20,15 @@ const {
 	image,
 	canonical,
 	noindex = false,
+	locale = DEFAULT_LOCALE,
 } = Astro.props;
+
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
+
+const direction = getLocaleDirection(activeLocale);
 
 // Absolute URLs for canonical + social cards (Astro.site comes from astro.config).
 const site = Astro.site;
@@ -60,7 +71,7 @@ const buildSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'local';
 ---
 
 <!doctype html>
-<html lang="en" data-theme="swiss">
+<html lang={activeLocale} dir={direction} data-theme="swiss">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -94,7 +105,7 @@ const buildSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'local';
 	<body>
 		<!-- Bypass block (WCAG 2.4.1): lives in the layout so every page has it,
 		     not just the home page. Targets the per-page <main id="main-content">. -->
-		<a href="#main-content" class="skip-link">Skip to main content</a>
+		<a href="#main-content" class="skip-link">{t(activeLocale, 'a11y.skipToContent')}</a>
 		<!-- Animated aurora backdrop — decorative; gives the glass panels something
 		     to refract. Fixed, behind everything, pointer-events:none, and frozen
 		     under prefers-reduced-motion (see _premium.scss). -->
