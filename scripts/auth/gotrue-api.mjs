@@ -41,6 +41,7 @@ export function createGotrueApi({ baseUrl, anonKey, serviceKey, fetch: fetchImpl
 
 	const id = (value) => encodeURIComponent(String(value));
 	return {
+		settings: () => call('/auth/v1/settings', { method: 'GET' }),
 		verify: (type, tokenHash) => call('/auth/v1/verify', { body: { type, token_hash: tokenHash } }),
 		refresh: (refreshToken) => call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: refreshToken } }),
 		exchangePkce: (authCode, codeVerifier) => call('/auth/v1/token?grant_type=pkce', { body: { auth_code: authCode, code_verifier: codeVerifier } }),
