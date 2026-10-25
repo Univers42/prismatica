@@ -53,20 +53,31 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       SITE_URL: https://prismatica-eta.vercel.app
     steps:
+      # The hook builds main's head, which is only this gated commit while main has not moved on;
+      # if it has, the newer commit's own run deploys it once its gate passes.
+      - name: Check this commit is still main's head
+        id: head
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then echo "current=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::main moved to ${head:0:7}; its own run deploys it — not deploying ${GITHUB_SHA:0:7}"; fi
+
       - name: Trigger the production build
+        if: steps.head.outputs.current == 'true'
         run: |
           [ -n "$HOOK" ] || { echo "::error::secret VERCEL_DEPLOY_HOOK_MAIN is unset — production was not deployed"; exit 1; }
           curl -fsS -X POST "$HOOK"
 
-      # Caveat: the hook builds main's head, so a tag pushed behind main ships main, and this waits on
-      # main's head. Bounded at 15 min; a slower Vercel queue reads as a failure — re-run the job.
+      # Caveat: bounded at 15 min — a slower Vercel queue reads as a failure, re-run the job. A tag on
+      # a commit behind main is not deployed (main's head is). A Vercel bot challenge (403) on the
+      # runner's IP reads as "not yet" until the bound.
       - name: Wait until production serves this commit
+        if: steps.head.outputs.current == 'true'
         run: |
-          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
           for _ in $(seq 90); do
             live=$(curl -fsS "$SITE_URL/" | sed -n 's/.*<meta name="prismatica-build" content="\([0-9a-f]*\)".*/\1/p')
-            echo "production serves ${live:-unknown}, want $sha"
-            if [ "$live" = "$sha" ]; then echo "Production serves ${sha:0:7}" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+            echo "production serves ${live:-unknown}, want $GITHUB_SHA"
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "Production serves ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
             sleep 10
           done
-          echo "::error::production still not on ${sha:0:7} after 15 min — check the Vercel build log"; exit 1
+          echo "::error::production still not on ${GITHUB_SHA:0:7} after 15 min — check the Vercel build log"; exit 1

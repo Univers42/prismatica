@@ -49,7 +49,7 @@ describe('Portal "Forgot password?"', () => {
 		openRecovery(fetchMock);
 		submitEmail('ines@arlet.test');
 		await vi.waitFor(() => expect(recoverCalls(fetchMock)).toHaveLength(1));
-		await vi.waitFor(() => expect($('.portal-form-error').hidden).toBe(false));
+		await vi.waitFor(() => expect($<HTMLElement>('.portal-form-error').hidden).toBe(false));
 		expect($('.portal-form-error').textContent).not.toContain('sent');
 	});
 
