@@ -1020,6 +1020,8 @@ async function mintOsionosSession(request, response, options = {}) {
 		subject,
 		email,
 		name: typeof metadata.username === 'string' ? metadata.username : email.split('@')[0],
+		// Signed with the rest so the bridge can trust it; a strict boolean, never the raw timestamp.
+		// An exempt address was never proven by its inbox, so false is its true value.
 		emailVerified: Boolean(user.email_confirmed_at) && !isVerificationExempt(verificationExempt, email),
 		jti: randomUUID(),
 	};
