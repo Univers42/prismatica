@@ -34,50 +34,53 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-  # Production deploys are triggered from here, after the gate, through a Vercel deploy hook (a
-  # secret URL; a CLI login cannot mint API tokens). The hook always builds the head of main —
-  # Vercel's Git integration made no new deployment when main was force-pushed back to an
-  # already-deployed commit (2026-10-25), and the site kept serving the reverted design.
+  # Deploys are triggered from here, after the gate, through Vercel deploy hooks (secret URLs; a CLI
+  # login cannot mint API tokens). Each hook always builds the head of its branch — Vercel's Git
+  # integration made no new deployment when main was force-pushed back to an already-deployed commit
+  # (2026-10-25), and the site kept serving the reverted design.
+  #   main, v* tags → production  https://prismatica-eta.vercel.app
+  #   develop       → beta        https://prismatica-beta.vercel.app (unlisted, noindex)
   deploy-vercel:
-    name: 🚀 Deploy to Vercel (production)
+    name: 🚀 Deploy to Vercel (${{ github.ref == 'refs/heads/develop' && 'beta' || 'production' }})
     needs: [quality-gate]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
     concurrency:
-      group: vercel-production
+      group: vercel-${{ github.ref == 'refs/heads/develop' && 'beta' || 'production' }}
       cancel-in-progress: false
     env:
-      HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_MAIN }}
+      BRANCH: ${{ github.ref == 'refs/heads/develop' && 'develop' || 'main' }}
+      HOOK: ${{ github.ref == 'refs/heads/develop' && secrets.VERCEL_DEPLOY_HOOK_DEVELOP || secrets.VERCEL_DEPLOY_HOOK_MAIN }}
+      SITE_URL: ${{ github.ref == 'refs/heads/develop' && 'https://prismatica-beta.vercel.app' || 'https://prismatica-eta.vercel.app' }}
       GH_TOKEN: ${{ github.token }}
-      SITE_URL: https://prismatica-eta.vercel.app
     steps:
-      # The hook builds main's head, which is only this gated commit while main has not moved on;
-      # if it has, the newer commit's own run deploys it once its gate passes.
-      - name: Check this commit is still main's head
+      # The hook builds its branch's head, which is only this gated commit while the branch has not
+      # moved on; if it has, the newer commit's own run deploys it once its gate passes.
+      - name: Check this commit is still the branch head
         id: head
         run: |
-          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/$BRANCH" --jq .sha)
           if [ "$head" = "$GITHUB_SHA" ]; then echo "current=true" >> "$GITHUB_OUTPUT"
-          else echo "::notice::main moved to ${head:0:7}; its own run deploys it — not deploying ${GITHUB_SHA:0:7}"; fi
+          else echo "::notice::$BRANCH moved to ${head:0:7}; its own run deploys it — not deploying ${GITHUB_SHA:0:7}"; fi
 
-      - name: Trigger the production build
+      - name: Trigger the build
         if: steps.head.outputs.current == 'true'
         run: |
-          [ -n "$HOOK" ] || { echo "::error::secret VERCEL_DEPLOY_HOOK_MAIN is unset — production was not deployed"; exit 1; }
+          [ -n "$HOOK" ] || { echo "::error::the $BRANCH deploy-hook secret is unset — $SITE_URL was not deployed"; exit 1; }
           curl -fsS -X POST "$HOOK"
 
       # Caveat: bounded at 15 min — a slower Vercel queue reads as a failure, re-run the job. A tag on
       # a commit behind main is not deployed (main's head is). A Vercel bot challenge (403) on the
       # runner's IP reads as "not yet" until the bound.
-      - name: Wait until production serves this commit
+      - name: Wait until the site serves this commit
         if: steps.head.outputs.current == 'true'
         run: |
           for _ in $(seq 90); do
             live=$(curl -fsS "$SITE_URL/" | sed -n 's/.*<meta name="prismatica-build" content="\([0-9a-f]*\)".*/\1/p')
-            echo "production serves ${live:-unknown}, want $GITHUB_SHA"
-            if [ "$live" = "$GITHUB_SHA" ]; then echo "Production serves ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+            echo "$SITE_URL serves ${live:-unknown}, want $GITHUB_SHA"
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "$SITE_URL serves ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
             sleep 10
           done
-          echo "::error::production still not on ${GITHUB_SHA:0:7} after 15 min — check the Vercel build log"; exit 1
+          echo "::error::$SITE_URL still not on ${GITHUB_SHA:0:7} after 15 min — check the Vercel build log"; exit 1
