@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "astro",
+  "git": { "deploymentEnabled": { "main": false, "develop": false } },
   "installCommand": "pnpm install --no-frozen-lockfile || true",
   "buildCommand": "pnpm exec astro build",
   "outputDirectory": "dist",
@@ -20,6 +21,11 @@
     { "source": "/storage/:path*", "destination": "https://baas.tail10f2ea.ts.net/storage/:path*" }
   ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "prismatica-beta.vercel.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
     {
       "source": "/(.*)",
       "headers": [

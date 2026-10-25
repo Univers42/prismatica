@@ -59,6 +59,10 @@ const developmentCsp = [
 	"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
 	"connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
 ].join('; ');
+// CI's deploy job polls for this to know the site serves the commit it just gated.
+const buildSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'local';
+// develop builds are the beta channel (prismatica-beta.vercel.app); testers see which commit they test.
+const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 ---
 
 <!doctype html>
@@ -84,6 +88,7 @@ const developmentCsp = [
 		<meta name="twitter:card" content="summary_large_image" />
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData).replace(/</g, '\\u003c')} />
 
+		<meta name="prismatica-build" content={buildSha} />
 		<meta name="prismatica-csp-mode" content={isDev ? 'development' : 'production'} />
 		{isDev && <meta http-equiv="Content-Security-Policy" content={developmentCsp} />}
 		<link rel="icon" type="image/svg+xml" href={favicon.src} />
@@ -98,6 +103,23 @@ const developmentCsp = [
 		{!bare && <SiteHeader />}
 		<slot />
 		{!bare && <SiteFooter />}
+		{isBeta && <p class="beta-badge">Beta · {buildSha.slice(0, 7)}</p>}
 		<script src="../scripts/main.ts"></script>
 	</body>
 </html>
+
+<style>
+	.beta-badge {
+		position: fixed;
+		inset-block-end: 0.75rem;
+		inset-inline-start: 0.75rem;
+		z-index: 1000;
+		margin: 0;
+		padding: 0.25rem 0.6rem;
+		border-radius: 999px;
+		background: #111;
+		color: #fff;
+		font: 600 0.75rem/1.2 system-ui, sans-serif;
+		pointer-events: none;
+	}
+</style>
