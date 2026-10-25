@@ -495,6 +495,18 @@ describe('oauth-session route', () => {
 		expect(hitsTo('/auth/v1/logout?scope=local')).toHaveLength(1);
 	});
 
+	it('sends no refresh cookie when the bridge answers 403 after a good exchange, and revokes', async () => {
+		setUser([{ ...EMAIL_IDENTITY }]);
+		syncUpstream();
+		bridgeStatus = 403;
+		const result = await call(oauthGateway, '/api/auth/oauth-session', { headers: OAUTH, body: { code: 'code-1', verifier: 'verifier-1' } });
+		expect(result.status).toBe(403);
+		expect(result.cookies).toEqual([]);
+		await wait(100);
+		expect(hitsTo('/auth/v1/logout?scope=local')).toHaveLength(1);
+		bridgeStatus = 200;
+	});
+
 	it('keeps the existing osionos-session caller sanitized', async () => {
 		setUser([{ ...EMAIL_IDENTITY }]);
 		syncUpstream();
