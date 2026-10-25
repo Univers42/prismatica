@@ -495,6 +495,10 @@ function syncPortalPasswordFeedback(portal: HTMLElement, elements: PortalFormEle
 }
 
 function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFormElements): void {
+	if (portal.dataset.portalMode === 'recovery') {
+		if (elements.submitButton) elements.submitButton.disabled = elements.email.value.trim().length === 0;
+		return;
+	}
 	const isRegister = portal.dataset.authMode === 'register';
 	const passwordReady = syncPortalPasswordFeedback(portal, elements);
 	const termsReady = !(elements.termsConsent instanceof HTMLInputElement) || elements.termsConsent.checked;
@@ -521,6 +525,8 @@ async function submitPortalResendVerification(portal: HTMLElement, elements: Por
 	notifyWithMascot({ kind: succeeded ? 'success' : 'error', title: succeeded ? 'Link sent' : 'Could not send a new link', message: elements.error.textContent });
 }
 
+const RECOVERY_SUBMIT_LABEL = 'Send reset link';
+
 async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
 	const email = elements.email;
 	clearPortalFieldErrors(email);
@@ -530,10 +536,14 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 	}
 	setPortalSubmitBusy(elements.submitButton, true, false);
 	try {
-		await authClient.recover({ email: email.value.trim(), turnstileToken: readTurnstileToken(portal) });
-		elements.error.textContent = 'Password reset instructions have been sent to your email address.';
+		const result = await authClient.recover({ email: email.value.trim(), turnstileToken: readTurnstileToken(portal) });
+		elements.error.textContent = result.ok
+			? 'If an account uses this address, a reset link has been sent to it. Check your inbox.'
+			: humanAuthMessage(result.message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' });
+		notifyWithMascot(result.ok
+			? { kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' }
+			: { kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Could not request password recovery.';
 		elements.error.textContent = humanAuthMessage(message);
@@ -541,6 +551,7 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 		notifyWithMascot({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, false);
+		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
 	}
 }
 
@@ -847,7 +858,16 @@ export function openPortal(mode: PortalMode): void {
 		updatePortalSubmitAvailability(portal, elements);
 	};
 
+	const passwordField = elements.password.closest('.field');
+	const setRecovery = (on: boolean): void => {
+		if (on) portal.dataset.portalMode = 'recovery';
+		else delete portal.dataset.portalMode;
+		if (passwordField instanceof HTMLElement) passwordField.hidden = on;
+		elements.password.required = !on;
+	};
+
 	const applyAuthMode = (targetMode: 'login' | 'register'): void => {
+		setRecovery(false);
 		syncAuthModeVisibility(portal, targetMode);
 		syncAuthModeCopy({
 			title: portal.querySelector('[data-auth-title]'),
@@ -874,6 +894,18 @@ export function openPortal(mode: PortalMode): void {
 		clearPortalAuthErrors(elements);
 		refreshPortalValidation();
 	};
+
+	portal.querySelector('[data-portal-action="forgot-password"]')?.addEventListener('click', () => {
+		applyAuthMode('login');
+		setRecovery(true);
+		const title = portal.querySelector('[data-auth-title]');
+		const note = portal.querySelector('[data-auth-note]');
+		if (title) title.textContent = 'Reset your password';
+		if (note) note.textContent = 'Enter your account email and we will send you a link to choose a new password.';
+		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
+		refreshPortalValidation();
+		elements.email.focus();
+	});
 
 	portal.querySelectorAll('[data-auth-switch]').forEach((btn) => {
 		btn.addEventListener('click', () => {
