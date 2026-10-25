@@ -832,7 +832,7 @@ function syncAuthModeVisibility(portal: HTMLElement, mode: 'login' | 'register')
 			}
 		}
 	});
-	portal.querySelectorAll('.portal-login-only').forEach((el) => {
+	portal.querySelectorAll<HTMLElement>('.portal-login-only').forEach((el) => {
 		if (el instanceof HTMLElement) el.hidden = isRegister;
 	});
 }

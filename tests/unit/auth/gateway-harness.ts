@@ -19,9 +19,6 @@ export const upstream = {
 	passwordStatus: 200,
 	auditDelayMs: 0,
 	existingEmails: [] as string[],
-	users: {} as Record<string, string | null>,
-	magicEmail: '',
-	lookupDelayMs: 0,
 	// /auth/v1/user: the caller's own lookup, with the fields the collision guard reads.
 	userStatus: 200,
 	user: {} as Record<string, unknown>,
@@ -34,6 +31,10 @@ export const upstream = {
 	settingsStatus: 200,
 	settings: { mailer_autoconfirm: false } as Record<string, unknown>,
 	logoutStatus: 204,
+	// P3-1-d1: the email-code sign-in lookup.
+	users: {} as Record<string, string | null>,
+	magicEmail: '',
+	lookupDelayMs: 0,
 };
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
