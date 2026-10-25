@@ -17,12 +17,14 @@ import StoryStage from '../components/layout/StoryStage.astro';
 import Notification from '../components/ui/Notification.astro';
 import ConsentBanner from '../components/gdpr/ConsentBanner.astro';
 import Layout from '../layouts/Layout.astro';
+
+const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 ---
 
-<Layout title="Prismatica — All your business apps, connected in one space">
+<Layout title="Prismatica — All your business apps, connected in one space" locale={requestedLocale}>
 	<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="global-announcer"></div>
 	<Notification />
-	<HeaderNew />
+	<HeaderNew locale={requestedLocale} />
 	<StoryStage />
 	<main id="main-content" class="swipe-stack" data-swipe-stack>
 		<section class="swipe-stack__scene" data-stage="hero"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew /><LogoStrip /></div></div></section>
