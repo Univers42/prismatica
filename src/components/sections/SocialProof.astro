@@ -1,46 +1,58 @@
 ---
 import Card from '../ui/Card.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const quotes = [
 	{
-		quote: '“We replaced four SaaS subscriptions with one Compose file. Onboarding now takes a day, not a sprint.”',
+		quoteKey: 'socialProof.quote1',
+		roleKey: 'socialProof.role1',
 		name: 'Amelia Hart',
-		role: 'Staff Engineer',
 		company: 'Northwave Studios',
 	},
 	{
-		quote: '“The GDPR plumbing alone saved us six weeks. The mascot is a bonus.”',
+		quoteKey: 'socialProof.quote2',
+		roleKey: 'socialProof.role2',
 		name: 'Jonas Reuter',
-		role: 'Head of Product',
 		company: 'Kollektiv DE',
 	},
 	{
-		quote: '“Self-hosted, audited, owned. Exactly what our security team asked for.”',
+		quoteKey: 'socialProof.quote3',
+		roleKey: 'socialProof.role3',
 		name: 'Noor Janssen',
-		role: 'CTO',
 		company: 'Axiom Lab',
 	},
-];
+] as const;
 ---
 
 <section class="section section--surface social-proof">
 	<div class="section__container">
 		<header class="section__head">
-			<Eyebrow>What teams say</Eyebrow>
-			<h2 class="section__title">Built by people shipping every week.</h2>
+			<Eyebrow data-i18n="socialProof.eyebrow">{t(activeLocale, 'socialProof.eyebrow')}</Eyebrow>
+			<h2 class="section__title" data-i18n="socialProof.title">{t(activeLocale, 'socialProof.title')}</h2>
 		</header>
 
 		<div class="social-proof__grid">
 			{quotes.map((q) => (
 				<div data-scroll-rise>
 					<Card variant="testimonial">
-						<blockquote class="social-proof__quote">{q.quote}</blockquote>
+						<blockquote class="social-proof__quote" data-i18n={q.quoteKey}>{t(activeLocale, q.quoteKey as any)}</blockquote>
 						<footer class="social-proof__author">
 							<span class="social-proof__avatar" aria-hidden="true">{q.name.split(' ').map((n) => n[0]).join('')}</span>
 							<div>
 								<strong>{q.name}</strong>
-								<span>{q.role} · {q.company}</span>
+								<span><span data-i18n={q.roleKey}>{t(activeLocale, q.roleKey as any)}</span> · {q.company}</span>
 							</div>
 						</footer>
 					</Card>
@@ -49,7 +61,6 @@ const quotes = [
 		</div>
 	</div>
 </section>
-
 <style is:global>
 	.social-proof__grid {
 		display: grid;
