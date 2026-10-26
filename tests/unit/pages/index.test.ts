@@ -34,4 +34,9 @@ describe('Index Page Locale', () => {
 		const sources = renderedSources();
 		expect(sources).toContain('locale={requestedLocale}');
 	});
+
+	it('forwards locale to HeroNew', () => {
+		const sources = renderedSources();
+		expect(sources).toContain('HeroNew locale={requestedLocale}');
+	});
 });

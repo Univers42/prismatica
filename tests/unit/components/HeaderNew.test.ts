@@ -24,4 +24,20 @@ describe('HeaderNew component', () => {
 		expect(componentMarkup).toContain('header-new__drawer-actions');
 		expect(componentMarkup).toContain('<LanguageSwitcher currentLocale={locale} isDrawer />');
 	});
+
+	it('imports t from ../lib/i18n', () => {
+		expect(componentMarkup).toContain("import { t } from '../../lib/i18n'");
+	});
+
+	it('navItems labels use t(activeLocale, ...)', () => {
+		expect(componentMarkup).toContain("t(activeLocale, 'nav.apps')");
+		expect(componentMarkup).toContain("t(activeLocale, 'nav.product')");
+		expect(componentMarkup).toContain("t(activeLocale, 'nav.pricing')");
+		expect(componentMarkup).toContain("t(activeLocale, 'nav.docs')");
+	});
+
+	it('auth buttons use t(activeLocale, ...)', () => {
+		expect(componentMarkup).toContain("t(activeLocale, 'auth.signIn')");
+		expect(componentMarkup).toContain("t(activeLocale, 'auth.startFree')");
+	});
 });
