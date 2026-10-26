@@ -7,7 +7,7 @@ export const MASCOT_LINES: ReadonlyArray<{ section: string; line: string }> = [
 	{ section: 'architecture', line: 'Ask me for a space and I lay out the engines, apps and rules.' },
 	{ section: 'pricing', line: 'Start free, or self-host the whole workspace with one command.' },
 	{ section: 'docs', line: 'Postgres plus PostgREST gives you a typed API.' },
-	{ section: 'faq', line: 'GDPR exports are one endpoint away.' },
+	{ section: 'faq', line: 'Your data stays on your own machine.' },
 ];
 
 export const ASSISTANT_PROMPT_LINE = 'Try asking: make a space for the sales team.';

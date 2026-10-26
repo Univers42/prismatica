@@ -11,10 +11,10 @@
 /* ************************************************************************** */
 
 export const POLICY_VERSION = '1.1.0';
-export const POLICY_LAST_UPDATED = '2026-10-01';
+export const POLICY_LAST_UPDATED = '2026-10-26';
 
 export const DATA_CONTROLLER = {
-	name: 'dlesieur',
+	name: 'The Prismatica team (Dylan, Vadim, Sergio, Daniel and Mostafa)',
 	email: 'dev.pro.photo@gmail.com',
 } as const;
 

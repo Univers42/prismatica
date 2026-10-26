@@ -6,7 +6,7 @@ import FeatureIcon from '../ui/FeatureIcon.astro';
 const features = [
 	{ title: 'Auth that just works', kind: 'auth' },
 	{ title: 'PostgREST + Postgres', kind: 'database' },
-	{ title: 'GDPR by default', kind: 'privacy' },
+	{ title: 'Privacy-first design', kind: 'privacy' },
 ] as const;
 ---
 
@@ -31,7 +31,7 @@ const features = [
 							<p class="ui-card__lede">Your schema is your <abbr title="Application Programming Interface: the contract software uses to talk to other software.">API</abbr>. <span class="term" title="Row-level security: database rules that limit which rows each user may read or change.">Row-level security</span>, typed queries, instant realtime — no glue code.</p>
 						)}
 						{feature.kind === 'privacy' && (
-							<p class="ui-card__lede"><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr> by default: consent ledger, <abbr title="Data Subject Access Request: a person asking to access, export, correct, or delete their data.">DSAR</abbr> exports, breach response runbook, and <abbr title="European Union.">EU</abbr> data residency baked in.</p>
+							<p class="ui-card__lede"><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr>-minded defaults: consent banner, documented data flows, and a breach-response runbook. Your data stays on the host you choose — self-service export and erasure are on the roadmap.</p>
 						)}
 					</Card>
 				</div>
