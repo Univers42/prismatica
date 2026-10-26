@@ -193,7 +193,7 @@ export function t(
   }
 
   if (params !== undefined) {
-    return value.replace(/{([a-zA-Z0-9_]+)}/g, (match: string, paramName: string) => {
+    return value.replace(/{([a-zA-Z0-9_]+)}/g, (_match: string, paramName: string) => {
       return String(params[paramName] ?? `{${paramName}}`);
     });
   }
