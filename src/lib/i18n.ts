@@ -42,6 +42,13 @@ export interface UIStrings {
   readonly greetings: {
     readonly welcomeUser: string;
   };
+  readonly finalCta: {
+    readonly title: string;
+    readonly lede: string;
+    readonly startFree: string;
+    readonly readDocs: string;
+    readonly meta: string;
+  };
 }
 
 export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
@@ -78,6 +85,13 @@ export const DICTIONARY: TranslationDictionary = {
     greetings: {
       welcomeUser: 'Welcome, {name}!',
     },
+    finalCta: {
+      title: 'Start with one page. Connect the rest as you grow.',
+      lede: 'Open source, GDPR-ready, and yours to host.',
+      startFree: 'Start free',
+      readDocs: 'Read the docs',
+      meta: 'No credit card. Self-host whenever you want.',
+    },
   },
   es: {
     a11y: {
@@ -110,6 +124,13 @@ export const DICTIONARY: TranslationDictionary = {
     greetings: {
       welcomeUser: '¡Bienvenido, {name}!',
     },
+    finalCta: {
+      title: 'Empieza con una página. Conecta el resto a medida que creces.',
+      lede: 'Código abierto, preparado para RGPD y listo para autoalojar.',
+      startFree: 'Empezar gratis',
+      readDocs: 'Leer la documentación',
+      meta: 'Sin tarjeta de crédito. Autoalojable cuando quieras.',
+    },
   },
   ar: {
     a11y: {
@@ -141,6 +162,13 @@ export const DICTIONARY: TranslationDictionary = {
     },
     greetings: {
       welcomeUser: 'مرحباً، {name}!',
+    },
+    finalCta: {
+      title: 'ابدأ بصفحة واحدة. واربط الباقي مع نمو أعمالك.',
+      lede: 'مفتوح المصدر، متوافق مع GDPR، وجاهز للاستضافة الذاتية.',
+      startFree: 'ابدأ مجاناً',
+      readDocs: 'اقرأ التوثيق',
+      meta: 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.',
     },
   },
 };
