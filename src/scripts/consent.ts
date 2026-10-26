@@ -54,6 +54,9 @@ export function bindConsentBanner(): void {
 
 	if (!readConsentPreferences()) {
 		showBanner();
+		// The banner appears without a focus change, so screen readers would
+		// not know it exists; announce it politely (WCAG 4.1.3).
+		announce('Privacy choices: choose your consent preferences.');
 	}
 
 	queryElements('[data-manage-cookies]', isButton).forEach((button) => button.addEventListener('click', () => {

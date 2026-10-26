@@ -71,7 +71,7 @@ const navItems = [
 	<div class="header-new__drawer" id="header-new-menu" hidden>
 		<ul class="header-new__list header-new__list--mobile">
 			{navItems.map((item) => (
-				<li><a class="header-new__link" href={item.href}>{item.label}</a></li>
+				<li><a class="header-new__link" href={item.href} data-i18n={item.i18nKey}>{item.label}</a></li>
 			))}
 		</ul>
 		<div class="header-new__drawer-actions">
