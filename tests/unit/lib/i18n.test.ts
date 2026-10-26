@@ -3,7 +3,7 @@ import { t } from '../../../src/lib/i18n';
 
 describe('i18n', () => {
   describe('t lookup', () => {
-    it.each([
+it.each([
       ['en', 'a11y.skipToContent', 'Skip to content'],
       ['es', 'a11y.skipToContent', 'Saltar al contenido'],
       ['ar', 'a11y.skipToContent', 'الانتقال إلى المحتوى'],
@@ -29,7 +29,7 @@ describe('i18n', () => {
       ['ar', 'auth.startFree', 'ابدأ مجاناً'],
       ['en', 'hero.title', 'All your business apps, connected in one space.'],
       ['es', 'hero.title', 'Todas tus aplicaciones de negocio, conectadas en un solo espacio.'],
-['ar', 'hero.title', 'جميع تطبيقات أعمالك، متصلة في مساحة واحدة.'],
+      ['ar', 'hero.title', 'جميع تطبيقات أعمالك، متصلة في مساحة واحدة.'],
       ['en', 'hero.lede', 'Pages, databases, boards, calendar, mail and whiteboards that link to each other, so every client, task and date lives in one place.'],
       ['es', 'hero.lede', 'Páginas, bases de datos, tableros, calendario, correo y pizarras vinculadas entre sí, para que cada cliente, tarea y fecha viva en un solo lugar.'],
       ['ar', 'hero.lede', 'صفحات وقواعد بيانات ولوحات وتقويم وبريد ولوحات بيضاء مترابطة، بحيث يعيش كل عميل ومهمة وتاريخ في مكان واحد.'],
@@ -48,6 +48,21 @@ describe('i18n', () => {
       ['en', 'actions.submit', 'Submit'],
       ['es', 'actions.submit', 'Enviar'],
       ['ar', 'actions.submit', 'إرسال'],
+      ['en', 'finalCta.title', 'Start with one page. Connect the rest as you grow.'],
+      ['es', 'finalCta.title', 'Empieza con una página. Conecta el resto a medida que creces.'],
+      ['ar', 'finalCta.title', 'ابدأ بصفحة واحدة. واربط الباقي مع نمو أعمالك.'],
+      ['en', 'finalCta.lede', 'Open source, GDPR-ready, and yours to host.'],
+      ['es', 'finalCta.lede', 'Código abierto, preparado para RGPD y listo para autoalojar.'],
+      ['ar', 'finalCta.lede', 'مفتوح المصدر، متوافق مع GDPR، وجاهز للاستضافة الذاتية.'],
+      ['en', 'finalCta.startFree', 'Start free'],
+      ['es', 'finalCta.startFree', 'Empezar gratis'],
+      ['ar', 'finalCta.startFree', 'ابدأ مجاناً'],
+      ['en', 'finalCta.readDocs', 'Read the docs'],
+      ['es', 'finalCta.readDocs', 'Leer la documentación'],
+      ['ar', 'finalCta.readDocs', 'اقرأ التوثيق'],
+      ['en', 'finalCta.meta', 'No credit card. Self-host whenever you want.'],
+      ['es', 'finalCta.meta', 'Sin tarjeta de crédito. Autoalojable cuando quieras.'],
+      ['ar', 'finalCta.meta', 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });
