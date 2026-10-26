@@ -1,98 +1,94 @@
 ---
-import { SUPPORTED_LOCALES, DEFAULT_LOCALE, t, type SupportedLocale } from '../../lib/i18n';
-import { normalizeLocale, isRtlLocale } from '../../lib/locale';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
 
 export type Props = {
 	readonly currentLocale?: string;
 	readonly class?: string;
+	readonly isDrawer?: boolean;
 };
 
-const { currentLocale = DEFAULT_LOCALE, class: className = '' } = Astro.props;
+const { currentLocale = DEFAULT_LOCALE, class: className = '', isDrawer = false } = Astro.props;
 
 const activeLocale = normalizeLocale(currentLocale, {
 	defaultLocale: DEFAULT_LOCALE,
 	supportedLocales: SUPPORTED_LOCALES,
 }) as SupportedLocale;
 
-export const LOCALE_LABELS: Record<SupportedLocale, { nativeName: string; labelKey: string }> = {
-	en: { nativeName: 'English', labelKey: 'en' },
-	es: { nativeName: 'Español', labelKey: 'es' },
-	ar: { nativeName: 'العربية', labelKey: 'ar' },
+export const LOCALE_LABELS: Record<SupportedLocale, { nativeName: string; code: string }> = {
+	en: { nativeName: 'English', code: 'EN' },
+	es: { nativeName: 'Español', code: 'ES' },
+	ar: { nativeName: 'العربية', code: 'AR' },
 };
+
+const currentIndex = SUPPORTED_LOCALES.indexOf(activeLocale);
+const nextIndex = (currentIndex + 1) % SUPPORTED_LOCALES.length;
+const nextLocale = SUPPORTED_LOCALES[nextIndex] ?? DEFAULT_LOCALE;
+
+const currentLabel = LOCALE_LABELS[activeLocale];
+const nextLabel = LOCALE_LABELS[nextLocale];
+const ariaLabel = `Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`;
+const title = `Switch to ${nextLabel.nativeName} language`;
 ---
 
-<nav class={`lang-switcher ${className}`.trim()} aria-label={t(activeLocale, 'a11y.languageSwitcher')}>
-	<ul class="lang-switcher__list" role="list">
-		{SUPPORTED_LOCALES.map((locale) => {
-			const isActive = locale === activeLocale;
-			return (
-				<li>
-					<a
-						href={`?lang=${locale}`}
-						class={['lang-switcher__link', isActive && 'is-active'].filter(Boolean).join(' ')}
-						lang={locale}
-						dir={isRtlLocale(locale) ? 'rtl' : 'ltr'}
-						aria-current={isActive ? 'true' : undefined}
-					>
-						{LOCALE_LABELS[locale].nativeName}
-						{isActive && (
-							<span class="sr-only">({t(activeLocale, 'a11y.currentLanguage')})</span>
-						)}
-					</a>
-				</li>
-			);
-		})}
-	</ul>
-</nav>
+<a
+	href={`?lang=${nextLocale}`}
+	class:list={[
+		'header-new__theme',
+		'lang-switcher',
+		isDrawer && 'header-new__theme--drawer lang-switcher--drawer',
+		className,
+	]}
+	aria-label={ariaLabel}
+	title={title}
+	data-current-lang={activeLocale}
+	data-next-lang={nextLocale}
+>
+	<svg class="header-icon--lang" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+		<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6" />
+		<path d="M3.6 9h16.8M3.6 15h16.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+		<ellipse cx="12" cy="12" rx="4.5" ry="9" fill="none" stroke="currentColor" stroke-width="1.6" />
+	</svg>
+	{isDrawer ? (
+		<span data-lang-label>{`Language: ${currentLabel.nativeName}`}</span>
+	) : (
+		<span class="header-icon__lang-badge" aria-hidden="true">{currentLabel.code}</span>
+		<span class="visually-hidden" data-lang-label>{`Language: ${currentLabel.nativeName}`}</span>
+	)}
+</a>
 
 <style is:global>
 	.lang-switcher {
-		display: inline-flex;
-		gap: 0.5rem;
-		padding-inline: 0.5rem;
-		margin-inline: 0;
-		inset-inline: auto;
-	}
-
-	.lang-switcher__list {
-		display: inline-flex;
-		gap: 0.5rem;
-		margin: 0;
-		padding: 0;
-	}
-
-	.lang-switcher__link {
-		min-height: 44px;
-		display: inline-flex;
-		align-items: center;
-		padding: 0.5rem 0.75rem;
-		border-radius: var(--system-radius-sm);
-		font-family: var(--system-font-sans);
-		font-size: 0.88rem;
-		font-weight: 500;
-		line-height: 1.1;
 		text-decoration: none;
-		color: var(--system-text-strong);
-		gap: 0.25rem;
+		position: relative;
+		display: inline-grid;
+		place-items: center;
 	}
 
-	.lang-switcher__link.is-active {
-		color: var(--system-action-bg);
+	.header-icon--lang {
+		width: 20px;
+		height: 20px;
 	}
 
-	.lang-switcher__link:focus-visible {
-		outline: 2px solid var(--osio-accent, #cc785c);
-		outline-offset: 2px;
-	}
-
-	.sr-only {
+	.header-icon__lang-badge {
 		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		border: 0;
+		inset-inline-end: 2px;
+		bottom: 2px;
+		font-family: var(--system-font-mono, monospace);
+		font-size: 0.58rem;
+		font-weight: 700;
+		line-height: 1;
+		padding: 1px 2px;
+		border-radius: 2px;
+		background: color-mix(in srgb, var(--brand-palette-primary) 25%, var(--system-surface));
+		color: var(--system-text-strong);
+		pointer-events: none;
+	}
+
+	.lang-switcher--drawer {
+		display: inline-flex;
+		justify-content: center;
+		gap: 0.5rem;
+		width: 100%;
 	}
 </style>
