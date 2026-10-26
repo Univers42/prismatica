@@ -46,6 +46,6 @@ export function easeInOut(t: number): number {
 /** `#rrggbb` (what a canvas normalises an opaque colour to) at `alpha`; anything else falls back to the brand red. */
 export function withAlpha(hex: string, alpha: number): string {
 	const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
-	const [r, g, b] = match ? [match[1], match[2], match[3]].map((part) => parseInt(part!, 16)) : [228, 0, 43];
+	const [r, g, b] = match ? [match[1], match[2], match[3]].map((part) => Number.parseInt(part!, 16)) : [228, 0, 43];
 	return `rgba(${r},${g},${b},${alpha})`;
 }

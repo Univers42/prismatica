@@ -22,7 +22,6 @@ const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 ---
 
 <Layout title="Prismatica — All your business apps, connected in one space" locale={requestedLocale}>
-	<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="global-announcer"></div>
 	<Notification />
 	<HeaderNew locale={requestedLocale} />
 	<StoryStage />

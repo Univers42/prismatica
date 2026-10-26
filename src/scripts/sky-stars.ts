@@ -100,7 +100,7 @@ export function createStarField(): StarField {
 			ctx.fill();
 			// Bright stars flare into a cross at their peak.
 			const flare = Math.max(0, twinkle - 0.88) / 0.12;
-			if (flare === 0) continue;
+			if (flare < 1e-6) continue;
 			const reach = star.size * (4 + flare * 6);
 			ctx.globalAlpha = 0.55 * flare;
 			ctx.lineWidth = 0.6;
