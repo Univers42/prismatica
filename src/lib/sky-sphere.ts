@@ -36,7 +36,7 @@ export function sphereProjector(spin: number, tilt: number, radius: number): (po
 }
 
 function hash3(x: number, y: number, z: number, seed: number): number {
-	let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1274126177) + Math.imul(seed, 2654435761)) | 0;
+	let h = Math.trunc(Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1274126177) + Math.imul(seed, 2654435761));
 	h = Math.imul(h ^ (h >>> 13), 1274126177);
 	return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
