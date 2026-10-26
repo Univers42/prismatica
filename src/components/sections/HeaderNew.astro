@@ -16,10 +16,10 @@ const activeLocale = normalizeLocale(locale, {
 }) as SupportedLocale;
 
 const navItems = [
-	{ href: '#apps',      label: t(activeLocale, 'nav.apps') },
-	{ href: '#product',   label: t(activeLocale, 'nav.product') },
-	{ href: '#pricing',   label: t(activeLocale, 'nav.pricing') },
-	{ href: '/docs/',     label: t(activeLocale, 'nav.docs') },
+	{ href: '#apps', i18nKey: 'nav.apps', label: t(activeLocale, 'nav.apps') },
+	{ href: '#product', i18nKey: 'nav.product', label: t(activeLocale, 'nav.product') },
+	{ href: '#pricing', i18nKey: 'nav.pricing', label: t(activeLocale, 'nav.pricing') },
+	{ href: '/docs/', i18nKey: 'nav.docs', label: t(activeLocale, 'nav.docs') },
 ];
 ---
 
@@ -33,7 +33,7 @@ const navItems = [
 		<nav class="header-new__nav" aria-label="Primary">
 			<ul class="header-new__list">
 				{navItems.map((item) => (
-					<li><a class="header-new__link" href={item.href}>{item.label}</a></li>
+					<li><a class="header-new__link" href={item.href} data-i18n={item.i18nKey}>{item.label}</a></li>
 				))}
 			</ul>
 		</nav>
@@ -50,8 +50,8 @@ const navItems = [
 				<svg class="header-icon--theme" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 3.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor" /><circle class="header-icon__swatch" cx="12" cy="12" r="3.4" /></svg>
 				<span class="visually-hidden" data-theme-label>Theme: Solar</span>
 			</button>
-			<Button variant="ghost" size="sm" data-open-connect>{t(activeLocale, 'auth.signIn')}</Button>
-			<Button variant="primary" size="sm" data-open-portal>{t(activeLocale, 'auth.startFree')}</Button>
+			<Button variant="ghost" size="sm" data-open-connect data-i18n="auth.signIn">{t(activeLocale, 'auth.signIn')}</Button>
+			<Button variant="primary" size="sm" data-open-portal data-i18n="auth.startFree">{t(activeLocale, 'auth.startFree')}</Button>
 		</div>
 
 		<button
@@ -86,8 +86,8 @@ const navItems = [
 				<svg class="header-icon--theme" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 3.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor" /><circle class="header-icon__swatch" cx="12" cy="12" r="3.4" /></svg>
 				<span data-theme-label>Theme: Solar</span>
 			</button>
-			<Button variant="ghost" size="md" data-open-connect full>{t(activeLocale, 'auth.signIn')}</Button>
-			<Button variant="primary" size="md" data-open-portal full>{t(activeLocale, 'auth.startFree')}</Button>
+			<Button variant="ghost" size="md" data-open-connect full data-i18n="auth.signIn">{t(activeLocale, 'auth.signIn')}</Button>
+			<Button variant="primary" size="md" data-open-portal full data-i18n="auth.startFree">{t(activeLocale, 'auth.startFree')}</Button>
 		</div>
 	</div>
 </header>

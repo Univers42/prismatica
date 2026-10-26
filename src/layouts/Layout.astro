@@ -107,7 +107,7 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 	<body>
 		<!-- Bypass block (WCAG 2.4.1): lives in the layout so every page has it,
 		     not just the home page. Targets the per-page <main id="main-content">. -->
-		<a href="#main-content" class="skip-link">{t(activeLocale, 'a11y.skipToContent')}</a>
+		<a href="#main-content" class="skip-link" data-i18n="a11y.skipToContent">{t(activeLocale, 'a11y.skipToContent')}</a>
 		<!-- Animated aurora backdrop — decorative; gives the glass panels something
 		     to refract. Fixed, behind everything, pointer-events:none, and frozen
 		     under prefers-reduced-motion (see _premium.scss). -->

@@ -26,13 +26,13 @@ const activeLocale = normalizeLocale(locale, {
 	<HeroUniverse />
 	<div class="section__container hero-new__grid">
 		<div class="hero-new__copy">
-			<h1 class="hero-new__title" id="hero-title">{t(activeLocale, 'hero.title')}</h1>
-			<p class="hero-new__lede">{t(activeLocale, 'hero.lede')}</p>
+			<h1 class="hero-new__title" id="hero-title" data-i18n="hero.title">{t(activeLocale, 'hero.title')}</h1>
+			<p class="hero-new__lede" data-i18n="hero.lede">{t(activeLocale, 'hero.lede')}</p>
 			<div class="hero-new__cta">
-				<Button variant="primary" size="lg" data-open-portal>{t(activeLocale, 'hero.startFree')}</Button>
-				<Button variant="secondary" size="lg" href="#apps">{t(activeLocale, 'hero.seeApps')}</Button>
+				<Button variant="primary" size="lg" data-open-portal data-i18n="hero.startFree">{t(activeLocale, 'hero.startFree')}</Button>
+				<Button variant="secondary" size="lg" href="#apps" data-i18n="hero.seeApps">{t(activeLocale, 'hero.seeApps')}</Button>
 			</div>
-			<p class="hero-new__note">{t(activeLocale, 'hero.note')}</p>
+			<p class="hero-new__note" data-i18n="hero.note">{t(activeLocale, 'hero.note')}</p>
 		</div>
 
 		<HeroDevices />
