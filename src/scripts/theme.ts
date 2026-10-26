@@ -108,10 +108,19 @@ function bindThemeControls(): void {
 
 /** Announces dynamic state changes to assistive technology. */
 function announce(message: string): void {
-	const announcer = queryElement('#global-announcer', isHtmlElement);
-	if (announcer) {
-		announcer.textContent = message;
+	let announcer = queryElement('#global-announcer', isHtmlElement);
+	if (!announcer) {
+		// The live region ships in Layout.astro, but guard against it being
+		// missing (older cached pages, partial DOM) so announcements still
+		// reach screen readers instead of silently disappearing.
+		announcer = document.createElement('div');
+		announcer.id = 'global-announcer';
+		announcer.className = 'visually-hidden';
+		announcer.setAttribute('aria-live', 'polite');
+		announcer.setAttribute('aria-atomic', 'true');
+		document.body.append(announcer);
 	}
+	announcer.textContent = message;
 }
 
 /* exports */
