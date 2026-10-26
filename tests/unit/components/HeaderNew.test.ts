@@ -22,6 +22,6 @@ describe('HeaderNew component', () => {
 
 	it('mounts LanguageSwitcher inside header-new__drawer-actions', () => {
 		expect(componentMarkup).toContain('header-new__drawer-actions');
-		expect(componentMarkup).toContain('<LanguageSwitcher currentLocale={locale} />');
+		expect(componentMarkup).toContain('<LanguageSwitcher currentLocale={locale} isDrawer />');
 	});
 });
