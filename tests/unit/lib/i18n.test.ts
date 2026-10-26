@@ -62,7 +62,22 @@ it.each([
       ['ar', 'finalCta.readDocs', 'اقرأ التوثيق'],
       ['en', 'finalCta.meta', 'No credit card. Self-host whenever you want.'],
       ['es', 'finalCta.meta', 'Sin tarjeta de crédito. Autoalojable cuando quieras.'],
-      ['ar', 'finalCta.meta', 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.'],
+      ['ar', 'finalCta.meta', 'لا حاجة لبطاقة ائتمان. استضافة ذاتية متى شئت.'],
+      ['en', 'featureTrio.eyebrow', 'What you get'],
+      ['es', 'featureTrio.eyebrow', 'Lo que obtienes'],
+      ['ar', 'featureTrio.eyebrow', 'ما تحصل عليه'],
+      ['en', 'featureTrio.title', 'A backend stack you would have built — already built.'],
+      ['es', 'featureTrio.title', 'El stack de backend que habrías construido — ya listo.'],
+      ['ar', 'featureTrio.title', 'بنية تحتية برمجية كما كنت لتبنيها — مبنية وجاهزة بالفعل.'],
+      ['en', 'featureTrio.authTitle', 'Auth that just works'],
+      ['es', 'featureTrio.authTitle', 'Autenticación que simplemente funciona'],
+      ['ar', 'featureTrio.authTitle', 'نظام مصادقة يعمل بسلاسة'],
+      ['en', 'featureTrio.dbTitle', 'PostgREST + Postgres'],
+      ['es', 'featureTrio.dbTitle', 'PostgREST + Postgres'],
+      ['ar', 'featureTrio.dbTitle', 'PostgREST + Postgres'],
+      ['en', 'featureTrio.privacyTitle', 'GDPR by default'],
+      ['es', 'featureTrio.privacyTitle', 'RGPD por defecto'],
+      ['ar', 'featureTrio.privacyTitle', 'متوافق مع GDPR افتراضياً'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

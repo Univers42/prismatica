@@ -59,6 +59,17 @@ export interface UIStrings {
     readonly quote3: string;
     readonly role3: string;
   };
+  readonly featureTrio: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly lede: string;
+    readonly authTitle: string;
+    readonly authLede: string;
+    readonly dbTitle: string;
+    readonly dbLede: string;
+    readonly privacyTitle: string;
+    readonly privacyLede: string;
+  };
 }
 
 export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
@@ -112,6 +123,17 @@ export const DICTIONARY: TranslationDictionary = {
       quote3: '“Self-hosted, audited, owned. Exactly what our security team asked for.”',
       role3: 'CTO',
     },
+    featureTrio: {
+      eyebrow: 'What you get',
+      title: 'A backend stack you would have built — already built.',
+      lede: 'Three primitives, one Docker Compose file, full keys to the kingdom.',
+      authTitle: 'Auth that just works',
+      authLede: 'Auth with GoTrue under the hood, social providers, magic links, and Turnstile-protected sign-ups out of the box.',
+      dbTitle: 'PostgREST + Postgres',
+      dbLede: 'Your schema is your API. Row-level security, typed queries, instant realtime — no glue code.',
+      privacyTitle: 'GDPR by default',
+      privacyLede: 'GDPR by default: consent ledger, DSAR exports, breach response runbook, and EU data residency baked in.',
+    },
   },
   es: {
     a11y: {
@@ -156,10 +178,21 @@ export const DICTIONARY: TranslationDictionary = {
       title: 'Construido por personas que entregan cada semana.',
       quote1: '“Reemplazamos cuatro suscripciones SaaS con un solo archivo Compose. La incorporación ahora lleva un día, no un sprint.”',
       role1: 'Ingeniera Principal',
-      quote2: '“La infraestructura de RGPD por sí sola nos ahorró six weeks. La mascota es un extra.”',
+      quote2: '“La infraestructura de RGPD por sí sola nos ahorró seis semanas. La mascota es un extra.”',
       role2: 'Jefe de Producto',
       quote3: '“Autoalojado, auditado y propio. Exactamente lo que pidió nuestro equipo de seguridad.”',
       role3: 'Director de Tecnología',
+    },
+    featureTrio: {
+      eyebrow: 'Lo que obtienes',
+      title: 'El stack de backend que habrías construido — ya listo.',
+      lede: 'Tres primitivas, un archivo Docker Compose, las llaves completas del reino.',
+      authTitle: 'Autenticación que simplemente funciona',
+      authLede: 'Autenticación con GoTrue por debajo, proveedores sociales, enlaces mágicos y registros protegidos con Turnstile de fábrica.',
+      dbTitle: 'PostgREST + Postgres',
+      dbLede: 'Tu esquema es tu API. Seguridad a nivel de fila, consultas tipadas y tiempo real instantáneo — sin código pegamento.',
+      privacyTitle: 'RGPD por defecto',
+      privacyLede: 'RGPD por defecto: registro de consentimientos, exportaciones ARCO/DSAR, guía de respuesta a brechas y residencia de datos en la UE.',
     },
   },
   ar: {
@@ -198,7 +231,8 @@ export const DICTIONARY: TranslationDictionary = {
       lede: 'مفتوح المصدر، متوافق مع GDPR، وجاهز للاستضافة الذاتية.',
       startFree: 'ابدأ مجاناً',
       readDocs: 'اقرأ التوثيق',
-meta: 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.',
+      meta: 'لا حاجة لبطاقة ائتمان. استضافة ذاتية متى شئت.',
+    },
     socialProof: {
       eyebrow: 'ما تقوله فرق العمل',
       title: 'صُمم بأيدي أشخاص يطلقون الإنتاج أسبوعياً.',
@@ -206,10 +240,20 @@ meta: 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى 
       role1: 'مهندسة رئيسية',
       quote2: '“بنية GDPR التحتية وحدها وفرت علينا ستة أسابيع. والتميمة ميزة إضافية.”',
       role2: 'رئيس المنتجات',
-      quote3: '“مستضيف ذاتياً، مُدقَّد، ومملوك بالكامل. exatamente ما طلبه فريق الأمان لدينا.”',
+      quote3: '“مستضيف ذاتياً، مُدقَّق، ومملوك بالكامل. تماماً ما طلبه فريق الأمان لدينا.”',
       role3: 'المدير التنفيذي للتكنولوجيا',
     },
-  },
+    featureTrio: {
+      eyebrow: 'ما تحصل عليه',
+      title: 'بنية تحتية برمجية كما كنت لتبنيها — مبنية وجاهزة بالفعل.',
+      lede: 'ثلاث لبنات أساسية، ملف Docker Compose واحد، والمفاتيح الكاملة لملكك.',
+      authTitle: 'نظام مصادقة يعمل بسلاسة',
+      authLede: 'مصادقة مدعومة بـ GoTrue، مع تسجيل دخول اجتماعي، وروابط سحرية، وحماية Turnstile مدمجة عند التسجيل.',
+      dbTitle: 'PostgREST + Postgres',
+      dbLede: 'مخطط بياناتك هو واجهة برمجة تطبيقاتك (API). أمان على مستوى الصف، استعلامات منمطة، وبث فوري دون كود وسيط.',
+      privacyTitle: 'متوافق مع GDPR افتراضياً',
+      privacyLede: 'توافق تام مع GDPR افتراضياً: سجل للموافقات، تصدير طلبات DSAR، دليل استجابة للخروقات، وإقامة بيانات في الاتحاد الأوروبي.',
+    },
   },
 };
 

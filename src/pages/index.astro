@@ -29,10 +29,10 @@ const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 	<main id="main-content" class="swipe-stack" data-swipe-stack>
 		<section class="swipe-stack__scene" data-stage="hero"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew locale={requestedLocale} /><LogoStrip /></div></div></section>
 		<section class="swipe-stack__scene" data-stage="apps"><div class="swipe-stack__card"><AppTour /></div></section>
-		<section class="swipe-stack__scene" data-stage="product"><div class="swipe-stack__card"><FeatureTrio /></div></section>
+		<section class="swipe-stack__scene" data-stage="product"><div class="swipe-stack__card"><FeatureTrio locale={requestedLocale} /></div></section>
 		<section class="swipe-stack__scene" data-stage="canvas"><div class="swipe-stack__card"><CanvasWindowsSection /></div></section>
 		<section class="swipe-stack__scene" data-stage="architecture"><div class="swipe-stack__card"><BackendArchitecture /></div></section>
-		<section class="swipe-stack__scene" data-stage="proof"><div class="swipe-stack__card"><SocialProof /></div></section>
+		<section class="swipe-stack__scene" data-stage="proof"><div class="swipe-stack__card"><SocialProof locale={requestedLocale} /></div></section>
 		<section class="swipe-stack__scene" data-stage="pricing"><div class="swipe-stack__card"><Pricing /></div></section>
 		<section class="swipe-stack__scene" data-stage="docs"><div class="swipe-stack__card"><DocsTeaser /></div></section>
 		<section class="swipe-stack__scene" data-stage="faq"><div class="swipe-stack__card"><FaqSection /></div></section>
