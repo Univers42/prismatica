@@ -26,7 +26,7 @@ describe('HeaderNew component', () => {
 	});
 
 	it('imports t from ../lib/i18n', () => {
-		expect(componentMarkup).toContain("import { t } from '../../lib/i18n'");
+		expect(componentMarkup).toContain("import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES } from '../../lib/i18n'");
 	});
 
 	it('navItems labels use t(activeLocale, ...)', () => {

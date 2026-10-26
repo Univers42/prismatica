@@ -8,15 +8,18 @@
 import Button from '../ui/Button.astro';
 import HeroUniverse from './hero/HeroUniverse.astro';
 import HeroDevices from './hero/HeroDevices.astro';
-import { t, type SupportedLocale } from '../../lib/i18n';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
 import { normalizeLocale } from '../../lib/locale';
 
 type Props = {
 	readonly locale?: string;
 };
 
-const { locale } = Astro.props;
-const activeLocale = normalizeLocale(locale) as SupportedLocale;
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 ---
 
 <section class="section section--hero hero-new" id="top" aria-labelledby="hero-title">

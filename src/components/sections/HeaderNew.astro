@@ -2,15 +2,18 @@
 import Button from '../ui/Button.astro';
 import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
 import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
-import { t } from '../../lib/i18n';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES } from '../../lib/i18n';
 import { normalizeLocale } from '../../lib/locale';
 
 type Props = {
 	readonly locale?: string;
 };
 
-const { locale } = Astro.props;
-const activeLocale = normalizeLocale(locale) as SupportedLocale;
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const navItems = [
 	{ href: '#apps',      label: t(activeLocale, 'nav.apps') },
