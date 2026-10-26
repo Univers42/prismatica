@@ -94,4 +94,12 @@ describe('normalizeLocale', () => {
   it('preserves configured locale casing pt-br -> pt-BR', () => {
     expect(normalizeLocale('pt-br', { defaultLocale: 'en', supportedLocales: ['en', 'pt-BR'] })).toBe('pt-BR');
   });
+
+  it('returns default locale for undefined input', () => {
+    expect(normalizeLocale(undefined, config)).toBe('en');
+  });
+
+  it('returns default locale for null input', () => {
+    expect(normalizeLocale(null, config)).toBe('en');
+  });
 });

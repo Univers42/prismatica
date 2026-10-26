@@ -22,6 +22,7 @@ import { queryElement, queryElements, isButton, isHtmlElement, isInput } from ".
 import { MiniBaasError } from "@grobase/js";
 import "./premium";
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, announce, ensureButtonLabels, MOTION_KEY } from "./theme";
+import { initialLocale, applyLocale, bindLanguageControls } from "./language";
 import { bindConsentBanner } from "./consent";
 import { mountMascot, setMountedMascotMood, notifyWithMascot } from "./mascot";
 import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
@@ -187,6 +188,8 @@ function init(): void {
 	bindPasswordToggles();
 	bindInteractions();
 	bindThemeControls();
+	applyLocale(initialLocale());
+	bindLanguageControls();
 	bindLogoutControls(logoutSession, announce);
 	bindScrollReveal();
 	void mountBaasStatus();

@@ -42,7 +42,11 @@ export function getLocaleDirection(locale: string, customRtlList?: readonly stri
  * @param config - Configuration with defaultLocale and supportedLocales
  * @returns The matched configured locale string, or the defaultLocale if no match is found
  */
-export function normalizeLocale(rawLocale: string, config: LocaleConfig): string {
+export function normalizeLocale(rawLocale: string | undefined | null, config: LocaleConfig): string {
+  if (typeof rawLocale !== 'string') {
+    return config.defaultLocale;
+  }
+
   const locale = rawLocale.trim().toLowerCase();
   if (locale === '') {
     return config.defaultLocale;

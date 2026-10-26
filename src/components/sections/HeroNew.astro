@@ -8,22 +8,31 @@
 import Button from '../ui/Button.astro';
 import HeroUniverse from './hero/HeroUniverse.astro';
 import HeroDevices from './hero/HeroDevices.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 ---
 
 <section class="section section--hero hero-new" id="top" aria-labelledby="hero-title">
 	<HeroUniverse />
 	<div class="section__container hero-new__grid">
 		<div class="hero-new__copy">
-			<h1 class="hero-new__title" id="hero-title">All your business apps, connected in one space.</h1>
-			<p class="hero-new__lede">
-				Pages, databases, boards, calendar, mail and whiteboards that link to each other, so
-				every client, task and date lives in one place.
-			</p>
+			<h1 class="hero-new__title" id="hero-title" data-i18n="hero.title">{t(activeLocale, 'hero.title')}</h1>
+			<p class="hero-new__lede" data-i18n="hero.lede">{t(activeLocale, 'hero.lede')}</p>
 			<div class="hero-new__cta">
-				<Button variant="primary" size="lg" data-open-portal>Start free</Button>
-				<Button variant="secondary" size="lg" href="#apps">See every app</Button>
+				<Button variant="primary" size="lg" data-open-portal data-i18n="hero.startFree">{t(activeLocale, 'hero.startFree')}</Button>
+				<Button variant="secondary" size="lg" href="#apps" data-i18n="hero.seeApps">{t(activeLocale, 'hero.seeApps')}</Button>
 			</div>
-			<p class="hero-new__note">No credit card. Self-host whenever you want.</p>
+			<p class="hero-new__note" data-i18n="hero.note">{t(activeLocale, 'hero.note')}</p>
 		</div>
 
 		<HeroDevices />

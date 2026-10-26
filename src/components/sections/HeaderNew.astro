@@ -1,12 +1,25 @@
 ---
 import Button from '../ui/Button.astro';
 import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
+import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const navItems = [
-	{ href: '#apps',      label: 'Apps' },
-	{ href: '#product',   label: 'Product' },
-	{ href: '#pricing',   label: 'Pricing' },
-	{ href: '/docs/',     label: 'Docs' },
+	{ href: '#apps', i18nKey: 'nav.apps', label: t(activeLocale, 'nav.apps') },
+	{ href: '#product', i18nKey: 'nav.product', label: t(activeLocale, 'nav.product') },
+	{ href: '#pricing', i18nKey: 'nav.pricing', label: t(activeLocale, 'nav.pricing') },
+	{ href: '/docs/', i18nKey: 'nav.docs', label: t(activeLocale, 'nav.docs') },
 ];
 ---
 
@@ -20,12 +33,13 @@ const navItems = [
 		<nav class="header-new__nav" aria-label="Primary">
 			<ul class="header-new__list">
 				{navItems.map((item) => (
-					<li><a class="header-new__link" href={item.href}>{item.label}</a></li>
+					<li><a class="header-new__link" href={item.href} data-i18n={item.i18nKey}>{item.label}</a></li>
 				))}
 			</ul>
 		</nav>
 
 		<div class="header-new__actions">
+			<LanguageSwitcher currentLocale={locale} />
 			<button
 				id="theme-toggle"
 				class="header-new__theme"
@@ -36,8 +50,8 @@ const navItems = [
 				<svg class="header-icon--theme" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 3.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor" /><circle class="header-icon__swatch" cx="12" cy="12" r="3.4" /></svg>
 				<span class="visually-hidden" data-theme-label>Theme: Solar</span>
 			</button>
-			<Button variant="ghost" size="sm" data-open-connect>Sign in</Button>
-			<Button variant="primary" size="sm" data-open-portal>Start free</Button>
+			<Button variant="ghost" size="sm" data-open-connect data-i18n="auth.signIn">{t(activeLocale, 'auth.signIn')}</Button>
+			<Button variant="primary" size="sm" data-open-portal data-i18n="auth.startFree">{t(activeLocale, 'auth.startFree')}</Button>
 		</div>
 
 		<button
@@ -61,6 +75,7 @@ const navItems = [
 			))}
 		</ul>
 		<div class="header-new__drawer-actions">
+			<LanguageSwitcher currentLocale={locale} isDrawer />
 			<button
 				class="header-new__theme header-new__theme--drawer"
 				type="button"
@@ -71,8 +86,8 @@ const navItems = [
 				<svg class="header-icon--theme" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 3.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor" /><circle class="header-icon__swatch" cx="12" cy="12" r="3.4" /></svg>
 				<span data-theme-label>Theme: Solar</span>
 			</button>
-			<Button variant="ghost" size="md" data-open-connect full>Sign in</Button>
-			<Button variant="primary" size="md" data-open-portal full>Start free</Button>
+			<Button variant="ghost" size="md" data-open-connect full data-i18n="auth.signIn">{t(activeLocale, 'auth.signIn')}</Button>
+			<Button variant="primary" size="md" data-open-portal full data-i18n="auth.startFree">{t(activeLocale, 'auth.startFree')}</Button>
 		</div>
 	</div>
 </header>
