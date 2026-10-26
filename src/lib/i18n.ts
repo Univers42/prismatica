@@ -49,6 +49,16 @@ export interface UIStrings {
     readonly readDocs: string;
     readonly meta: string;
   };
+  readonly socialProof: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly quote1: string;
+    readonly role1: string;
+    readonly quote2: string;
+    readonly role2: string;
+    readonly quote3: string;
+    readonly role3: string;
+  };
 }
 
 export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
@@ -92,6 +102,16 @@ export const DICTIONARY: TranslationDictionary = {
       readDocs: 'Read the docs',
       meta: 'No credit card. Self-host whenever you want.',
     },
+    socialProof: {
+      eyebrow: 'What teams say',
+      title: 'Built by people shipping every week.',
+      quote1: '“We replaced four SaaS subscriptions with one Compose file. Onboarding now takes a day, not a sprint.”',
+      role1: 'Staff Engineer',
+      quote2: '“The GDPR plumbing alone saved us six weeks. The mascot is a bonus.”',
+      role2: 'Head of Product',
+      quote3: '“Self-hosted, audited, owned. Exactly what our security team asked for.”',
+      role3: 'CTO',
+    },
   },
   es: {
     a11y: {
@@ -131,6 +151,16 @@ export const DICTIONARY: TranslationDictionary = {
       readDocs: 'Leer la documentación',
       meta: 'Sin tarjeta de crédito. Autoalojable cuando quieras.',
     },
+    socialProof: {
+      eyebrow: 'Lo que dicen los equipos',
+      title: 'Construido por personas que entregan cada semana.',
+      quote1: '“Reemplazamos cuatro suscripciones SaaS con un solo archivo Compose. La incorporación ahora lleva un día, no un sprint.”',
+      role1: 'Ingeniera Principal',
+      quote2: '“La infraestructura de RGPD por sí sola nos ahorró six weeks. La mascota es un extra.”',
+      role2: 'Jefe de Producto',
+      quote3: '“Autoalojado, auditado y propio. Exactamente lo que pidió nuestro equipo de seguridad.”',
+      role3: 'Director de Tecnología',
+    },
   },
   ar: {
     a11y: {
@@ -168,8 +198,18 @@ export const DICTIONARY: TranslationDictionary = {
       lede: 'مفتوح المصدر، متوافق مع GDPR، وجاهز للاستضافة الذاتية.',
       startFree: 'ابدأ مجاناً',
       readDocs: 'اقرأ التوثيق',
-      meta: 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.',
+meta: 'لا حاجة لبطاقة ائتمان. استضافةذاتية متى شئت.',
+    socialProof: {
+      eyebrow: 'ما تقوله فرق العمل',
+      title: 'صُمم بأيدي أشخاص يطلقون الإنتاج أسبوعياً.',
+      quote1: '“استبدلنا أربعة اشتراكات SaaS بملف Compose واحد. أصبح انضمام الفريق يستغرق يوماً واحداً لا مرحلة كاملة.”',
+      role1: 'مهندسة رئيسية',
+      quote2: '“بنية GDPR التحتية وحدها وفرت علينا ستة أسابيع. والتميمة ميزة إضافية.”',
+      role2: 'رئيس المنتجات',
+      quote3: '“مستضيف ذاتياً، مُدقَّد، ومملوك بالكامل. exatamente ما طلبه فريق الأمان لدينا.”',
+      role3: 'المدير التنفيذي للتكنولوجيا',
     },
+  },
   },
 };
 
