@@ -20,6 +20,20 @@ export interface UIStrings {
   readonly nav: {
     readonly home: string;
     readonly docs: string;
+    readonly apps: string;
+    readonly product: string;
+    readonly pricing: string;
+  };
+  readonly auth: {
+    readonly signIn: string;
+    readonly startFree: string;
+  };
+  readonly hero: {
+    readonly title: string;
+    readonly lede: string;
+    readonly startFree: string;
+    readonly seeApps: string;
+    readonly note: string;
   };
   readonly actions: {
     readonly close: string;
@@ -41,7 +55,21 @@ export const DICTIONARY: TranslationDictionary = {
     },
     nav: {
       home: 'Home',
-      docs: 'Documentation',
+      docs: 'Docs',
+      apps: 'Apps',
+      product: 'Product',
+      pricing: 'Pricing',
+    },
+    auth: {
+      signIn: 'Sign in',
+      startFree: 'Start free',
+    },
+    hero: {
+      title: 'All your business apps, connected in one space.',
+      lede: 'Pages, databases, boards, calendar, mail and whiteboards that link to each other, so every client, task and date lives in one place.',
+      startFree: 'Start free',
+      seeApps: 'See every app',
+      note: 'No credit card. Self-host whenever you want.',
     },
     actions: {
       close: 'Close',
@@ -60,6 +88,20 @@ export const DICTIONARY: TranslationDictionary = {
     nav: {
       home: 'Inicio',
       docs: 'Documentación',
+      apps: 'Aplicaciones',
+      product: 'Producto',
+      pricing: 'Precios',
+    },
+    auth: {
+      signIn: 'Iniciar sesión',
+      startFree: 'Empezar gratis',
+    },
+    hero: {
+      title: 'Todas tus aplicaciones de negocio, conectadas en un solo espacio.',
+      lede: 'Páginas, bases de datos, tableros, calendario, correo y pizarras vinculadas entre sí, para que cada cliente, tarea y fecha viva en un solo lugar.',
+      startFree: 'Empezar gratis',
+      seeApps: 'Ver todas las apps',
+      note: 'Sin tarjeta de crédito. Autoalojable cuando quieras.',
     },
     actions: {
       close: 'Cerrar',
@@ -78,6 +120,20 @@ export const DICTIONARY: TranslationDictionary = {
     nav: {
       home: 'الرئيسية',
       docs: 'التوثيق',
+      apps: 'تطبيقات',
+      product: 'المنتج',
+      pricing: 'الأسعار',
+    },
+    auth: {
+      signIn: 'تسجيل الدخول',
+      startFree: 'ابدأ مجاناً',
+    },
+    hero: {
+      title: 'جميع تطبيقات أعمالك، متصلة في مساحة واحدة.',
+      lede: 'صفحات وقواعد بيانات ولوحات وتقويم وبريد ولوحات بيضاء مترابطة، بحيث يعيش كل عميل ومهمة وتاريخ في مكان واحد.',
+      startFree: 'ابدأ مجاناً',
+      seeApps: 'عرض جميع التطبيقات',
+      note: 'بدون بطاقة ائتمان. استضفها بنفسك متى شئت.',
     },
     actions: {
       close: 'إغلاق',
@@ -137,7 +193,7 @@ export function t(
   }
 
   if (params !== undefined) {
-    return value.replace(/{([a-zA-Z0-9_]+)}/g, (match: string, paramName: string) => {
+    return value.replace(/{([a-zA-Z0-9_]+)}/g, (_match: string, paramName: string) => {
       return String(params[paramName] ?? `{${paramName}}`);
     });
   }

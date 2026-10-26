@@ -18,3 +18,25 @@ describe('Index Page Anchors', () => {
 		}
 	});
 });
+
+describe('Index Page Locale', () => {
+	it('reads lang search param', () => {
+		const sources = renderedSources();
+		expect(sources).toContain("Astro.url.searchParams.get('lang')");
+	});
+
+	it('passes locale to Layout', () => {
+		const sources = renderedSources();
+		expect(sources).toContain('locale={requestedLocale}');
+	});
+
+	it('passes locale to HeaderNew', () => {
+		const sources = renderedSources();
+		expect(sources).toContain('locale={requestedLocale}');
+	});
+
+	it('forwards locale to HeroNew', () => {
+		const sources = renderedSources();
+		expect(sources).toContain('HeroNew locale={requestedLocale}');
+	});
+});
