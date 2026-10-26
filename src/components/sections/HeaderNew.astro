@@ -105,19 +105,26 @@ const navItems = [
 		const toggle = root.querySelector('[data-header-toggle]');
 		const drawer = root.querySelector('#header-new-menu');
 		if (!(toggle instanceof HTMLElement) || !(drawer instanceof HTMLElement)) return;
-		const setDrawerOpen = (open: boolean): void => {
+
+		const setOpen = (open: boolean) => {
 			toggle.setAttribute('aria-expanded', String(open));
 			drawer.hidden = !open;
 			document.body.classList.toggle('drawer-open', open);
 		};
+
 		toggle.addEventListener('click', () => {
-			setDrawerOpen(toggle.getAttribute('aria-expanded') !== 'true');
+			const open = toggle.getAttribute('aria-expanded') === 'true';
+			setOpen(!open);
 		});
-		// WCAG 2.1.2: Escape closes the mobile drawer and returns focus to
-		// the toggle so keyboard users are not left inside it.
-		drawer.addEventListener('keydown', (event) => {
-			if (event.key === 'Escape') {
-				setDrawerOpen(false);
+
+		// Mobile: close the drawer after choosing a section so the page is usable.
+		drawer.querySelectorAll('a[href]').forEach((link) => {
+			link.addEventListener('click', () => setOpen(false));
+		});
+
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+				setOpen(false);
 				toggle.focus();
 			}
 		});
