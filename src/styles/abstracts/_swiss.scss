@@ -413,10 +413,6 @@
 	.consent-banner__version { display: none; }
 	.consent-banner__actions { flex-wrap: nowrap; }
 	.consent-banner__preferences { grid-column: 1 / -1; }
-	/* Keep the bar SLIM: the preferences form stays collapsed until "Manage"
-	   is clicked. The base .consent-banner__preferences{display:grid} overrode
-	   the [hidden] attribute, so the toggle could never hide it. */
-	.consent-banner__preferences[hidden] { display: none !important; }
 
 	/* Phones: a compact two-row bar (title, then Accept / Reject with Manage
 	   beneath) instead of a panel covering a quarter of the screen. */

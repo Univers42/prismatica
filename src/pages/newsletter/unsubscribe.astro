@@ -1,43 +1,27 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AuthResult from '../../components/ui/AuthResult.astro';
 ---
 
 <Layout title="Unsubscribe from Prismatica" description="Unsubscribe from the Prismatica newsletter." noindex>
 	<main id="main-content" class="auth-page" data-newsletter-unsubscribe>
-		<section class="auth-card" aria-labelledby="newsletter-unsubscribe-title">
-			<p class="eyebrow">Newsletter</p>
-			<h1 id="newsletter-unsubscribe-title">Unsubscribing…</h1>
-			<p data-newsletter-unsubscribe-status role="status" aria-live="polite">Processing your unsubscribe request.</p>
-			<a class="text-link" href="/">Return home</a>
-		</section>
+		<AuthResult id="newsletter-unsubscribe" eyebrow="Newsletter" title="Unsubscribing you…" message="Removing your address from the newsletter. This takes a few seconds." />
 	</main>
 	<script>
-		const root = document.querySelector('[data-newsletter-unsubscribe]') as HTMLElement | null;
-		const status = root?.querySelector('[data-newsletter-unsubscribe-status]');
-		const token = new URLSearchParams(window.location.search).get('token');
-		const setStatus = (message: string, isError = false) => {
-			if (!status) return;
-			status.textContent = message;
-			status.classList.toggle('is-error', isError);
+		import { showAuthResult, type AuthResult } from '../../scripts/auth-result';
+		import { postNewsletterToken, type NewsletterOutcome } from '../../scripts/newsletter-link';
+
+		const USE_LATEST = 'Open the most recent newsletter you received and select its “One-click unsubscribe” link.';
+		const RESULTS: Record<NewsletterOutcome, AuthResult> = {
+			done: { tone: 'success', title: 'You are unsubscribed', message: 'You will not receive the Prismatica newsletter any more. Emails about your account, such as sign-in links, are not affected.', steps: [] },
+			missing: { tone: 'notice', title: 'This unsubscribe link is incomplete', message: 'Part of the link is missing, so your address could not be identified. Nothing was changed.', steps: [USE_LATEST] },
+			refused: { tone: 'notice', title: 'This unsubscribe link no longer works', message: 'It was already used or has expired. If it was already used, you are unsubscribed.', steps: [`Still receiving the newsletter? ${USE_LATEST}`] },
+			unreachable: { tone: 'danger', title: 'The newsletter service did not answer', message: 'Your request could not be processed right now. Nothing was changed.', steps: ['Check your internet connection.', 'Open the unsubscribe link again in a minute.'] },
 		};
-		async function unsubscribe() {
-			if (!token) {
-				setStatus('This unsubscribe link is missing its token.', true);
-				return;
-			}
-			try {
-				const response = await fetch('/api/newsletter/unsubscribe', {
-					method: 'POST',
-					headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-					body: JSON.stringify({ token }),
-				});
-				if (!response.ok) throw new Error('newsletter_unsubscribe_failed');
-			} catch {
-				setStatus('This unsubscribe link is invalid or has already been used.', true);
-				return;
-			}
-			setStatus('You have been unsubscribed from the Prismatica newsletter.');
-		}
-		void unsubscribe().catch(() => setStatus('Could not unsubscribe right now. Please try again later.', true));
+
+		const card = document.querySelector<HTMLElement>('[data-newsletter-unsubscribe] [data-auth-result]');
+		void postNewsletterToken(fetch, '/api/newsletter/unsubscribe', window.location.search).then((outcome) => {
+			if (card) showAuthResult(card, RESULTS[outcome]);
+		});
 	</script>
 </Layout>

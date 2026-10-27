@@ -3,17 +3,10 @@
    gateway body is shown except the plain reference code. */
 
 import type { CallbackProblem } from './auth-callback';
+import type { AuthResult } from './auth-result';
 import type { OAuthProvider } from './portal-oauth';
 
-export type CallbackTone = 'notice' | 'danger';
-
-export type CallbackCopy = {
-	tone: CallbackTone;
-	title: string;
-	message: string;
-	steps: string[];
-	action: string;
-};
+export type CallbackCopy = Required<Omit<AuthResult, 'code'>>;
 
 const PROVIDER_NAMES: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 

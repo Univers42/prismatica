@@ -1,80 +1,26 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import AuthResult from '../../components/ui/AuthResult.astro';
 ---
 
 <Layout title="Signing in · Prismatica" description="Completing your Prismatica sign-in." noindex referrerPolicy="no-referrer">
 	<main id="main-content" class="auth-page" data-auth-callback>
-		<section class="auth-card auth-callback" aria-labelledby="callback-title" data-tone="loading">
-			<div class="auth-callback__badge" aria-hidden="true">
-				<span class="auth-callback__spinner" data-callback-icon="loading"></span>
-				<svg data-callback-icon="notice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-					<circle cx="12" cy="12" r="10"></circle>
-					<path d="M12 16v-4"></path>
-					<path d="M12 8h.01"></path>
-				</svg>
-				<svg data-callback-icon="danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-					<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-					<path d="M12 9v4"></path>
-					<path d="M12 17h.01"></path>
-				</svg>
-			</div>
-			<p class="eyebrow">Sign in</p>
-			<h1 id="callback-title" tabindex="-1">Finishing your sign-in…</h1>
-			<p class="auth-callback__message" data-callback-message role="status" aria-live="polite">Confirming your account with the provider and opening your workspace. This takes a few seconds.</p>
-			<noscript><p class="auth-callback__message">Signing in needs JavaScript. Turn it on, then start again from the homepage.</p></noscript>
-			<div class="auth-callback__next" data-callback-next hidden>
-				<h2 class="auth-callback__subtitle">What you can do</h2>
-				<ol class="auth-callback__steps" data-callback-steps></ol>
-			</div>
-			<div class="auth-callback__actions" data-callback-actions hidden>
-				<button class="button button--primary" type="button" data-open-connect data-callback-action>Try again</button>
-				<a class="button button--ghost" href="/">Back to homepage</a>
-			</div>
-			<p class="auth-callback__reference" data-callback-reference hidden>Reference <code data-callback-code></code></p>
-		</section>
+		<AuthResult id="callback" eyebrow="Sign in" title="Finishing your sign-in…" message="Confirming your account with the provider and opening your workspace. This takes a few seconds." />
 	</main>
 	<script>
 		import { authConfig } from '../../lib/auth-config';
 		import { completeOAuthCallback } from '../../scripts/auth-callback';
 		import { callbackCopy } from '../../scripts/auth-callback-copy';
+		import { showAuthResult } from '../../scripts/auth-result';
 
-		const root = document.querySelector<HTMLElement>('[data-auth-callback]');
-		const card = root?.querySelector<HTMLElement>('.auth-callback');
-		const title = root?.querySelector<HTMLElement>('#callback-title');
-		const message = root?.querySelector('[data-callback-message]');
-		const steps = root?.querySelector('[data-callback-steps]');
-		const action = root?.querySelector('[data-callback-action]');
-		const code = root?.querySelector('[data-callback-code]');
-
-		const reveal = (selector: string) => {
-			const element = root?.querySelector(selector);
-			if (element instanceof HTMLElement) element.hidden = false;
-		};
+		const card = document.querySelector<HTMLElement>('[data-auth-callback] [data-auth-result]');
 
 		void completeOAuthCallback(authConfig.gatewayUrl, window.location, window.history, window.sessionStorage).then((outcome) => {
 			if (outcome.kind === 'redirect') {
 				window.location.assign(outcome.url);
 				return;
 			}
-			const copy = callbackCopy(outcome.problem, outcome.provider);
-			document.title = `${copy.title} · Prismatica`;
-			card?.setAttribute('data-tone', copy.tone);
-			if (title) title.textContent = copy.title;
-			if (message) message.textContent = copy.message;
-			steps?.replaceChildren(
-				...copy.steps.map((step) => {
-					const item = document.createElement('li');
-					item.textContent = step;
-					return item;
-				}),
-			);
-			if (action) action.textContent = copy.action;
-			if (code) code.textContent = outcome.code;
-			reveal('[data-callback-next]');
-			reveal('[data-callback-actions]');
-			reveal('[data-callback-reference]');
-			// The heading carries the outcome: focus moves there so a screen reader starts on it.
-			title?.focus();
+			if (card) showAuthResult(card, { ...callbackCopy(outcome.problem, outcome.provider), code: outcome.code });
 		});
 	</script>
 </Layout>
