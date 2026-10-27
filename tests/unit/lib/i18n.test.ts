@@ -99,6 +99,21 @@ it.each([
       ['en', 'docsTeaser.openDocs', 'Open the docs'],
       ['es', 'docsTeaser.openDocs', 'Abrir la documentación'],
       ['ar', 'docsTeaser.openDocs', 'افتح التوثيق'],
+      ['en', 'pricing.eyebrow', 'Pricing'],
+      ['es', 'pricing.eyebrow', 'Precios'],
+      ['ar', 'pricing.eyebrow', 'الأسعار'],
+      ['en', 'pricing.title', 'Pick a tier. Switch anytime.'],
+      ['es', 'pricing.title', 'Elige un plan. Cambia cuando quieras.'],
+      ['ar', 'pricing.title', 'اختر خطتك. وبدّل في أي وقت.'],
+      ['en', 'pricing.freeName', 'Free'],
+      ['es', 'pricing.freeName', 'Gratis'],
+      ['ar', 'pricing.freeName', 'مجاني'],
+      ['en', 'pricing.teamName', 'Team'],
+      ['es', 'pricing.teamName', 'Equipo'],
+      ['ar', 'pricing.teamName', 'فريق'],
+      ['en', 'pricing.selfName', 'Self-hosted'],
+      ['es', 'pricing.selfName', 'Autoalojado'],
+      ['ar', 'pricing.selfName', 'استضافة ذاتية'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

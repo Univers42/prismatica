@@ -88,6 +88,39 @@ export interface UIStrings {
     readonly q5: string;
     readonly a5: string;
   };
+  readonly pricing: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly lede: string;
+    readonly mostPopular: string;
+    readonly freeName: string;
+    readonly freePrice: string;
+    readonly freeCadence: string;
+    readonly freeSummary: string;
+    readonly freeFeature1: string;
+    readonly freeFeature2: string;
+    readonly freeFeature3: string;
+    readonly freeFeature4: string;
+    readonly freeCta: string;
+    readonly teamName: string;
+    readonly teamPrice: string;
+    readonly teamCadence: string;
+    readonly teamSummary: string;
+    readonly teamFeature1: string;
+    readonly teamFeature2: string;
+    readonly teamFeature3: string;
+    readonly teamFeature4: string;
+    readonly teamCta: string;
+    readonly selfName: string;
+    readonly selfPrice: string;
+    readonly selfCadence: string;
+    readonly selfSummary: string;
+    readonly selfFeature1: string;
+    readonly selfFeature2: string;
+    readonly selfFeature3: string;
+    readonly selfFeature4: string;
+    readonly selfCta: string;
+  };
   readonly docsTeaser: {
     readonly eyebrow: string;
     readonly title: string;
@@ -194,6 +227,39 @@ export const DICTIONARY: TranslationDictionary = {
       q5: 'What about security audits?',
       a5: 'Auth flows ship with Turnstile, rate-limit and CSP defaults. The repo includes a published threat model, breach-response runbook, and OWASP ASVS L2 mapping in /docs/gdpr/.',
     },
+    pricing: {
+      eyebrow: 'Pricing',
+      title: 'Pick a tier. Switch anytime.',
+      lede: 'No seat counts. No vendor lock-in. Self-host whenever you want.',
+      mostPopular: 'Most popular',
+      freeName: 'Free',
+      freePrice: '€0',
+      freeCadence: 'forever',
+      freeSummary: 'For solo builders and side projects.',
+      freeFeature1: '1 project · 5K MAU',
+      freeFeature2: 'Auth, Database, Storage',
+      freeFeature3: 'Community support',
+      freeFeature4: 'EU data residency',
+      freeCta: 'Start free',
+      teamName: 'Team',
+      teamPrice: '€39',
+      teamCadence: 'per project · month',
+      teamSummary: 'For teams with users in production.',
+      teamFeature1: '10 projects · 50K MAU',
+      teamFeature2: 'Realtime, Edge Functions',
+      teamFeature3: 'SSO + audit logs',
+      teamFeature4: 'Email support, 24h SLA',
+      teamCta: 'Start 14-day trial',
+      selfName: 'Self-hosted',
+      selfPrice: 'Free',
+      selfCadence: 'forever · MIT',
+      selfSummary: 'Run the whole stack on your VPS.',
+      selfFeature1: 'Unlimited everything',
+      selfFeature2: 'Docker Compose + Helm',
+      selfFeature3: 'Audited GDPR runbooks',
+      selfFeature4: 'Optional paid support',
+      selfCta: 'See the docs',
+    },
   },
   es: {
     a11y: {
@@ -270,19 +336,52 @@ socialProof: {
       privacyTitle: 'RGPD por defecto',
       privacyLede: 'RGPD por defecto: registro de consentimientos, exportaciones ARCO/DSAR, guía de respuesta a brechas y residencia de datos en la UE.',
     },
-    faq: {
+faq: {
       eyebrow: 'Preguntas frecuentes',
       title: 'Respuestas, antes de que preguntes.',
       q1: '¿Realmente puedo autoalojar todo el stack?',
       a1: 'Sí. Todo el repositorio de infraestructura backend tiene licencia MIT: Kong, GoTrue, PostgREST, Postgres, MailHog. Un docker compose up y funciona en local; las mismas imágenes se despliegan en cualquier VPS.',
       q2: '¿Dónde residen mis datos?',
-      a2: 'Donde tú decidas. El plan alojado opera en regiones de la UE (París y Fráncfort). Autoalojado significa tus máquinas, tu jurisdicción, tu DPA — nunca vemos los datos.',
+      a2: 'Donde tú decida. El plan alojado opera en regiones de la UE (París y Fráncfort). Autoalojado significa tus máquinas, tu jurisdicción, tu DPA — nunca vemos los datos.',
       q3: '¿Cómo funciona el precio a medida que crezco?',
       a3: 'Pagas por proyecto activo, no por usuario. Pasa de Free a Team con un solo clic. Si superas Team, autoaloja: el mismo código, sin migración.',
       q4: '¿Cómo migro desde otro BaaS?',
       a4: 'Con PostgREST tu esquema es tu API. La mayoría de equipos importa su volcado existente, conecta Kong y lo publica en menos de un día. Tenemos recetas de migración para Supabase, Firebase y Hasura.',
       q5: '¿Qué hay de las auditorías de seguridad?',
       a5: 'Los flujos de autenticación incluyen Turnstile, límites de tasa y CSP por defecto. El repositorio incluye un modelo de amenazas publicado, guía de respuesta a brechas y correspondencia con OWASP ASVS L2 en /docs/gdpr/.',
+    },
+    pricing: {
+      eyebrow: 'Precios',
+      title: 'Elige un plan. Cambia cuando quieras.',
+      lede: 'Sin recuento de usuarios. Sin permanencia. Autoaloja cuando quieras.',
+      mostPopular: 'Más popular',
+      freeName: 'Gratis',
+      freePrice: '€0',
+      freeCadence: 'para siempre',
+      freeSummary: 'Para desarrolladores independientes y proyectos secundarios.',
+      freeFeature1: '1 proyecto · 5K MAU',
+      freeFeature2: 'Autenticación, Base de datos, Almacenamiento',
+      freeFeature3: 'Soporte comunitario',
+      freeFeature4: 'Residencia de datos en la UE',
+      freeCta: 'Empezar gratis',
+      teamName: 'Equipo',
+      teamPrice: '€39',
+      teamCadence: 'por proyecto · mes',
+      teamSummary: 'Para equipos con usuarios en producción.',
+      teamFeature1: '10 proyectos · 50K MAU',
+      teamFeature2: 'Tiempo real, Funciones Edge',
+      teamFeature3: 'SSO + registros de auditoría',
+      teamFeature4: 'Soporte por email, SLA 24h',
+      teamCta: 'Iniciar prueba de 14 días',
+      selfName: 'Autoalojado',
+      selfPrice: 'Gratis',
+      selfCadence: 'para siempre · MIT',
+      selfSummary: 'Ejecuta todo el stack en tu VPS.',
+      selfFeature1: 'Ilimitado en todo',
+      selfFeature2: 'Docker Compose + Helm',
+      selfFeature3: 'Manuales de RGPD auditados',
+      selfFeature4: 'Soporte de pago opcional',
+      selfCta: 'Ver la documentación',
     },
   },
   ar: {
@@ -360,7 +459,7 @@ socialProof: {
       privacyTitle: 'متوافق مع GDPR افتراضياً',
       privacyLede: 'توافق تام مع GDPR افتراضياً: سجل للموافقات، تصدير طلبات DSAR، دليل استجابة للخروقات، وإقامة بيانات في الاتحاد الأوروبي.',
     },
-    faq: {
+faq: {
       eyebrow: 'الأسئلة الشائعة',
       title: 'إجابات، قبل أن تسأل.',
       q1: 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟',
@@ -373,6 +472,39 @@ socialProof: {
       a4: 'بفضل PostgREST مخطط بياناتك هو واجهة API نفسها. معظم الفرق تستورد قاعدة بياناتها الحالية، وتوجه Kong إليها، وتطلق الإنتاج في أقل من يوم. لدينا إرشادات ترحيل من Supabase و Firebase و Hasura.',
       q5: 'ماذا عن تدقيق الأمان والامتثال؟',
       a5: 'مسارات المصادقة تأتي مدمجة مع Turnstile وحدود الاستخدام وسياسات CSP افتراضياً. يتضمن المستودع نموذج تهديد منشور، ودليل استجابة للخروقات، ومطابقة مع معيار OWASP ASVS L2 في /docs/gdpr/.',
+    },
+    pricing: {
+      eyebrow: 'الأسعار',
+      title: 'اختر خطتك. وبدّل في أي وقت.',
+      lede: 'بدون حساب للمقاعد. بدون قيود مزودين. استضفها بنفسك متى شئت.',
+      mostPopular: 'الأكثر طلباً',
+      freeName: 'مجاني',
+      freePrice: '€0',
+      freeCadence: 'للأبد',
+      freeSummary: 'للمطورين المستقلين والمشاريع الجانبية.',
+      freeFeature1: 'مشروع واحد · 5 آلاف مستخدم نشط',
+      freeFeature2: 'مصادقة، قواعد بيانات، تخزين',
+      freeFeature3: 'دعم المجتمع',
+      freeFeature4: 'إقامة البيانات في الاتحاد الأوروبي',
+      freeCta: 'ابدأ مجاناً',
+      teamName: 'فريق',
+      teamPrice: '€39',
+      teamCadence: 'لكل مشروع · شهرياً',
+      teamSummary: 'للفرق التي لديها مستخدمون في الإنتاج.',
+      teamFeature1: '10 مشاريع · 50 ألف مستخدم نشط',
+      teamFeature2: 'تفاعل فوري، دوال طرفية (Edge)',
+      teamFeature3: 'تسجيل دخول موحد (SSO) وسجلات تدقيق',
+      teamFeature4: 'دعم عبر البريد، اتفاقية مستوى خدمة 24 ساعة',
+      teamCta: 'ابدأ تجربة 14 يوماً',
+      selfName: 'استضافة ذاتية',
+      selfPrice: 'مجاني',
+      selfCadence: 'للأبد · MIT',
+      selfSummary: 'شغّل البنية بالكامل على خادم VPS الخاص بك.',
+      selfFeature1: 'كل شيء غير محدود',
+      selfFeature2: 'Docker Compose + Helm',
+      selfFeature3: 'دليل إجراءات GDPR مدقق',
+      selfFeature4: 'دعم مدفوع اختياري',
+      selfCta: 'شاهد التوثيق',
     },
   },
 };

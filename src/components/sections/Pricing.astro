@@ -3,94 +3,111 @@ import Button from '../ui/Button.astro';
 import Card from '../ui/Card.astro';
 import Badge from '../ui/Badge.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const tiers = [
 	{
 		id: 'free',
-		name: 'Free',
-		price: '€0',
-		cadence: 'forever',
-		summary: 'For solo builders and side projects.',
-		features: [
-			'1 project · 5K MAU',
-			'Auth, Database, Storage',
-			'Community support',
-			'EU data residency',
+		nameKey: 'pricing.freeName',
+		priceKey: 'pricing.freePrice',
+		cadenceKey: 'pricing.freeCadence',
+		summaryKey: 'pricing.freeSummary',
+		featureKeys: [
+			'pricing.freeFeature1',
+			'pricing.freeFeature2',
+			'pricing.freeFeature3',
+			'pricing.freeFeature4',
 		],
-		cta: { label: 'Start free', variant: 'secondary', action: 'open-portal-start' },
+		cta: { labelKey: 'pricing.freeCta', variant: 'secondary', action: 'open-portal-start' },
 		emphasized: false,
 	},
 	{
 		id: 'team',
-		name: 'Team',
-		price: '€39',
-		cadence: 'per project · month',
-		summary: 'For teams with users in production.',
-		features: [
-			'10 projects · 50K MAU',
-			'Realtime, Edge Functions',
-			'SSO + audit logs',
-			'Email support, 24h SLA',
+		nameKey: 'pricing.teamName',
+		priceKey: 'pricing.teamPrice',
+		cadenceKey: 'pricing.teamCadence',
+		summaryKey: 'pricing.teamSummary',
+		featureKeys: [
+			'pricing.teamFeature1',
+			'pricing.teamFeature2',
+			'pricing.teamFeature3',
+			'pricing.teamFeature4',
 		],
-		cta: { label: 'Start 14-day trial', variant: 'primary', action: 'open-portal-start' },
+		cta: { labelKey: 'pricing.teamCta', variant: 'primary', action: 'open-portal-start' },
 		emphasized: true,
 	},
 	{
 		id: 'self',
-		name: 'Self-hosted',
-		price: 'Free',
-		cadence: 'forever · MIT',
-		summary: 'Run the whole stack on your VPS.',
-		features: [
-			'Unlimited everything',
-			'Docker Compose + Helm',
-			'Audited GDPR runbooks',
-			'Optional paid support',
+		nameKey: 'pricing.selfName',
+		priceKey: 'pricing.selfPrice',
+		cadenceKey: 'pricing.selfCadence',
+		summaryKey: 'pricing.selfSummary',
+		featureKeys: [
+			'pricing.selfFeature1',
+			'pricing.selfFeature2',
+			'pricing.selfFeature3',
+			'pricing.selfFeature4',
 		],
-		cta: { label: 'See the docs', variant: 'secondary', action: 'open-docs' },
+		cta: { labelKey: 'pricing.selfCta', variant: 'secondary', action: 'open-docs' },
 		emphasized: false,
 	},
-];
+] as const;
 ---
 
 <section class="section section--sunken pricing" id="pricing">
 	<div class="section__container">
 		<header class="section__head">
-			<Eyebrow>Pricing</Eyebrow>
-			<h2 class="section__title">Pick a tier. Switch anytime.</h2>
-			<p class="section__lede">No seat counts. No vendor lock-in. Self-host whenever you want.</p>
+			<Eyebrow data-i18n="pricing.eyebrow">{t(activeLocale, 'pricing.eyebrow')}</Eyebrow>
+			<h2 class="section__title" data-i18n="pricing.title">{t(activeLocale, 'pricing.title')}</h2>
+			<p class="section__lede" data-i18n="pricing.lede">{t(activeLocale, 'pricing.lede')}</p>
 		</header>
 
 		<div class="pricing__grid">
-			{tiers.map((tier) => (
-				<div data-scroll-grow class={`pricing__cell ${tier.emphasized ? 'pricing__cell--emphasized' : ''}`}>
-					<Card variant="pricing" emphasized={tier.emphasized}>
-						<div class="pricing__head">
-							<h3 class="ui-card__title">{tier.name}</h3>
-							{tier.emphasized && <Badge tone="accent" size="sm">Most popular</Badge>}
-						</div>
-						<p class="pricing__price">
-							<span
-								class="pricing__amount"
-								data-count-to={/^€(\d+)$/.exec(tier.price)?.[1]}
-								data-count-prefix={/^€\d/.test(tier.price) ? '€' : undefined}
-							>{tier.price}</span>
-							<span class="pricing__cadence">{tier.cadence}</span>
-						</p>
-						<p class="ui-card__lede">{tier.summary}</p>
-						<ul class="pricing__features" role="list">
-							{tier.features.map((f) => (<li>{f}</li>))}
-						</ul>
-						<Button
-							variant={tier.cta.variant as 'primary' | 'secondary'}
-							size="md"
-							full
-							href={tier.cta.action === 'open-docs' ? '/docs/' : undefined}
-							data-open-portal={tier.cta.action === 'open-portal-start' ? true : undefined}
-						>{tier.cta.label}</Button>
-					</Card>
-				</div>
-			))}
+			{tiers.map((tier) => {
+				const priceVal = t(activeLocale, tier.priceKey as any);
+				return (
+					<div data-scroll-grow class={`pricing__cell ${tier.emphasized ? 'pricing__cell--emphasized' : ''}`}>
+						<Card variant="pricing" emphasized={tier.emphasized}>
+							<div class="pricing__head">
+								<h3 class="ui-card__title" data-i18n={tier.nameKey}>{t(activeLocale, tier.nameKey as any)}</h3>
+								{tier.emphasized && <Badge tone="accent" size="sm" data-i18n="pricing.mostPopular">{t(activeLocale, 'pricing.mostPopular')}</Badge>}
+							</div>
+							<p class="pricing__price">
+								<span
+									class="pricing__amount"
+									data-i18n={tier.priceKey}
+									data-count-to={/^€(\d+)$/.exec(priceVal)?.[1]}
+									data-count-prefix={/^€\d/.test(priceVal) ? '€' : undefined}
+								>{priceVal}</span>
+								<span class="pricing__cadence" data-i18n={tier.cadenceKey}>{t(activeLocale, tier.cadenceKey as any)}</span>
+							</p>
+							<p class="ui-card__lede" data-i18n={tier.summaryKey}>{t(activeLocale, tier.summaryKey as any)}</p>
+							<ul class="pricing__features" role="list">
+								{tier.featureKeys.map((fKey) => (<li data-i18n={fKey}>{t(activeLocale, fKey as any)}</li>))}
+							</ul>
+							<Button
+								variant={tier.cta.variant as 'primary' | 'secondary'}
+								size="md"
+								full
+								href={tier.cta.action === 'open-docs' ? '/docs/' : undefined}
+								data-open-portal={tier.cta.action === 'open-portal-start' ? true : undefined}
+								data-i18n={tier.cta.labelKey}
+							>{t(activeLocale, tier.cta.labelKey as any)}</Button>
+						</Card>
+					</div>
+				);
+			})}
 		</div>
 	</div>
 </section>
@@ -105,9 +122,6 @@ const tiers = [
 	.pricing__cell { height: 100%; }
 	.pricing__cell .ui-card { height: 100%; }
 
-	/* The emphasized tier earns a warm accent ring + top rule so "Most popular"
-	   reads at a glance, not just from the badge. Scoped to pricing so the
-	   shared .ui-card--emphasized (dark ink) is untouched elsewhere. */
 	.pricing__cell--emphasized .ui-card {
 		border-color: var(--brand-palette-primary);
 		box-shadow:
@@ -155,8 +169,6 @@ const tiers = [
 		list-style: none;
 		font-size: 0.92rem;
 	}
-	/* A drawn tick, not a ✓ glyph: the web font has none, and the fallback
-	   depends on the visitor's system fonts (a missing-glyph box on some). */
 	.pricing__features li::before {
 		content: '';
 		display: inline-block;
