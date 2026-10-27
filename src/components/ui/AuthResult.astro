@@ -40,6 +40,7 @@ const { id, eyebrow, title, message, hidden = false } = Astro.props;
 	</div>
 	<div class="auth-result__actions" data-result-actions hidden>
 		<button class="button button--primary" type="button" data-open-connect data-result-action></button>
+		<a class="button button--primary" href="/" data-result-continue hidden>Open your workspace</a>
 		<a class="button button--ghost" href="/">Back to homepage</a>
 	</div>
 	<p class="auth-result__reference" data-result-reference hidden>Reference <code data-result-code></code></p>

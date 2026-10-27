@@ -13,13 +13,14 @@ function card(): HTMLElement {
 		['ol', 'steps'],
 		['div', 'actions'],
 		['button', 'action'],
+		['a', 'continue'],
 		['p', 'reference'],
 		['code', 'code'],
 	];
 	for (const [tag, name] of parts) {
 		const element = document.createElement(tag);
 		element.setAttribute(`data-result-${name}`, '');
-		if (['next', 'actions', 'reference'].includes(name)) element.hidden = true;
+		if (['next', 'actions', 'continue', 'reference'].includes(name)) element.hidden = true;
 		if (name === 'title') element.tabIndex = -1;
 		section.append(element);
 	}
@@ -56,6 +57,16 @@ describe('showAuthResult', () => {
 		expect(part(section, 'action').hidden).toBe(true);
 		expect(part(section, 'actions').hidden).toBe(false);
 		expect(part(section, 'reference').hidden).toBe(true);
+	});
+
+	it('turns the action into a link to the given page instead of the sign-in button', () => {
+		const section = card();
+		showAuthResult(section, { tone: 'success', title: 'Signed in', message: 'Password removed.', steps: [], action: 'Open your workspace', continueUrl: 'https://app.test/workspace' });
+		const link = part(section, 'continue') as HTMLAnchorElement;
+		expect(link.hidden).toBe(false);
+		expect(link.textContent).toBe('Open your workspace');
+		expect(link.href).toBe('https://app.test/workspace');
+		expect(part(section, 'action').hidden).toBe(true);
 	});
 
 	it('renders gateway text as text, never as markup', () => {

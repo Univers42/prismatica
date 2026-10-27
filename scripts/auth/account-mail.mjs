@@ -118,6 +118,16 @@ export function createAccountMail({ store, queue, gotrue, mailer, render, links,
 			queue.push('password-changed', () => sendMessage(email, 'passwordChanged', { changedAt }, 'password_changed_email_sent'));
 		},
 
+		/**
+		 * The provider sign-in that removed a password (oauth-link.mjs). Audited under the password
+		 * notice's event: it is the same kind of mail, and the audit names are a database CHECK.
+		 */
+		scheduleAccountLinked(email, changedAt, counts) {
+			const shown = (value) => (Number.isInteger(value) ? String(value) : 'could not be counted');
+			const vars = { changedAt, aiTokensRevoked: shown(counts.ai_tokens_revoked), patsRevoked: shown(counts.pats_revoked), membersToReview: shown(counts.workspace_members_to_review) };
+			queue.push('account-linked', () => sendMessage(email, 'accountLinked', vars, 'password_changed_email_sent'));
+		},
+
 		/** The verification-off (local only) path's answer to a taken address: the same mail. */
 		async scheduleAccountExists(email) {
 			await accept('register', email, () => sendMessage(email, 'accountExists', {}, 'account_exists_email_sent'));

@@ -46,6 +46,30 @@ describe('createGotrueApi', () => {
 		expect(calls[1].init.method).toBe('GET');
 	});
 
+	it('reads, updates and removes a factor of a user through the admin routes', async () => {
+		const { calls, fetchImpl } = recorder();
+		const gotrue = createGotrueApi({ ...base, fetch: fetchImpl });
+		await gotrue.getUser('u1');
+		await gotrue.updateUser('u1', { app_metadata: { a: 1 } });
+		await gotrue.deleteFactor('u1', 'f/1');
+		expect(calls.map((call) => `${call.init.method} ${call.url}`)).toEqual([
+			'GET http://kong:8000/auth/v1/admin/users/u1',
+			'PUT http://kong:8000/auth/v1/admin/users/u1',
+			'DELETE http://kong:8000/auth/v1/admin/users/u1/factors/f%2F1',
+		]);
+		expect(JSON.parse(String(calls[1].init.body))).toEqual({ app_metadata: { a: 1 } });
+		for (const call of calls) expect(call.init.headers).toMatchObject({ apikey: 'service', authorization: 'Bearer service' });
+	});
+
+	it('reaches PostgREST with the service key and the asked Prefer header', async () => {
+		const { calls, fetchImpl } = recorder(200, [{ id: 't1' }]);
+		const result = await createGotrueApi({ ...base, fetch: fetchImpl }).serviceRest('ai_access_tokens?user_id=eq.u1&select=id', { method: 'PATCH', body: { revoked_at: 'now' }, prefer: 'return=representation' });
+		expect(result.body).toEqual([{ id: 't1' }]);
+		expect(calls[0].url).toBe('http://kong:8000/rest/v1/ai_access_tokens?user_id=eq.u1&select=id');
+		expect(calls[0].init.method).toBe('PATCH');
+		expect(calls[0].init.headers).toMatchObject({ apikey: 'service', authorization: 'Bearer service', prefer: 'return=representation' });
+	});
+
 	it('runs the TOTP challenge and verify with the user token', async () => {
 		const { calls, fetchImpl } = recorder(200, { id: 'ch1' });
 		const gotrue = createGotrueApi({ ...base, fetch: fetchImpl });
