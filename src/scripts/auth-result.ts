@@ -10,6 +10,8 @@ export type AuthResult = {
 	steps: string[];
 	// Label of the button that opens the sign-in window; without one only "Back to homepage" shows.
 	action?: string;
+	// With it the action is a link there, not the sign-in button; a same-site page checks it first.
+	continueUrl?: string;
 	// Plain support reference, shown only when set.
 	code?: string;
 };
@@ -39,8 +41,14 @@ export function showAuthResult(card: HTMLElement, result: AuthResult): void {
 	);
 	setShown(part(card, 'next'), result.steps.length > 0);
 	const action = part(card, 'action');
-	if (action) action.textContent = result.action ?? '';
-	setShown(action, Boolean(result.action));
+	if (action) action.textContent = result.continueUrl ? '' : (result.action ?? '');
+	setShown(action, Boolean(result.action) && !result.continueUrl);
+	const continueLink = part(card, 'continue');
+	if (continueLink instanceof HTMLAnchorElement) {
+		continueLink.textContent = result.action ?? '';
+		continueLink.href = result.continueUrl ?? '#';
+	}
+	setShown(continueLink, Boolean(result.continueUrl));
 	setShown(part(card, 'actions'), true);
 	const code = part(card, 'code');
 	if (code) code.textContent = result.code ?? '';

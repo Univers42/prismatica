@@ -4,7 +4,10 @@
  * Order of checks (verdict B): the link's own signature and exp (C1, no GoTrue call when it
  * fails) → the password policy (so a weak password never spends a link) → GoTrue /verify.
  * A reset then runs PUT /user, POST /logout?scope=global, the session cut-off the osionos
- * bridge enforces (C8), and the "password changed" notice.
+ * bridge enforces (C8), and the "password changed" notice. A reset that signed out everywhere and
+ * cut off osionos also leaves the `mailbox_proof` marker, which lets a later Google/GitHub sign-in
+ * to the address reach the account without another reset (oauth-link.mjs, C341). Confirming a
+ * signup writes none: under autoconfirm a pre-hijacker can confirm an address it does not read.
  *
  * A user with a verified TOTP factor is asked for the code and reaches aal2 through GoTrue's
  * challenge/verify before PUT /user (C4). Because /verify has already spent the link by then,
@@ -70,6 +73,12 @@ export function createLinkFlows({ gotrue, store, linkKey, nowMs, passwordAccepta
 		return { state: { ...state, accessToken: verified.body.access_token ?? state.accessToken, aal2: true } };
 	}
 
+	async function writeMailboxProof(state, at) {
+		const proof = { at, email: String(state.email).trim().toLowerCase(), by: 'password_reset' };
+		const written = await gotrue.updateUser(state.userId, { app_metadata: { mailbox_proof: proof } });
+		if (!written.ok) audit('password_reset_marker_failed', { user_id: state.userId, status: written.status });
+	}
+
 	async function finish(state, ticket) {
 		const loggedOut = await gotrue.logout(state.accessToken, 'global');
 		if (!loggedOut.ok) audit('password_reset_logout_failed', { user_id: state.userId, status: loggedOut.status });
@@ -78,6 +87,7 @@ export function createLinkFlows({ gotrue, store, linkKey, nowMs, passwordAccepta
 		if (!cut) audit('password_reset_cutoff_failed', { user_id: state.userId });
 		if (ticket) await Promise.all([store.del(ticketKey(ticket)), store.del(attemptsKey(ticket))]);
 		if (state.email) notifyPasswordChanged(state.email);
+		if (loggedOut.ok && cut && state.email) await writeMailboxProof(state, at);
 		audit('password_reset_completed', { user_id: state.userId });
 		return { status: 200, body: { message: 'Your password was changed. Sign in again with the new password.', signed_out_everywhere: loggedOut.ok && cut } };
 	}

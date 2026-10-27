@@ -26,7 +26,7 @@ describe('completeOAuthCallback', () => {
 		startFlow();
 		const fetchMock = gateway({ redirectUrl: APP });
 		const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, fetchMock);
-		expect(outcome).toEqual({ kind: 'redirect', url: APP });
+		expect(outcome).toEqual({ kind: 'redirect', url: APP, credentialReset: false, provider: 'google' });
 		const [url, init] = fetchMock.mock.calls[0];
 		expect(url).toBe('/api/auth/oauth-session');
 		expect(JSON.parse(String(init?.body))).toEqual({ code: 'code-1', verifier: 'verifier-1' });
@@ -48,6 +48,18 @@ describe('completeOAuthCallback', () => {
 		const replay = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, fetchMock);
 		expect(replay.kind).toBe('error');
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('reports a sign-in that removed the account password, and maps the link refusals', async () => {
+		startFlow();
+		const reset = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({ redirectUrl: APP, credential_reset: true }));
+		expect(reset).toEqual({ kind: 'redirect', url: APP, credentialReset: true, provider: 'google' });
+		const problems: Record<string, string> = { oauth_mfa_account: 'mfa_account', oauth_link_busy: 'service_down', oauth_link_unavailable: 'service_down', oauth_link_reset_failed: 'link_unfinished' };
+		for (const [error, problem] of Object.entries(problems)) {
+			startFlow();
+			const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({ error }, 409));
+			expect(outcome, error).toMatchObject({ kind: 'error', problem, code: error });
+		}
 	});
 
 	it('maps provider and gateway refusals to a problem and a plain reference code', async () => {

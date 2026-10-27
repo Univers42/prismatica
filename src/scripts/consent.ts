@@ -46,6 +46,13 @@ export function bindConsentBanner(): void {
 	const rejectAll = banner.querySelector('[data-consent-reject-all]');
 	const showBanner = (): void => banner.removeAttribute('hidden');
 	const hideBanner = (): void => banner.setAttribute('hidden', '');
+	// The fixed bar covered the footer's last rows; the body reserves its live
+	// height (0 while hidden, taller when "Manage" expands).
+	if (typeof ResizeObserver !== 'undefined') {
+		new ResizeObserver(([entry]) => {
+			document.documentElement.style.setProperty('--consent-banner-height', `${entry?.borderBoxSize[0]?.blockSize ?? 0}px`);
+		}).observe(banner);
+	}
 	const save = (analytics: boolean, newsletter: boolean, marketing: boolean): void => {
 		storeConsentPreferences({ analytics, newsletter, marketing });
 		hideBanner();

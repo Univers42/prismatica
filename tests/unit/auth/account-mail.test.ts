@@ -238,3 +238,14 @@ describe('the password-changed notice', () => {
 		expect(await deps.store.get(addressBucketKey('ines@arlet.test'))).toBe('3');
 	});
 });
+
+describe('the account-linked notice', () => {
+	it('names what the reset revoked, and an uncounted step as such', async () => {
+		const { mail, deps } = setup();
+		mail.scheduleAccountLinked('ines@arlet.test', 'Thursday 15 October 2026 at 12:00 UTC', { ai_tokens_revoked: 2, pats_revoked: 0, workspace_members_to_review: null });
+		await deps.queue.runAll();
+		const notice = deps.mailer.send.mock.calls.map(([sent]) => sent).find((sent) => sent.subject === 'Your sign-in was linked and your password removed');
+		expect(notice?.text).toContain('AI access tokens revoked: 2. Personal access tokens revoked: 0.');
+		expect(notice?.text).toContain('besides you: could not be counted.');
+	});
+});

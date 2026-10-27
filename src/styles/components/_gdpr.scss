@@ -13,7 +13,13 @@
 .consent-banner {
 	position: fixed;
 	inset: auto 1rem 1rem;
-	z-index: 80;
+	// Above the footer card (.swipe-stack__tail, 9999, 88 % canvas) and the mascot (10000):
+	// below them the bar showed through the footer as a faded strip.
+	z-index: 10001;
+}
+
+body:has(.consent-banner:not([hidden])) {
+	padding-block-end: var(--consent-banner-height, 0px);
 }
 
 .consent-banner__paper,

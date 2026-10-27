@@ -31,6 +31,10 @@ export const upstream = {
 	settingsStatus: 200,
 	settings: { mailer_autoconfirm: false } as Record<string, unknown>,
 	logoutStatus: 204,
+	// /auth/v1/admin/users/<id> and its /factors: what oauth-link.mjs reads; null serves `user`.
+	adminUser: null as Record<string, unknown> | null,
+	factorsStatus: 200,
+	factors: [] as unknown[],
 };
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
@@ -88,6 +92,8 @@ function fakeKong() {
 				if (parsed.code === '888888') return send(429, { error: 'too_many_attempts' });
 				return send(401, { error: 'invalid_code' });
 			}
+			if (/^\/auth\/v1\/admin\/users\/[^/]+\/factors$/.test(path) && request.method === 'GET') return send(upstream.factorsStatus, upstream.factors);
+			if (/^\/auth\/v1\/admin\/users\/[^/]+$/.test(path) && request.method === 'GET') return send(200, upstream.adminUser ?? upstream.user);
 			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: 'd'.repeat(56) });
 			if (path.startsWith('/rest/v1/users') && request.method === 'GET') {
 				const taken = upstream.existingEmails.some((email) => decodeURIComponent(path).includes(`email=eq.${email}`));
