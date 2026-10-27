@@ -12,6 +12,8 @@ import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
 import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 import { createPortalMarkup } from './portal-markup';
+import { bindPortalOAuth } from './portal-oauth';
+import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 
 export type PortalMode = 'start' | 'connect';
 
@@ -134,29 +136,6 @@ type RpcStatus = {
 	ok: boolean;
 	status: number;
 };
-
-export function isTrustedOsionosRedirect(redirectUrl: string): boolean {
-	try {
-		const parsed = new URL(redirectUrl, window.location.origin);
-		const allowed = [
-			window.location.origin,
-			import.meta.env.PUBLIC_OSIONOS_APP_URL,
-			'https://app.osionos.com',
-			'http://localhost:3000',
-			'http://localhost:4321',
-			'http://localhost:4322',
-		].filter(Boolean);
-		return allowed.some((origin) => {
-			try {
-				return new URL(origin).origin === parsed.origin;
-			} catch {
-				return false;
-			}
-		});
-	} catch {
-		return false;
-	}
-}
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const preferences = readConsentPreferences();
@@ -929,6 +908,8 @@ export function openPortal(mode: PortalMode): void {
 		passwordForm: elements.form,
 		onSession: (token) => completePortalLogin(token, elements.email.value.trim()),
 	});
+
+	void bindPortalOAuth(portal, authConfig.gatewayUrl);
 
 	elements.resendVerification?.addEventListener('click', () => {
 		void submitPortalResendVerification(portal, elements);

@@ -7,7 +7,7 @@
 /*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
+/*   Updated: 2026/10/25 12:00:00 by dlesieur         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,7 @@ import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
+import { enabledOauthProviders, isS256Challenge, oauthAuthorizeUrl } from './auth/oauth-providers.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
@@ -94,7 +95,7 @@ config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LIN
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
 // otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30, osionosSession: 30, oauthSession: 30 };
 const RATE_WINDOWS_SEC = { otpResend: 3600 };
 // Open signup swaps the per-minute register allowance for an hourly one: a mail cannon needs volume.
 if (config.signupOpen && config.registerHourlyLimit > 0) {
@@ -947,15 +948,21 @@ function handleHealth(_request, response) {
 	json(response, 200, { status: 'ok' });
 }
 
-async function handleOsionosSession(request, response) {
-	const accessToken = bearerToken(request);
+async function mintOsionosSession(request, response, options = {}) {
+	const accessToken = typeof options.accessToken === 'string' ? options.accessToken : bearerToken(request);
 	if (!accessToken) {
 		json(response, 401, { message: 'Missing bearer token.' });
-		return;
+		return 'failed';
 	}
 	if (!config.osionosBridgeSecret) {
 		json(response, 503, { message: 'osionos bridge is not configured.' });
-		return;
+		return 'failed';
+	}
+
+	const retryAfter = await rateLimit(clientIp(request), 'osionosSession');
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return 'failed';
 	}
 
 	const userClient = createClient({ url: config.baasUrl, anonKey: config.anonKey, accessToken, persistSession: false });
@@ -964,14 +971,55 @@ async function handleOsionosSession(request, response) {
 		user = await userClient.auth.getUser();
 	} catch {
 		json(response, 401, { message: 'Invalid or expired Prismatica session.' });
-		return;
+		return 'failed';
 	}
+
+	const identityUnavailable = () => {
+		json(response, 503, { error: 'oauth_identity_unavailable', message: 'Prismatica user identities are unavailable.' });
+		return 'failed';
+	};
+	const identities = user?.identities;
+	if (!Array.isArray(identities) || identities.length === 0) return identityUnavailable();
+	// Fail closed before the one-identity shortcut: a malformed entry never proves a provider.
+	if (!identities.every((identity) => identity !== null && typeof identity === 'object' && typeof identity.provider === 'string')) return identityUnavailable();
 
 	const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
 	const subject = typeof user.id === 'string' ? user.id : '';
 	if (!subject || !EMAIL_REGEX.test(email)) {
 		json(response, 422, { message: 'Prismatica user identity is incomplete.' });
-		return;
+		return 'failed';
+	}
+
+	const isUnverifiedIdentity = (identity) => {
+		const provider = typeof identity?.provider === 'string' ? identity.provider : '';
+		if (provider === 'fortytwo' || provider === 'custom:fortytwo') return true;
+		if (provider.startsWith('custom:')) return true;
+		return identity?.identity_data?.email_verified !== true;
+	};
+	const nonEmailIdentities = identities.filter((identity) => identity?.provider !== 'email');
+	const allNonEmailVerified = nonEmailIdentities.every((identity) => !isUnverifiedIdentity(identity));
+	const confirmedAt = Date.parse(typeof user.email_confirmed_at === 'string' ? user.email_confirmed_at : '');
+	// An unknown provider date is not dropped: it makes the recency rule fail closed.
+	const nonEmailDates = nonEmailIdentities.map((identity) => Date.parse(typeof identity?.created_at === 'string' ? identity.created_at : ''));
+	const datesKnown = nonEmailDates.every((value) => Number.isFinite(value));
+	const earliest = datesKnown && nonEmailDates.length > 0 ? Math.min(...nonEmailDates) : Number.NaN;
+	const confirmedBeforeIdentities = datesKnown && Number.isFinite(confirmedAt) && Number.isFinite(earliest) && confirmedAt <= earliest;
+	// A provider sign-in only reaches a single-identity account. GoTrue links a provider by email into
+	// an existing account, and with autoconfirm on that account may be a /signup row whose holder never
+	// proved the mailbox yet looks confirmed before the provider identity (F1). Password sign-in keeps
+	// the dated rule, so a user whose account GoTrue linked is not locked out of it.
+	const allowed = datesKnown && (identities.length === 1 || (!options.singleIdentityOnly && allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
+
+	if (!allowed) {
+		await audit('osionos_bridge_refused', request, { email, reason: 'oauth_email_collision' });
+		const logoutPromise = gotrue.logout(accessToken, 'local').then((result) => {
+			if (!result.ok) audit('osionos_bridge_refused_logout_failed', request, { email, reason: 'oauth_email_collision' }).catch(() => undefined);
+		}).catch(() => {
+			audit('osionos_bridge_refused_logout_failed', request, { email, reason: 'oauth_email_collision' }).catch(() => undefined);
+		});
+		void logoutPromise;
+		json(response, 409, { error: 'oauth_email_collision', message: 'This email is already linked to another sign-in method.' });
+		return 'refused_logged_out';
 	}
 
 	const metadata = typeof user.user_metadata === 'object' && user.user_metadata !== null ? user.user_metadata : {};
@@ -1000,16 +1048,129 @@ async function handleOsionosSession(request, response) {
 	} catch (error) {
 		await audit('osionos_bridge_failed', request, { email, status: 502, error: error instanceof Error ? error.message : 'bridge_unreachable' });
 		json(response, 502, { message: 'osionos bridge is unreachable.' });
-		return;
+		return 'failed';
 	}
 	const body = await result.json().catch(() => ({}));
 	if (result.ok && config.osionosAppUrl && typeof body?.redirectUrl === 'string' && !body.redirectUrl.startsWith(config.osionosAppUrl)) {
 		await audit('osionos_bridge_redirect_rejected', request, { email, status: result.status });
 		json(response, 502, { message: 'osionos bridge returned an unexpected redirect target.' });
-		return;
+		return 'failed';
 	}
 	await audit(result.ok ? 'osionos_bridge_success' : 'osionos_bridge_failed', request, { email, status: result.status });
-	json(response, result.status, body);
+	if (!result.ok && result.status >= 500 && options.mapBridgeFailureTo502) {
+		json(response, 502, { message: 'osionos bridge is unreachable.' });
+		return 'failed';
+	}
+	if (result.ok && options.scheduleAlertOnSuccess) scheduleLoginAlert(request, email, 'success');
+	// The refresh cookie is a success credential: a refused or failed mint never sends it.
+	json(response, result.status, sanitizeAuthPayload(body), result.ok ? options.responseHeaders ?? {} : {});
+	return result.ok ? 'minted' : 'failed';
+}
+
+async function handleOsionosSession(request, response) {
+	await mintOsionosSession(request, response, { accessToken: bearerToken(request) });
+}
+
+function oauthOrigin(request) {
+	const header = request.headers.origin;
+	const value = Array.isArray(header) ? header[0] : header;
+	if (!value) return false;
+	try {
+		return value === new URL(config.siteUrl).origin;
+	} catch {
+		return false;
+	}
+}
+
+// A post-exchange refusal must not leave the GoTrue session alive; the 409 path already logged out.
+function revokeOauthSession(accessToken, request) {
+	const failed = (status) => {
+		audit('oauth_session_logout_failed', request, { status }).catch(() => undefined);
+	};
+	gotrue.logout(accessToken, 'local').then((result) => {
+		if (!result.ok) failed(result.status);
+	}).catch(() => failed(0));
+}
+
+async function oauthProviders() {
+	const settings = await gotrue.settings();
+	return settings.ok ? enabledOauthProviders(settings.body) : [];
+}
+
+// origin lets a site served elsewhere (the beta) hide the buttons: the callback only returns to siteUrl.
+async function handleOauthProviders(request, response) {
+	json(response, 200, { providers: await oauthProviders(), origin: new URL(config.siteUrl).origin });
+}
+
+// A browser navigation, so every refusal lands on the callback page that explains it.
+async function handleOauthAuthorize(request, response) {
+	const query = new URL(request.url ?? '/', 'http://gateway').searchParams;
+	const provider = query.get('provider') ?? '';
+	const codeChallenge = query.get('code_challenge') ?? '';
+	const refuse = (error) => {
+		response.writeHead(302, { location: `${siteBaseUrl()}/auth/callback?error=${error}`, 'cache-control': 'no-store' });
+		response.end();
+	};
+	if (config.loginEmailOtp || !isS256Challenge(codeChallenge)) return refuse('oauth_invalid_request');
+	if (await rateLimit(clientIp(request), 'oauthSession')) return refuse('rate_limited');
+	if (!(await oauthProviders()).includes(provider)) return refuse('oauth_provider_unavailable');
+	response.writeHead(302, { location: oauthAuthorizeUrl({ siteUrl: config.siteUrl, anonKey: config.anonKey, provider, codeChallenge }), 'cache-control': 'no-store' });
+	response.end();
+}
+
+async function handleOauthSession(request, response) {
+	if (!oauthOrigin(request)) {
+		json(response, 403, { error: 'oauth_origin_refused', message: 'Sign-in must start from the Prismatica site.' });
+		return;
+	}
+	const contentType = String(request.headers['content-type'] ?? '').trim().toLowerCase();
+	if (!contentType.startsWith('application/json')) {
+		json(response, 415, { error: 'unsupported_media_type', message: 'Send JSON.' });
+		return;
+	}
+	if (config.loginEmailOtp) {
+		json(response, 409, { error: 'oauth_requires_password_login', message: 'OAuth sign-in requires password login.' });
+		return;
+	}
+	const retryAfter = await rateLimit(clientIp(request), 'oauthSession');
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
+	let payload;
+	try {
+		payload = await readJson(request);
+	} catch {
+		json(response, 400, { message: 'Invalid request body.' });
+		return;
+	}
+	const code = String(payload?.code ?? '').trim();
+	const verifier = String(payload?.verifier ?? '').trim();
+	if (!code || !verifier || code.length > 512 || verifier.length > 512) {
+		json(response, 400, { message: 'OAuth code and verifier are required.' });
+		return;
+	}
+	// F1 measured the takeover with autoconfirm true; F15 measured /settings exposes it as a boolean.
+	if ((await oauthProviders()).length === 0) {
+		json(response, 503, { error: 'oauth_unsafe_config', message: 'Provider sign-in is not available right now.' });
+		return;
+	}
+	const exchanged = await gotrue.exchangePkce(code, verifier);
+	const accessToken = typeof exchanged.body?.access_token === 'string' ? exchanged.body.access_token : '';
+	if (!exchanged.ok || !accessToken) {
+		await audit('oauth_exchange_failed', request, { status: exchanged.status });
+		if (exchanged.status === 0 || exchanged.status >= 500) {
+			json(response, 502, { error: 'oauth_upstream_failed', message: 'The sign-in service did not answer. Try again in a minute.' });
+			return;
+		}
+		// Fixed text: GoTrue's own error body is never reflected.
+		json(response, 401, { error: 'oauth_exchange_failed', message: 'OAuth sign-in failed.' });
+		return;
+	}
+	const refreshToken = typeof exchanged.body.refresh_token === 'string' ? exchanged.body.refresh_token : '';
+	const responseHeaders = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
+	const outcome = await mintOsionosSession(request, response, { accessToken, responseHeaders, scheduleAlertOnSuccess: true, mapBridgeFailureTo502: true, singleIdentityOnly: true });
+	if (outcome === 'failed') revokeOauthSession(accessToken, request);
 }
 
 async function emailOtpAction(request, response, action, flow) {
@@ -1066,6 +1227,9 @@ const routes = new Map([
 	['POST /api/auth/refresh', handleRefresh],
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
+	['GET /api/auth/oauth/providers', handleOauthProviders],
+	['GET /api/auth/oauth/authorize', handleOauthAuthorize],
+	['POST /api/auth/oauth-session', handleOauthSession],
 	...(config.loginEmailOtp ? [['POST /api/auth/mfa/email/verify', handleMfaEmailVerify], ['POST /api/auth/mfa/email/resend', handleMfaEmailResend]] : []),
 	...(loginApprove ? [['POST /api/auth/mfa/email/status', handleMfaEmailStatus], ...approveRoutes({ loginApprove, rateLimit, clientIp, readJson, json })] : []),
 	['POST /api/newsletter/subscribe', handleNewsletterSubscribe],

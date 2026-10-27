@@ -26,7 +26,11 @@ async function signIn() {
 }
 
 describe('Portal approval waiting step', () => {
-	beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] }));
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+		// Opening the portal asks the gateway for OAuth providers; keep that off the network.
+		gateway({});
+	});
 	afterEach(() => {
 		closePortal();
 		document.body.innerHTML = '';

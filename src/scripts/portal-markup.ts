@@ -7,6 +7,7 @@ import { authConfig } from '../lib/auth-config';
 import { APP_GLYPH_PATHS } from '../data/app-glyphs';
 import { loginApproveMarkup } from './portal-login-approve';
 import { loginCodeMarkup } from './portal-login-code';
+import { oauthMarkup } from './portal-oauth';
 import type { PortalMode } from './portal';
 
 // Mirrors components/brand/PrismaticaLogo.astro (decorative variant).
@@ -66,6 +67,7 @@ export function createPortalMarkup(mode: PortalMode): string {
 							<button class="portal-auth-switch__button" type="button" data-auth-switch="login" aria-pressed="${quick ? 'true' : 'false'}">Sign in</button>
 						</div>
 						<form class="portal-login" novalidate>
+							${oauthMarkup()}
 							<div class="field-row portal-register-identity">
 								<div class="field field--half portal-register-only">
 									<label for="portal-username">Username <span class="field__required" aria-hidden="true">*</span></label>
