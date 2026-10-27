@@ -31,6 +31,7 @@ import { escapeHtml, renderHtmlTemplate, renderMessage } from './auth/mail-templ
 import { loginAlertMailFields } from './auth/request-display.mjs';
 import { deriveClientIp, ipBucket } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
+import { createOauthLink, parseLinkMode } from './auth/oauth-link.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
@@ -84,6 +85,8 @@ const config = {
 	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR || 10),
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
+	// Throws at boot on a typo: a misspelt `on` must not silently run as off or as on.
+	oauthLinkExisting: parseLinkMode(process.env.AUTH_OAUTH_LINK_EXISTING),
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
@@ -521,15 +524,27 @@ const accountMail = createAccountMail({
 	signupAllowed,
 });
 
+const writeCutoff = createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey });
+const utcNow = () => `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`;
+
 const linkFlows = createLinkFlows({
 	gotrue,
 	store,
 	linkKey: config.linkSigningKey,
 	nowMs: () => Date.now(),
 	passwordAcceptable: (password) => PASSWORD_REGEX.test(password),
-	writeCutoff: createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey }),
-	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`),
+	writeCutoff,
+	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, utcNow()),
 	audit: flowAudit,
+});
+
+const oauthLink = createOauthLink({
+	gotrue,
+	store,
+	writeCutoff,
+	notifyLinked: (email, counts) => accountMail.scheduleAccountLinked(email, utcNow(), counts),
+	audit: flowAudit,
+	mode: config.oauthLinkExisting,
 });
 
 const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
@@ -1029,8 +1044,15 @@ async function mintOsionosSession(request, response, options = {}) {
 	// proved the mailbox yet looks confirmed before the provider identity (F1). Password sign-in keeps
 	// the dated rule, so a user whose account GoTrue linked is not locked out of it.
 	const allowed = datesKnown && (identities.length === 1 || (!options.singleIdentityOnly && allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
+	// AUTH_OAUTH_LINK_EXISTING: the provider sign-in may still reach the account once oauth-link.mjs
+	// removed every credential the provider did not prove; off keeps the refusal below untouched.
+	const linked = !allowed && options.singleIdentityOnly && oauthLink.mode !== 'off' ? await oauthLink.link({ userId: subject, accessToken, email }) : null;
+	if (linked && !linked.allow) {
+		json(response, linked.status, linked.body);
+		return 'failed';
+	}
 
-	if (!allowed) {
+	if (!allowed && !linked) {
 		await audit('osionos_bridge_refused', request, { email, reason: 'oauth_email_collision' });
 		const logoutPromise = gotrue.logout(accessToken, 'local').then((result) => {
 			if (!result.ok) audit('osionos_bridge_refused_logout_failed', request, { email, reason: 'oauth_email_collision' }).catch(() => undefined);
@@ -1081,9 +1103,11 @@ async function mintOsionosSession(request, response, options = {}) {
 		json(response, 502, { message: 'osionos bridge is unreachable.' });
 		return 'failed';
 	}
-	if (result.ok && options.scheduleAlertOnSuccess) scheduleLoginAlert(request, email, 'success');
+	const credentialReset = result.ok && linked?.credentialReset === true;
+	if (result.ok && options.scheduleAlertOnSuccess) scheduleLoginAlert(request, email, 'success', credentialReset);
 	// The refresh cookie is a success credential: a refused or failed mint never sends it.
-	json(response, result.status, sanitizeAuthPayload(body), result.ok ? options.responseHeaders ?? {} : {});
+	// credential_reset tells the callback page to say the password is gone (C351).
+	json(response, result.status, { ...sanitizeAuthPayload(body), ...(credentialReset ? { credential_reset: true } : {}) }, result.ok ? options.responseHeaders ?? {} : {});
 	return result.ok ? 'minted' : 'failed';
 }
 

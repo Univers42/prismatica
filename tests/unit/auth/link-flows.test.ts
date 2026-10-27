@@ -99,6 +99,27 @@ describe('resetPassword (C1, C4, C8)', () => {
 		expect(order).toEqual([...order].sort((left, right) => left - right));
 	});
 
+	it('leaves the mailbox proof only after a complete sign-out and cut-off (C341)', async () => {
+		const { flows, api } = setup();
+		await flows.resetPassword({ ...link('recovery'), password: PASSWORD });
+		expect(api.updateUser).toHaveBeenCalledWith('user-1', { app_metadata: { mailbox_proof: { at: new Date(NOW_MS).toISOString(), email: 'ines@arlet.test', by: 'password_reset' } } });
+		const partial = setup({ logout: async () => fail(500) });
+		await partial.flows.resetPassword({ ...link('recovery'), password: PASSWORD });
+		expect(partial.api.updateUser).not.toHaveBeenCalled();
+	});
+
+	it('keeps the reset when the proof write fails, and audits it', async () => {
+		const { flows, deps } = setup({ updateUser: async () => fail(500) });
+		expect(await flows.resetPassword({ ...link('recovery'), password: PASSWORD })).toMatchObject({ status: 200, body: { signed_out_everywhere: true } });
+		expect(deps.audit).toHaveBeenCalledWith('password_reset_marker_failed', { user_id: 'user-1', status: 500 });
+	});
+
+	it('confirms a signup without writing a proof', async () => {
+		const { flows, api } = setup({ verify: async () => ok({ access_token: 'x', user: { id: 'user-1', email: 'ines@arlet.test' } }) });
+		await flows.verifyEmail(link('signup'));
+		expect(api.updateUser).not.toHaveBeenCalled();
+	});
+
 	it('still answers 200 when the cut-off write fails, says so, and audits it', async () => {
 		const { flows, deps } = setup({}, { writeCutoff: vi.fn(async () => false) });
 		const result = await flows.resetPassword({ ...link('recovery'), password: PASSWORD });

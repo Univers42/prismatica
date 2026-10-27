@@ -1,0 +1,16 @@
+Your sign-in was linked and your password removed
+
+On {{changedAt}}, someone signed in to the Prismatica account {{email}} with Google or GitHub. The account already had a password, so to make sure only the owner of this mailbox holds it, we removed that password and signed out every other device.
+
+What changed:
+- The old password no longer works. To use a password again, choose "Forgot password" in the sign-in window.
+- AI access tokens revoked: {{aiTokensRevoked}}. Personal access tokens revoked: {{patsRevoked}}. Create new ones if you still need them.
+- Members in workspaces you own, besides you: {{membersToReview}}. Check that you know each of them.
+
+{{siteUrl}}
+
+This was not you? Choose "Forgot password" in the sign-in window and set a new password at once, then review your workspace members.
+
+This is a security notice about your account; it is sent whatever your e-mail preferences.
+
+Prismatica - {{siteUrl}}

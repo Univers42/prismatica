@@ -6,7 +6,7 @@ import type { CallbackProblem } from './auth-callback';
 import type { AuthResult } from './auth-result';
 import type { OAuthProvider } from './portal-oauth';
 
-export type CallbackCopy = Required<Omit<AuthResult, 'code'>>;
+export type CallbackCopy = Required<Omit<AuthResult, 'code' | 'continueUrl'>>;
 
 const PROVIDER_NAMES: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
@@ -76,6 +76,20 @@ const COPY: Record<CallbackProblem, CopyBuilder> = {
 		steps: ['Try again.', 'If it happens again, contact support and quote the reference below.'],
 		action: 'Try again',
 	}),
+	mfa_account: (provider) => ({
+		tone: 'notice',
+		title: 'This account uses two-step sign-in',
+		message: `The email address ${provider} shared belongs to a Prismatica account protected by an authenticator code, so ${provider} alone cannot open it. Nothing was changed.`,
+		steps: ['Sign in with your email, your password and your authenticator code.'],
+		action: 'Sign in with email',
+	}),
+	link_unfinished: () => ({
+		tone: 'danger',
+		title: 'Your account could not be secured',
+		message: 'This email already had a Prismatica account. Before opening it, we sign out every other device and remove its password, and that step stopped half-way. The old password may no longer work.',
+		steps: ['Wait a minute, then try again: the next attempt finishes the job.', 'Or choose “Forgot password” in the sign-in window to set a new password.'],
+		action: 'Try again',
+	}),
 	failed: (provider) => ({
 		tone: 'danger',
 		title: 'Sign-in did not finish',
@@ -84,6 +98,18 @@ const COPY: Record<CallbackProblem, CopyBuilder> = {
 		action: 'Try again',
 	}),
 };
+
+// The sign-in succeeded, but it removed the password of an account that already had one.
+export function credentialResetCopy(provider: OAuthProvider | null): CallbackCopy {
+	const name = provider ? PROVIDER_NAMES[provider] : 'your provider';
+	return {
+		tone: 'success',
+		title: 'You are signed in',
+		message: `This email already had a Prismatica account with a password. To make sure only you can open it, its password was removed and every other device was signed out. From now on, sign in with ${name}.`,
+		steps: ['Want a password too? Choose “Forgot password” in the sign-in window.', 'We sent you an email listing the access tokens that were revoked and the workspace members to review.'],
+		action: 'Open your workspace',
+	};
+}
 
 export function callbackCopy(problem: CallbackProblem, provider: OAuthProvider | null): CallbackCopy {
 	return COPY[problem](provider ? PROVIDER_NAMES[provider] : 'your provider');

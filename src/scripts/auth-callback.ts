@@ -17,6 +17,8 @@ export type CallbackProblem =
 	| 'password_only'
 	| 'service_down'
 	| 'redirect_blocked'
+	| 'mfa_account'
+	| 'link_unfinished'
 	| 'failed';
 
 // Codes from the provider (via GoTrue's redirect) and from the gateway. Anything unlisted is 'failed'.
@@ -38,10 +40,16 @@ const PROBLEM_BY_CODE: Record<string, CallbackProblem> = {
 	oauth_upstream_failed: 'service_down',
 	oauth_network_failed: 'service_down',
 	oauth_redirect_blocked: 'redirect_blocked',
+	// AUTH_OAUTH_LINK_EXISTING answers (scripts/auth/oauth-link.mjs); busy and unavailable changed nothing.
+	oauth_mfa_account: 'mfa_account',
+	oauth_link_busy: 'service_down',
+	oauth_link_unavailable: 'service_down',
+	oauth_link_reset_failed: 'link_unfinished',
 };
 
 export type CallbackOutcome =
-	| { kind: 'redirect'; url: string }
+	// credentialReset: the sign-in removed the account's password, and the page says so first (C351).
+	| { kind: 'redirect'; url: string; credentialReset: boolean; provider: OAuthProvider | null }
 	| { kind: 'error'; problem: CallbackProblem; code: string; provider: OAuthProvider | null };
 
 type LocationLike = Pick<Location, 'pathname' | 'search'>;
@@ -94,10 +102,10 @@ export async function completeOAuthCallback(
 			credentials: 'include',
 			body: JSON.stringify({ code, verifier: pending.verifier }),
 		});
-		const body = (await response.json().catch(() => ({}))) as { error?: string; redirectUrl?: string };
+		const body = (await response.json().catch(() => ({}))) as { error?: string; redirectUrl?: string; credential_reset?: boolean };
 		if (!response.ok) return failure(body.error ?? `http_${response.status}`, provider);
 		if (typeof body.redirectUrl !== 'string' || !isTrustedOsionosRedirect(body.redirectUrl)) return failure('oauth_redirect_blocked', provider);
-		return { kind: 'redirect', url: body.redirectUrl };
+		return { kind: 'redirect', url: body.redirectUrl, credentialReset: body.credential_reset === true, provider };
 	} catch {
 		return failure('oauth_network_failed', provider);
 	}
