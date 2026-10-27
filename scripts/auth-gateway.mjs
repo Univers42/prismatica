@@ -106,6 +106,7 @@ const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
 const SIGN_IN_NOTICE_TTL_SEC = 600;
+const SUCCESS_NOTICE_TTL_SEC = 24 * 3600;
 const MAIL_DOMAIN_CACHE_MS = 10 * 60 * 1000;
 const DNS_LOOKUP_TIMEOUT_MS = 3500;
 const GOTRUE_MANAGED_PROFILE_MARKER = 'managed-by-gotrue';
@@ -261,9 +262,12 @@ async function localProfileExists(column, value) {
 	return serviceBaas.from('users').exists({ filters: { [column]: value } });
 }
 
-async function restRpc(name, body, authorization = config.anonKey) {
+// The newsletter RPCs are granted to service_role only: an anon grant let anyone request and
+// confirm an opt-in for someone else's address with a token of their choosing.
+async function serviceRpc(name, body) {
+	if (!serviceBaas) return sdkErrorResult(new Error('The service key is not configured.'));
 	try {
-		return sdkResult(await publicBaas.rpc(name, body, { bearerToken: authorization }));
+		return sdkResult(await serviceBaas.rpc(name, body, { apiKey: config.serviceKey, bearerToken: config.serviceKey }));
 	} catch (error) {
 		return sdkErrorResult(error);
 	}
@@ -347,22 +351,34 @@ function loginAlertContext(request, email, outcome = 'success') {
 	};
 }
 
-async function shouldSendSignInNotice(email, outcome) {
-	if (outcome === 'success') return true;
-	const key = `notice:${outcome}:${keyHash(email)}`;
-	const existing = await store.get(key);
-	if (existing !== null) return false;
-	await store.set(key, '1', SIGN_IN_NOTICE_TTL_SEC);
-	return true;
+// A success alert per sign-in spent 77 of the 50-mail daily cap on 2026-10-27, so it goes
+// once per (address, client IP, user agent) a day; a new IP or browser still alerts at once.
+// The key is written only after the mail is accepted, so a failed send suppresses nothing, and
+// a store error sends the alert (fail open).
+// Caveat: an attacker on the owner's IP (same NAT) with the owner's exact user agent, within
+// 24h of the owner's own sign-in, gets no success alert; failed-attempt alerts are unaffected.
+function signInNotice(request, email, outcome) {
+	if (outcome !== 'success') return { key: `notice:${outcome}:${keyHash(email)}`, ttlSec: SIGN_IN_NOTICE_TTL_SEC };
+	const client = keyHash(`${clientIp(request) || 'unknown'}|${request.headers?.['user-agent'] ?? ''}`);
+	return { key: `notice:success:${keyHash(email)}:${client}`, ttlSec: SUCCESS_NOTICE_TTL_SEC };
 }
 
-async function sendLoginSecurityNotification(email, outcome, context) {
+async function signInNoticeRecentlySent(notice) {
+	try {
+		return (await store.get(notice.key)) !== null;
+	} catch (error) {
+		console.warn(`[auth-gateway] sign-in notice lookup failed, sending the alert: ${error instanceof Error ? error.message : 'unknown error'}`);
+		return false;
+	}
+}
+
+async function sendLoginSecurityNotification(email, outcome, context, notice, alwaysSend) {
 	if (!mailConfigured()) {
 		console.warn(`[auth-gateway] login security alert skipped for ${email}: the email service is not configured.`);
 		await audit('login_alert_skipped', null, { email, reason: 'mail_not_configured' });
 		return;
 	}
-	if (!(await shouldSendSignInNotice(email, outcome))) {
+	if (!alwaysSend && (await signInNoticeRecentlySent(notice))) {
 		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
@@ -372,18 +388,22 @@ async function sendLoginSecurityNotification(email, outcome, context) {
 		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
 	});
 	if (!wasSent(sendResult)) return;
+	await store.set(notice.key, '1', notice.ttlSec).catch((error) => {
+		console.warn(`[auth-gateway] sign-in notice key not stored: ${error instanceof Error ? error.message : 'unknown error'}`);
+	});
 	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
 }
 
 // A failed-login alert goes only to an existing profile; looking that up before answering
 // told an attacker which addresses have accounts (verdict B, B2), so the lookup and the
-// send run after the 401, in the queue (C5).
-function scheduleLoginAlert(request, email, outcome) {
+// send run after the 401, in the queue (C5). A sign-in that removed a password always alerts (C373).
+function scheduleLoginAlert(request, email, outcome, alwaysSend = false) {
 	const context = loginAlertContext(request, email, outcome);
+	const notice = signInNotice(request, email, outcome);
 	mailQueue.push('login-alert', async () => {
 		if (outcome === 'failed' && !(await localProfileExists('email', email))) return;
-		await sendLoginSecurityNotification(email, outcome, context);
+		await sendLoginSecurityNotification(email, outcome, context, notice, alwaysSend);
 	});
 }
 
@@ -833,7 +853,7 @@ async function handleResetPassword(request, response) {
 
 async function requestNewsletterOptIn(request, email) {
 	const token = randomBytes(32).toString('hex');
-	const result = await restRpc('gdpr_request_newsletter_optin', { email, token });
+	const result = await serviceRpc('gdpr_request_newsletter_optin', { email, token });
 	if (!result.response.ok) {
 		return {
 			ok: false,
@@ -897,7 +917,7 @@ async function handleNewsletterConfirm(request, response) {
 		json(response, 422, { message: 'Confirmation token is required.' });
 		return;
 	}
-	const result = await restRpc('gdpr_confirm_newsletter_optin', { token });
+	const result = await serviceRpc('gdpr_confirm_newsletter_optin', { token });
 	if (!result.response.ok) {
 		json(response, result.response.status, { message: humanAuthMessage(result.payload, 'This confirmation link is invalid or expired.') });
 		return;
@@ -919,7 +939,7 @@ async function handleNewsletterUnsubscribe(request, response) {
 		json(response, 422, { message: 'Unsubscribe token is required.' });
 		return;
 	}
-	const result = await restRpc('gdpr_withdraw_consent', { consent_type: 'newsletter', token });
+	const result = await serviceRpc('gdpr_withdraw_consent', { consent_type: 'newsletter', token });
 	if (!result.response.ok) {
 		json(response, result.response.status, { message: humanAuthMessage(result.payload, 'This unsubscribe link is invalid or has already been used.') });
 		return;

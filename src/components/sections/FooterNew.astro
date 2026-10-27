@@ -47,7 +47,7 @@ const year = new Date().getFullYear();
 			<p class="footer-new__tagline">Open-source backend for product teams.</p>
 
 			<form class="footer-new__newsletter" action="/api/newsletter/subscribe" method="post" novalidate data-newsletter-signup>
-				<label for="footer-newsletter-email">Get release notes</label>
+				<label class="footer-new__newsletter-label" for="footer-newsletter-email">Get release notes</label>
 				<div class="footer-new__newsletter-row">
 					<input id="footer-newsletter-email" type="email" name="email" autocomplete="email" placeholder="you@studio.io" required />
 					<Button variant="primary" size="sm" type="submit">Subscribe</Button>
@@ -133,7 +133,7 @@ const year = new Date().getFullYear();
 		color: var(--system-text-muted);
 		max-width: 38ch;
 	}
-	.footer-new__newsletter label {
+	.footer-new__newsletter-label {
 		display: block;
 		font-size: 0.86rem;
 		font-weight: 600;
@@ -144,7 +144,7 @@ const year = new Date().getFullYear();
 		display: flex;
 		gap: 0.5rem;
 	}
-	.footer-new__newsletter input {
+	.footer-new__newsletter-row input {
 		flex: 1;
 		min-height: 40px;
 		padding: 0.55rem 0.75rem;
@@ -154,7 +154,7 @@ const year = new Date().getFullYear();
 		color: var(--system-input-fg);
 		font: inherit;
 	}
-	.footer-new__newsletter input:focus-visible {
+	.footer-new__newsletter-row input:focus-visible {
 		outline: 0;
 		border-color: var(--system-input-border-focus);
 		box-shadow: var(--system-input-shadow-focus);
@@ -180,6 +180,10 @@ const year = new Date().getFullYear();
 		margin: 0;
 		margin-top: 0.18rem;
 		accent-color: var(--brand-palette-secondary);
+	}
+	.footer-new__consent input:focus-visible {
+		outline: 2px solid var(--system-focus-ring);
+		outline-offset: 2px;
 	}
 	.footer-new__newsletter-status {
 		display: block;

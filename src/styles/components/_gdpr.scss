@@ -16,6 +16,10 @@
 	z-index: 80;
 }
 
+body:has(.consent-banner:not([hidden])) {
+	padding-block-end: var(--consent-banner-height, 0px);
+}
+
 .consent-banner__paper,
 .newsletter-signup,
 .data-rights-form,
