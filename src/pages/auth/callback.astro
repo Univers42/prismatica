@@ -18,6 +18,7 @@ import Layout from '../../layouts/Layout.astro';
 		import { completeOAuthCallback } from '../../scripts/auth-callback';
 
 		const root = document.querySelector('[data-auth-callback]');
+		const title = root?.querySelector('#callback-title');
 		const status = root?.querySelector('[data-auth-status]');
 		const loading = root?.querySelector('[data-auth-loading]');
 		const home = root?.querySelector('[data-callback-home]');
@@ -26,6 +27,7 @@ import Layout from '../../layouts/Layout.astro';
 				window.location.assign(outcome.url);
 				return;
 			}
+			if (title) title.textContent = 'Sign-in did not finish';
 			if (loading instanceof HTMLElement) loading.hidden = true;
 			if (home instanceof HTMLElement) home.hidden = false;
 			if (status) {
