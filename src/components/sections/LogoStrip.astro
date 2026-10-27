@@ -1,12 +1,22 @@
 ---
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+type Props = {
+	readonly locale?: string;
+};
 const logos = [
 	'Northwave', 'Kollektiv', 'Halcyon', 'Foundry', 'Axiom Lab', 'Praxis',
 ];
+const localeProp: string | undefined = Astro.props.locale ?? undefined;
+const activeLocale = normalizeLocale(localeProp, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 ---
 
-<section class="section section--tight section--sunken logo-strip" aria-label="Trusted by teams at">
+<section class="section section--tight section--sunken logo-strip" aria-label={t(activeLocale, 'logoStrip.ariaLabel')}>
 	<div class="section__container">
-		<p class="logo-strip__label">Trusted by product teams everywhere</p>
+		<p class="logo-strip__label" data-i18n="logoStrip.label">{t(activeLocale, 'logoStrip.label')}</p>
 		<ul class="logo-strip__list" role="list">
 			{logos.map((name) => (
 				<li class="logo-strip__item" data-scroll-rise>{name}</li>

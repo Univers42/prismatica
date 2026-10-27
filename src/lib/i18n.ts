@@ -70,6 +70,10 @@ export interface UIStrings {
     readonly privacyTitle: string;
     readonly privacyLede: string;
   };
+  readonly logoStrip: {
+    readonly label: string;
+    readonly ariaLabel: string;
+  };
   readonly faq: {
     readonly eyebrow: string;
     readonly title: string;
@@ -126,6 +130,10 @@ export const DICTIONARY: TranslationDictionary = {
       startFree: 'Start free',
       readDocs: 'Read the docs',
       meta: 'No credit card. Self-host whenever you want.',
+    },
+    logoStrip: {
+      label: 'Trusted by product teams everywhere',
+      ariaLabel: 'Trusted by teams at',
     },
     socialProof: {
       eyebrow: 'What teams say',
@@ -201,6 +209,10 @@ export const DICTIONARY: TranslationDictionary = {
       readDocs: 'Leer la documentación',
       meta: 'Sin tarjeta de crédito. Autoalojable cuando quieras.',
     },
+    logoStrip: {
+      label: 'De la confianza de equipos de producto en todo el mundo',
+      ariaLabel: 'De la confianza de equipos en',
+    },
     socialProof: {
       eyebrow: 'Lo que dicen los equipos',
       title: 'Construido por personas que entregan cada semana.',
@@ -274,6 +286,10 @@ export const DICTIONARY: TranslationDictionary = {
       startFree: 'ابدأ مجاناً',
       readDocs: 'اقرأ التوثيق',
       meta: 'لا حاجة لبطاقة ائتمان. استضافة ذاتية متى شئت.',
+    },
+    logoStrip: {
+      label: 'موثوق به من قِبل فرق المنتجات في كل مكان',
+      ariaLabel: 'موثوق به من فرق عمل في',
     },
     socialProof: {
       eyebrow: 'ما تقوله فرق العمل',

@@ -27,7 +27,7 @@ const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 	<HeaderNew locale={requestedLocale} />
 	<StoryStage />
 	<main id="main-content" class="swipe-stack" data-swipe-stack>
-		<section class="swipe-stack__scene" data-stage="hero"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew locale={requestedLocale} /><LogoStrip /></div></div></section>
+		<section class="swipe-stack__scene" data-stage="hero"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew locale={requestedLocale} /><LogoStrip locale={requestedLocale} /></div></div></section>
 		<section class="swipe-stack__scene" data-stage="apps"><div class="swipe-stack__card"><AppTour /></div></section>
 		<section class="swipe-stack__scene" data-stage="product"><div class="swipe-stack__card"><FeatureTrio locale={requestedLocale} /></div></section>
 		<section class="swipe-stack__scene" data-stage="canvas"><div class="swipe-stack__card"><CanvasWindowsSection /></div></section>

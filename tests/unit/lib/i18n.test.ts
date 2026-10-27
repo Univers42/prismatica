@@ -87,6 +87,9 @@ it.each([
       ['en', 'faq.q1', 'Can I really self-host the whole stack?'],
       ['es', 'faq.q1', '¿Realmente puedo autoalojar todo el stack?'],
       ['ar', 'faq.q1', 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟'],
+      ['en', 'logoStrip.label', 'Trusted by product teams everywhere'],
+      ['es', 'logoStrip.label', 'De la confianza de equipos de producto en todo el mundo'],
+      ['ar', 'logoStrip.label', 'موثوق به من قِبل فرق المنتجات في كل مكان'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });
