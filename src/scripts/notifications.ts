@@ -33,12 +33,15 @@ const DEFAULT_DURATIONS: Record<NotificationKind, number> = {
 	info: 5000,
 };
 
-const ICONS: Record<NotificationKind, string> = {
-	success: '✓',
-	error: '✕',
-	warning: '⚠',
-	info: 'ℹ',
+// Drawn as SVG paths: the text glyphs (✓ ✕ ⚠ ℹ) are missing from the site fonts and rendered as boxes.
+const ICON_PATHS: Record<NotificationKind, string> = {
+	success: 'M20 6 9 17l-5-5',
+	error: 'M18 6 6 18M6 6l12 12',
+	warning: 'M12 6v8M12 18h.01',
+	info: 'M12 11v7M12 6h.01',
 };
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const records = new Map<string, NotificationRecord>();
 let counter = 0;
@@ -97,15 +100,29 @@ function createTextElement(tagName: 'p' | 'strong' | 'span', className: string, 
 	return element;
 }
 
+function createIcon(kind: NotificationKind): HTMLElement {
+	const icon = document.createElement('span');
+	icon.className = 'notification-card__icon';
+	icon.setAttribute('aria-hidden', 'true');
+	const svg = document.createElementNS(SVG_NS, 'svg');
+	svg.setAttribute('viewBox', '0 0 24 24');
+	svg.setAttribute('focusable', 'false');
+	const path = document.createElementNS(SVG_NS, 'path');
+	path.setAttribute('d', ICON_PATHS[kind]);
+	svg.append(path);
+	icon.append(svg);
+	return icon;
+}
+
 function createDismissProgress(duration: number): SVGSVGElement {
-	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	const svg = document.createElementNS(SVG_NS, 'svg');
 	svg.classList.add('notification-card__dismiss-progress');
 	svg.setAttribute('viewBox', '0 0 36 36');
 	svg.setAttribute('aria-hidden', 'true');
 	svg.style.setProperty('--notification-duration', `${duration}ms`);
-	const track = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+	const track = document.createElementNS(SVG_NS, 'circle');
 	track.classList.add('notification-card__dismiss-progress-track');
-	const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+	const ring = document.createElementNS(SVG_NS, 'circle');
 	ring.classList.add('notification-card__dismiss-progress-ring');
 	[track, ring].forEach((circle) => {
 		circle.setAttribute('cx', '18');
@@ -158,8 +175,7 @@ export function notify(options: NotificationOptions): void {
 	card.setAttribute('role', options.kind === 'error' || options.kind === 'warning' ? 'alert' : 'status');
 	card.setAttribute('aria-atomic', 'true');
 
-	const icon = createTextElement('span', 'notification-card__icon', ICONS[options.kind]);
-	icon.setAttribute('aria-hidden', 'true');
+	const icon = createIcon(options.kind);
 
 	const body = document.createElement('div');
 	body.className = 'notification-card__body';
