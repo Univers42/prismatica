@@ -37,9 +37,7 @@ describe('GET /api/auth/oauth/providers', () => {
 		expect(result.body).toEqual({ providers: ['google', 'github'], origin: SITE });
 	});
 
-	it('lists nothing while autoconfirm is on or GoTrue is down', async () => {
-		upstream.settings = { mailer_autoconfirm: true, external: { google: true, github: true } };
-		expect((await call(gateway, '/api/auth/oauth/providers', { method: 'GET' })).body.providers).toEqual([]);
+	it('lists nothing while GoTrue is down', async () => {
 		upstream.settingsStatus = 500;
 		expect((await call(gateway, '/api/auth/oauth/providers', { method: 'GET' })).body.providers).toEqual([]);
 	});

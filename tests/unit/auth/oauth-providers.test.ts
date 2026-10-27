@@ -13,11 +13,7 @@ describe('enabledOauthProviders', () => {
 		expect(enabledOauthProviders({ mailer_autoconfirm: false, external: { fortytwo: true, google: 'true' } })).toEqual([]);
 	});
 
-	it('is empty unless autoconfirm is exactly false', () => {
-		const external = { google: true, github: true };
-		expect(enabledOauthProviders({ mailer_autoconfirm: true, external })).toEqual([]);
-		expect(enabledOauthProviders({ external })).toEqual([]);
-		expect(enabledOauthProviders({ mailer_autoconfirm: 'false', external })).toEqual([]);
+	it('is empty for missing settings or a missing external map', () => {
 		expect(enabledOauthProviders(null)).toEqual([]);
 		expect(enabledOauthProviders({ mailer_autoconfirm: false })).toEqual([]);
 	});

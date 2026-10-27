@@ -407,7 +407,7 @@ describe('oauth-session route', () => {
 
 		setUser([{ ...EMAIL_IDENTITY }]);
 		syncUpstream();
-		upstream.settings = { mailer_autoconfirm: true };
+		upstream.settings = {};
 		noCookie(await call(oauthGateway, '/api/auth/oauth-session', { headers: OAUTH, body: { code: 'code-1', verifier: 'verifier-1' } }));
 		upstream.settings = SAFE_SETTINGS;
 
@@ -455,11 +455,20 @@ describe('oauth-session route', () => {
 		expect(hitsTo('/auth/v1/token')).toHaveLength(30);
 	});
 
-	it('refuses unsafe autoconfirm settings: true, missing and a 500 each answer 503 with no /token', async () => {
+	it('refuses a linked account over oauth-session even when it was confirmed before the provider identity', async () => {
+		setUser([{ ...EMAIL_IDENTITY }, { ...GOOGLE_VERIFIED }], '2026-10-01T00:00:00Z');
+		syncUpstream();
+		const result = await call(oauthGateway, '/api/auth/oauth-session', { headers: OAUTH, body: { code: 'code-1', verifier: 'verifier-1' } });
+		expect(result.status).toBe(409);
+		expect(result.body).toEqual(collisionBody());
+		expect(result.cookies).toEqual([]);
+		expect(bridgeCalls).toHaveLength(0);
+	});
+
+	it('answers 503 with no /token when GoTrue settings are empty or down', async () => {
 		setUser([{ ...EMAIL_IDENTITY }]);
 		syncUpstream();
 		const cases: { settingsStatus: number; settings: Record<string, unknown> }[] = [
-			{ settingsStatus: 200, settings: { mailer_autoconfirm: true } },
 			{ settingsStatus: 200, settings: {} },
 			{ settingsStatus: 500, settings: {} },
 		];

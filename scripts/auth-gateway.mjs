@@ -1004,7 +1004,11 @@ async function mintOsionosSession(request, response, options = {}) {
 	const datesKnown = nonEmailDates.every((value) => Number.isFinite(value));
 	const earliest = datesKnown && nonEmailDates.length > 0 ? Math.min(...nonEmailDates) : Number.NaN;
 	const confirmedBeforeIdentities = datesKnown && Number.isFinite(confirmedAt) && Number.isFinite(earliest) && confirmedAt <= earliest;
-	const allowed = datesKnown && (identities.length === 1 || (allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
+	// A provider sign-in only reaches a single-identity account. GoTrue links a provider by email into
+	// an existing account, and with autoconfirm on that account may be a /signup row whose holder never
+	// proved the mailbox yet looks confirmed before the provider identity (F1). Password sign-in keeps
+	// the dated rule, so a user whose account GoTrue linked is not locked out of it.
+	const allowed = datesKnown && (identities.length === 1 || (!options.singleIdentityOnly && allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
 
 	if (!allowed) {
 		await audit('osionos_bridge_refused', request, { email, reason: 'oauth_email_collision' });
@@ -1165,7 +1169,7 @@ async function handleOauthSession(request, response) {
 	}
 	const refreshToken = typeof exchanged.body.refresh_token === 'string' ? exchanged.body.refresh_token : '';
 	const responseHeaders = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
-	const outcome = await mintOsionosSession(request, response, { accessToken, responseHeaders, scheduleAlertOnSuccess: true, mapBridgeFailureTo502: true });
+	const outcome = await mintOsionosSession(request, response, { accessToken, responseHeaders, scheduleAlertOnSuccess: true, mapBridgeFailureTo502: true, singleIdentityOnly: true });
 	if (outcome === 'failed') revokeOauthSession(accessToken, request);
 }
 

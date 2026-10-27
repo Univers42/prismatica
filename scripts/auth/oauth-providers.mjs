@@ -8,10 +8,8 @@ export const OAUTH_PROVIDERS = ['google', 'github'];
 const PROVIDER_SCOPES = { github: 'read:user user:email' };
 const S256_CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 
-// Empty while autoconfirm is on: then an OAuth sign-up can claim an unverified password account (F1).
 export function enabledOauthProviders(settings) {
-	if (settings?.mailer_autoconfirm !== false) return [];
-	const external = settings.external ?? {};
+	const external = settings?.external ?? {};
 	return OAUTH_PROVIDERS.filter((name) => external[name] === true);
 }
 
