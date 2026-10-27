@@ -64,12 +64,19 @@ describe('bindPortalOAuth', () => {
 		expect(portal.querySelectorAll('[data-oauth-provider]')).toHaveLength(0);
 	});
 
-	it('shows one labelled button per enabled provider', async () => {
+	it('shows one logo button per enabled provider, named and described for assistive tech', async () => {
 		vi.stubGlobal('fetch', answer({ providers: ['google', 'github'], origin: ORIGIN }));
 		const portal = mount();
 		await bindPortalOAuth(portal, '/api/auth');
 		expect(portal.querySelector<HTMLElement>('[data-oauth-providers]')!.hidden).toBe(false);
-		const labels = [...portal.querySelectorAll('[data-oauth-provider]')].map((button) => button.textContent);
-		expect(labels).toEqual(['Continue with Google', 'Continue with GitHub']);
+		const buttons = [...portal.querySelectorAll<HTMLButtonElement>('[data-oauth-provider]')];
+		expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(['Continue with Google', 'Continue with GitHub']);
+		for (const button of buttons) {
+			expect(button.querySelector('svg[aria-hidden="true"] path')).not.toBeNull();
+			const tooltip = document.getElementById(button.getAttribute('aria-describedby')!);
+			expect(tooltip?.getAttribute('role')).toBe('tooltip');
+			expect(button.contains(tooltip)).toBe(true);
+		}
+		expect(document.getElementById('portal-oauth-tooltip-google')!.textContent).toBe('Sign in or create your account with Google');
 	});
 });
