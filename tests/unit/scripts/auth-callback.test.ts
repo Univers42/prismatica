@@ -70,6 +70,8 @@ describe('completeOAuthCallback', () => {
 	it('reports a missing or used flow as expired', async () => {
 		const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({}));
 		expect(outcome).toEqual({ kind: 'error', problem: 'expired', code: 'oauth_flow_missing', provider: null });
+		const reloaded = await completeOAuthCallback('/api/auth', callback(''), history(), sessionStorage, gateway({}));
+		expect(reloaded).toEqual({ kind: 'error', problem: 'expired', code: 'oauth_flow_missing', provider: null });
 	});
 
 	it('blocks a redirect to an unknown origin', async () => {

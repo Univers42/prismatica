@@ -84,7 +84,8 @@ export async function completeOAuthCallback(
 	const provider = pending?.provider ?? null;
 	const code = params.get('code');
 	// GoTrue sends error_code empty for some provider errors, so an empty value falls back to error.
-	if (!code) return failure(params.get('error_code') || params.get('error'), provider);
+	// No code and no error: a reload (the query is already stripped) or a bookmark — the flow is spent.
+	if (!code) return failure(params.get('error_code') || params.get('error') || 'oauth_flow_missing', provider);
 	if (!pending) return failure('oauth_flow_missing', null);
 	try {
 		const response = await fetchImpl(`${gatewayUrl}/oauth-session`, {
