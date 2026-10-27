@@ -3,28 +3,58 @@
    the flow started. The query is stripped from the address bar before any request. */
 
 import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
-import { OAUTH_PENDING_KEY, type PendingOAuthFlow } from './portal-oauth';
+import { OAUTH_PENDING_KEY, type OAuthProvider, type PendingOAuthFlow } from './portal-oauth';
 
 const FLOW_TTL_MS = 10 * 60 * 1000;
 
-const ERROR_MESSAGES: Record<string, string> = {
-	oauth_email_collision: 'This email already has a Prismatica account. Sign in with your password instead.',
-	oauth_provider_unavailable: 'Sign-in with this provider is not available right now.',
-	oauth_unsafe_config: 'Sign-in with a provider is not available right now.',
-	oauth_invalid_request: 'This sign-in attempt was not valid. Try again from the sign-in window.',
-	oauth_requires_password_login: 'Sign in with your email and password instead.',
-	provider_email_needs_verification: 'Verify your email with the provider first, then try again.',
-	access_denied: 'Sign-in was cancelled at the provider.',
-	rate_limited: 'Too many attempts. Wait a minute and try again.',
+export type CallbackProblem =
+	| 'cancelled'
+	| 'email_in_use'
+	| 'email_unverified'
+	| 'expired'
+	| 'rate_limited'
+	| 'unavailable'
+	| 'password_only'
+	| 'service_down'
+	| 'redirect_blocked'
+	| 'failed';
+
+// Codes from the provider (via GoTrue's redirect) and from the gateway. Anything unlisted is 'failed'.
+const PROBLEM_BY_CODE: Record<string, CallbackProblem> = {
+	access_denied: 'cancelled',
+	oauth_email_collision: 'email_in_use',
+	provider_email_needs_verification: 'email_unverified',
+	email_not_confirmed: 'email_unverified',
+	bad_oauth_state: 'expired',
+	flow_state_expired: 'expired',
+	flow_state_not_found: 'expired',
+	oauth_flow_missing: 'expired',
+	rate_limited: 'rate_limited',
+	over_request_rate_limit: 'rate_limited',
+	oauth_provider_unavailable: 'unavailable',
+	oauth_unsafe_config: 'unavailable',
+	provider_disabled: 'unavailable',
+	oauth_requires_password_login: 'password_only',
+	oauth_upstream_failed: 'service_down',
+	oauth_network_failed: 'service_down',
+	oauth_redirect_blocked: 'redirect_blocked',
 };
 
-export type CallbackOutcome = { kind: 'redirect'; url: string } | { kind: 'error'; message: string };
+export type CallbackOutcome =
+	| { kind: 'redirect'; url: string }
+	| { kind: 'error'; problem: CallbackProblem; code: string; provider: OAuthProvider | null };
 
 type LocationLike = Pick<Location, 'pathname' | 'search'>;
 type HistoryLike = Pick<History, 'state' | 'replaceState'>;
 
-function messageFor(code: string | undefined, fallback: string): string {
-	return (code && ERROR_MESSAGES[code]) || fallback;
+// The code is shown to the user as a support reference, so only a plain token is echoed back.
+function safeCode(code: string | null | undefined): string {
+	return code && /^[a-z0-9_]{1,64}$/.test(code) ? code : 'unknown_error';
+}
+
+function failure(code: string | null | undefined, provider: OAuthProvider | null): CallbackOutcome {
+	const reference = safeCode(code);
+	return { kind: 'error', problem: PROBLEM_BY_CODE[reference] ?? 'failed', code: reference, provider };
 }
 
 // One read per flow: the entry is removed before it is parsed, so a replayed callback finds nothing.
@@ -51,9 +81,11 @@ export async function completeOAuthCallback(
 	const params = new URLSearchParams(location.search);
 	history.replaceState(history.state, '', location.pathname);
 	const pending = takePendingFlow(storage);
+	const provider = pending?.provider ?? null;
 	const code = params.get('code');
-	if (!code) return { kind: 'error', message: messageFor(params.get('error_code') ?? params.get('error') ?? undefined, 'Sign-in was refused by the provider.') };
-	if (!pending) return { kind: 'error', message: 'This sign-in attempt expired or was already used. Try again from the sign-in window.' };
+	// GoTrue sends error_code empty for some provider errors, so an empty value falls back to error.
+	if (!code) return failure(params.get('error_code') || params.get('error'), provider);
+	if (!pending) return failure('oauth_flow_missing', null);
 	try {
 		const response = await fetchImpl(`${gatewayUrl}/oauth-session`, {
 			method: 'POST',
@@ -62,12 +94,10 @@ export async function completeOAuthCallback(
 			body: JSON.stringify({ code, verifier: pending.verifier }),
 		});
 		const body = (await response.json().catch(() => ({}))) as { error?: string; redirectUrl?: string };
-		if (!response.ok) return { kind: 'error', message: messageFor(body.error, 'Could not complete sign-in. Try again.') };
-		if (typeof body.redirectUrl !== 'string' || !isTrustedOsionosRedirect(body.redirectUrl)) {
-			return { kind: 'error', message: 'Workspace redirect blocked: the link did not match the osionos app.' };
-		}
+		if (!response.ok) return failure(body.error ?? `http_${response.status}`, provider);
+		if (typeof body.redirectUrl !== 'string' || !isTrustedOsionosRedirect(body.redirectUrl)) return failure('oauth_redirect_blocked', provider);
 		return { kind: 'redirect', url: body.redirectUrl };
 	} catch {
-		return { kind: 'error', message: 'The sign-in service did not answer. Try again in a minute.' };
+		return failure('oauth_network_failed', provider);
 	}
 }
