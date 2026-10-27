@@ -19,6 +19,9 @@ function harness(knobs: Knobs = {}, mode = 'on') {
 	const log: string[] = [];
 	const audits: { event: string; details: Record<string, any> }[] = [];
 	let clock = NOW;
+	// GoTrue's admin password update ends every session of the user (live 2026-10-27: the provider
+	// session's own logout then answered 403 "Session not found").
+	let sessionsEnded = false;
 	const afterLogout = () => log.includes('logout others');
 	const answer = (name: string, body: unknown = {}): Result => (knobs.status?.[name] ? fail(knobs.status[name]) : ok(body as Record<string, any>));
 	const gotrue = {
@@ -34,10 +37,11 @@ function harness(knobs: Knobs = {}, mode = 'on') {
 		updateUser: vi.fn(async (_id: string, body: Record<string, unknown>) => {
 			const marking = 'app_metadata' in body;
 			log.push(marking ? 'PUT marker' : 'PUT password');
+			if (!marking) sessionsEnded = true;
 			return answer(marking ? 'marker' : 'rotate');
 		}),
 		deleteFactor: vi.fn(async (_id: string, factorId: string) => (log.push(`DELETE factor ${factorId}`), answer('deleteFactor'))),
-		logout: vi.fn(async (_token: string, scope: string) => (log.push(`logout ${scope}`), answer('logout'))),
+		logout: vi.fn(async (_token: string, scope: string) => (log.push(`logout ${scope}`), sessionsEnded ? fail(403) : answer('logout'))),
 		serviceRest: vi.fn(async (path: string, init: { method?: string } = {}) => {
 			const table = path.split('?')[0];
 			log.push(`${init.method ?? 'GET'} ${table}`);
@@ -139,9 +143,9 @@ describe('link, on', () => {
 		expect(await h.run()).toEqual({ allow: true, credentialReset: true });
 		const cutoff = h.log.find((entry) => entry.startsWith('cutoff'));
 		expect(h.mutations()).toEqual([
+			'logout others',
 			'PUT password',
 			'DELETE factor f9',
-			'logout others',
 			cutoff,
 			'PATCH ai_access_tokens',
 			'PATCH osionos_personal_access_tokens',
