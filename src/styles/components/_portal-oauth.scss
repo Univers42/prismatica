@@ -1,0 +1,41 @@
+// Provider sign-in sits above the email fields; recovery is email-only, so it hides there.
+.portal-oauth {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.portal-oauth[hidden],
+dialog.portal[data-portal-mode='recovery'] .portal-oauth {
+	display: none;
+}
+
+.portal-oauth__buttons {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.portal-oauth__button {
+	width: 100%;
+}
+
+.portal-oauth__terms {
+	margin: 0;
+	font-size: 0.82rem;
+	color: var(--system-text-muted);
+}
+
+.portal-oauth__divider {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0.25rem 0 0;
+	font-size: 0.85rem;
+	color: var(--system-text-muted);
+
+	&::before,
+	&::after {
+		content: '';
+		flex: 1;
+		border-top: 1px solid var(--system-border);
+	}
+}

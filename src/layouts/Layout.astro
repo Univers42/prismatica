@@ -11,6 +11,7 @@ type Props = {
 	image?: string;
 	canonical?: string;
 	noindex?: boolean;
+	referrerPolicy?: string;
 	locale?: string;
 };
 
@@ -20,6 +21,7 @@ const {
 	image,
 	canonical,
 	noindex = false,
+	referrerPolicy,
 	locale = DEFAULT_LOCALE,
 } = Astro.props;
 
@@ -77,6 +79,7 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		{referrerPolicy && <meta name="referrer" content={referrerPolicy} />}
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#ffffff" />
 		<meta name="description" content={description} />

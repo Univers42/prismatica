@@ -135,6 +135,12 @@ export default defineConfig({
 				'X-Prismatica-CSP-Mode': 'development',
 			},
 			proxy: {
+				// GoTrue's OAuth authorize and callback, as vercel.json routes them in production.
+				'/auth/v1': {
+					target: baasGatewayTarget,
+					changeOrigin: true,
+					secure: false,
+				},
 				'/api/auth': {
 					target: authGatewayTarget,
 					changeOrigin: true,
