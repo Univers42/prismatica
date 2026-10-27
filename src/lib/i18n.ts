@@ -88,6 +88,18 @@ export interface UIStrings {
     readonly q5: string;
     readonly a5: string;
   };
+  readonly docsTeaser: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly lede: string;
+    readonly openDocs: string;
+    readonly copy: string;
+    readonly copied: string;
+    readonly linkQuickstart: string;
+    readonly linkAuth: string;
+    readonly linkPostgrest: string;
+    readonly linkGdpr: string;
+  };
 }
 
 export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
@@ -144,6 +156,18 @@ export const DICTIONARY: TranslationDictionary = {
       role2: 'Head of Product',
       quote3: '“Self-hosted, audited, owned. Exactly what our security team asked for.”',
       role3: 'CTO',
+    },
+    docsTeaser: {
+      eyebrow: 'Built for engineers',
+      title: 'Read the docs. Ship in an afternoon.',
+      lede: 'Every endpoint typed. Every recipe runnable. Every page versioned.',
+      openDocs: 'Open the docs',
+      copy: 'Copy',
+      copied: 'Copied',
+      linkQuickstart: 'Quickstart',
+      linkAuth: 'Auth & sessions',
+      linkPostgrest: 'PostgREST recipes',
+      linkGdpr: 'GDPR runbook',
     },
     featureTrio: {
       eyebrow: 'What you get',
@@ -213,15 +237,27 @@ export const DICTIONARY: TranslationDictionary = {
       label: 'De la confianza de equipos de producto en todo el mundo',
       ariaLabel: 'De la confianza de equipos en',
     },
-    socialProof: {
+socialProof: {
       eyebrow: 'Lo que dicen los equipos',
       title: 'Construido por personas que entregan cada semana.',
       quote1: '“Reemplazamos cuatro suscripciones SaaS con un solo archivo Compose. La incorporación ahora lleva un día, no un sprint.”',
       role1: 'Ingeniera Principal',
-      quote2: '“La infraestructura de RGPD por sí sola nos ahorró seis semanas. La mascota es un extra.”',
+      quote2: '“La infraestructura de GDPR por sí sola nos ahorró seis semanas. La mascota es un extra.”',
       role2: 'Jefe de Producto',
       quote3: '“Autoalojado, auditado y propio. Exactamente lo que pidió nuestro equipo de seguridad.”',
       role3: 'Director de Tecnología',
+    },
+    docsTeaser: {
+      eyebrow: 'Construido para ingenieros',
+      title: 'Lee la documentación. Entrega en una tarde.',
+      lede: 'Cada endpoint tipado. Cada receta ejecutable. Cada página versionada.',
+      openDocs: 'Abrir la documentación',
+      copy: 'Copiar',
+      copied: 'Copiado',
+      linkQuickstart: 'Guía rápida',
+      linkAuth: 'Autenticación y sesiones',
+      linkPostgrest: 'Recetas de PostgREST',
+      linkGdpr: 'Manual de RGPD',
     },
     featureTrio: {
       eyebrow: 'Lo que obtienes',
@@ -300,6 +336,18 @@ export const DICTIONARY: TranslationDictionary = {
       role2: 'رئيس المنتجات',
       quote3: '“مستضيف ذاتياً، مُدقَّق، ومملوك بالكامل. تماماً ما طلبه فريق الأمان لدينا.”',
       role3: 'المدير التنفيذي للتكنولوجيا',
+    },
+    docsTeaser: {
+      eyebrow: 'صُمم للمهندسين',
+      title: 'اقرأ التوثيق. أطلق في ظهيرة واحدة.',
+      lede: 'كل نقطة نهاية منمطة. كل وصفة جاهزة للتشغيل. كل صفحة مؤرخة بإصدار.',
+      openDocs: 'افتح التوثيق',
+      copy: 'نسخ',
+      copied: 'تم النسخ',
+      linkQuickstart: 'البدء السريع',
+      linkAuth: 'المصادقة والجلسات',
+      linkPostgrest: 'وصفات PostgREST',
+      linkGdpr: 'دليل إجراءات GDPR',
     },
     featureTrio: {
       eyebrow: 'ما تحصل عليه',

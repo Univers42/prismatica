@@ -90,6 +90,15 @@ it.each([
       ['en', 'logoStrip.label', 'Trusted by product teams everywhere'],
       ['es', 'logoStrip.label', 'De la confianza de equipos de producto en todo el mundo'],
       ['ar', 'logoStrip.label', 'موثوق به من قِبل فرق المنتجات في كل مكان'],
+      ['en', 'docsTeaser.eyebrow', 'Built for engineers'],
+      ['es', 'docsTeaser.eyebrow', 'Construido para ingenieros'],
+      ['ar', 'docsTeaser.eyebrow', 'صُمم للمهندسين'],
+      ['en', 'docsTeaser.title', 'Read the docs. Ship in an afternoon.'],
+      ['es', 'docsTeaser.title', 'Lee la documentación. Entrega en una tarde.'],
+      ['ar', 'docsTeaser.title', 'اقرأ التوثيق. أطلق في ظهيرة واحدة.'],
+      ['en', 'docsTeaser.openDocs', 'Open the docs'],
+      ['es', 'docsTeaser.openDocs', 'Abrir la documentación'],
+      ['ar', 'docsTeaser.openDocs', 'افتح التوثيق'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });
