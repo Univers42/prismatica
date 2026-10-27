@@ -78,6 +78,15 @@ it.each([
       ['en', 'featureTrio.privacyTitle', 'GDPR by default'],
       ['es', 'featureTrio.privacyTitle', 'RGPD por defecto'],
       ['ar', 'featureTrio.privacyTitle', 'متوافق مع GDPR افتراضياً'],
+      ['en', 'faq.eyebrow', 'FAQ'],
+      ['es', 'faq.eyebrow', 'Preguntas frecuentes'],
+      ['ar', 'faq.eyebrow', 'الأسئلة الشائعة'],
+      ['en', 'faq.title', 'Answers, before you ask.'],
+      ['es', 'faq.title', 'Respuestas, antes de que preguntes.'],
+      ['ar', 'faq.title', 'إجابات، قبل أن تسأل.'],
+      ['en', 'faq.q1', 'Can I really self-host the whole stack?'],
+      ['es', 'faq.q1', '¿Realmente puedo autoalojar todo el stack?'],
+      ['ar', 'faq.q1', 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

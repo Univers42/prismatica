@@ -70,6 +70,20 @@ export interface UIStrings {
     readonly privacyTitle: string;
     readonly privacyLede: string;
   };
+  readonly faq: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly q1: string;
+    readonly a1: string;
+    readonly q2: string;
+    readonly a2: string;
+    readonly q3: string;
+    readonly a3: string;
+    readonly q4: string;
+    readonly a4: string;
+    readonly q5: string;
+    readonly a5: string;
+  };
 }
 
 export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
@@ -134,6 +148,20 @@ export const DICTIONARY: TranslationDictionary = {
       privacyTitle: 'GDPR by default',
       privacyLede: 'GDPR by default: consent ledger, DSAR exports, breach response runbook, and EU data residency baked in.',
     },
+    faq: {
+      eyebrow: 'FAQ',
+      title: 'Answers, before you ask.',
+      q1: 'Can I really self-host the whole stack?',
+      a1: 'Yes. The entire backend infrastructure repo is MIT licensed: Kong, GoTrue, PostgREST, Postgres, MailHog. One docker compose up and you are running locally; the same images deploy to any VPS.',
+      q2: 'Where does my data live?',
+      a2: 'Wherever you put it. The hosted tier runs in EU regions (Paris and Frankfurt). Self-hosted means your machines, your jurisdiction, your DPA — we never see the data.',
+      q3: 'How does pricing work as I grow?',
+      a3: 'You pay per active project, not per seat. Move from Free → Team in one click. If you outgrow Team, self-host: same code, no migration.',
+      q4: 'How do I migrate from another BaaS?',
+      a4: 'PostgREST means your schema is the API. Most teams import their existing dump, point Kong at it, and ship in under a day. We have migration recipes for Supabase, Firebase and Hasura.',
+      q5: 'What about security audits?',
+      a5: 'Auth flows ship with Turnstile, rate-limit and CSP defaults. The repo includes a published threat model, breach-response runbook, and OWASP ASVS L2 mapping in /docs/gdpr/.',
+    },
   },
   es: {
     a11y: {
@@ -194,6 +222,20 @@ export const DICTIONARY: TranslationDictionary = {
       privacyTitle: 'RGPD por defecto',
       privacyLede: 'RGPD por defecto: registro de consentimientos, exportaciones ARCO/DSAR, guía de respuesta a brechas y residencia de datos en la UE.',
     },
+    faq: {
+      eyebrow: 'Preguntas frecuentes',
+      title: 'Respuestas, antes de que preguntes.',
+      q1: '¿Realmente puedo autoalojar todo el stack?',
+      a1: 'Sí. Todo el repositorio de infraestructura backend tiene licencia MIT: Kong, GoTrue, PostgREST, Postgres, MailHog. Un docker compose up y funciona en local; las mismas imágenes se despliegan en cualquier VPS.',
+      q2: '¿Dónde residen mis datos?',
+      a2: 'Donde tú decidas. El plan alojado opera en regiones de la UE (París y Fráncfort). Autoalojado significa tus máquinas, tu jurisdicción, tu DPA — nunca vemos los datos.',
+      q3: '¿Cómo funciona el precio a medida que crezco?',
+      a3: 'Pagas por proyecto activo, no por usuario. Pasa de Free a Team con un solo clic. Si superas Team, autoaloja: el mismo código, sin migración.',
+      q4: '¿Cómo migro desde otro BaaS?',
+      a4: 'Con PostgREST tu esquema es tu API. La mayoría de equipos importa su volcado existente, conecta Kong y lo publica en menos de un día. Tenemos recetas de migración para Supabase, Firebase y Hasura.',
+      q5: '¿Qué hay de las auditorías de seguridad?',
+      a5: 'Los flujos de autenticación incluyen Turnstile, límites de tasa y CSP por defecto. El repositorio incluye un modelo de amenazas publicado, guía de respuesta a brechas y correspondencia con OWASP ASVS L2 en /docs/gdpr/.',
+    },
   },
   ar: {
     a11y: {
@@ -253,6 +295,20 @@ export const DICTIONARY: TranslationDictionary = {
       dbLede: 'مخطط بياناتك هو واجهة برمجة تطبيقاتك (API). أمان على مستوى الصف، استعلامات منمطة، وبث فوري دون كود وسيط.',
       privacyTitle: 'متوافق مع GDPR افتراضياً',
       privacyLede: 'توافق تام مع GDPR افتراضياً: سجل للموافقات، تصدير طلبات DSAR، دليل استجابة للخروقات، وإقامة بيانات في الاتحاد الأوروبي.',
+    },
+    faq: {
+      eyebrow: 'الأسئلة الشائعة',
+      title: 'إجابات، قبل أن تسأل.',
+      q1: 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟',
+      a1: 'نعم. مستودع البنية التحتية الخلفية بأكمله مرخص بموجب MIT: Kong و GoTrue و PostgREST و Postgres و MailHog. أمر واحد: docker compose up وستعمل محلياً؛ كما تُنشر الصور ذاتها على أي VPS.',
+      q2: 'أين تستقر بياناتي؟',
+      a2: 'أينما تضعها. الخطة السحابية المستضافة تعمل في مناطق الاتحاد الأوروبي (باريس وفرانكفورت). والاستضافة الذاتية تعني أجهزتك، اختصاصك القضائي، واتفاقية DPA الخاصة بك — نحن لا نرى البيانات أبداً.',
+      q3: 'كيف يعمل التسعير مع نمو مشروعي؟',
+      a3: 'أنت تدفع لكل مشروع نشط، وليس لكل مستخدم. انتقل من Free إلى Team بنقرة واحدة. وإذا تجاوزت Team، استضف ذاتياً: نفس الكود وبدون أي ترحيل.',
+      q4: 'كيف يمكنني الترحيل من BaaS آخر؟',
+      a4: 'بفضل PostgREST مخطط بياناتك هو واجهة API نفسها. معظم الفرق تستورد قاعدة بياناتها الحالية، وتوجه Kong إليها، وتطلق الإنتاج في أقل من يوم. لدينا إرشادات ترحيل من Supabase و Firebase و Hasura.',
+      q5: 'ماذا عن تدقيق الأمان والامتثال؟',
+      a5: 'مسارات المصادقة تأتي مدمجة مع Turnstile وحدود الاستخدام وسياسات CSP افتراضياً. يتضمن المستودع نموذج تهديد منشور، ودليل استجابة للخروقات، ومطابقة مع معيار OWASP ASVS L2 في /docs/gdpr/.',
     },
   },
 };
