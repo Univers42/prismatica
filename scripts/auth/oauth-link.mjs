@@ -10,9 +10,10 @@
  *
  *   off      the gateway never calls this; a provider sign-in to such an account answers 409.
  *   observe  decides and audits, changes nothing, takes no lock, still 409 (C354, C380).
- *   on       rotate the password to an unknown value, drop unverified factors, sign out every
- *            other session, re-read the account, cut off osionos sessions, revoke AI and personal
- *            access tokens, mail the owner, write the marker LAST (C343, C376, C377).
+ *   on       sign out every other session, rotate the password to an unknown value (which
+ *            ends the rest), drop unverified factors, re-read the account, cut off osionos
+ *            sessions, revoke AI and personal access tokens, mail the owner, write the marker
+ *            LAST (C343, C376, C377).
  *            Any failure: 503 and no marker, so the next sign-in resets again.
  *
  * Verdict: osionos-ai-records/oauth-link-newsletter-verdict.md, C341–C355 and C374–C381.
@@ -149,10 +150,13 @@ export function createOauthLink({ gotrue, store, writeCutoff, notifyLinked, audi
 			inTime();
 			if (!(await run()).ok) throw new LinkStop(stage);
 		};
+		// Logout first: the admin password update ends EVERY session, this provider session included,
+		// so a logout after it answers 403 "Session not found" (live 2026-10-27). The rotation then
+		// also ends any session minted between the two calls.
+		await step('logout', () => gotrue.logout(accessToken, 'others'));
 		await step('rotate', () => gotrue.updateUser(userId, { password: newSecret() }));
 		// decide() refused every verified factor, so these are all unverified.
 		for (const factor of factors) await step('factors', () => gotrue.deleteFactor(userId, factor.id));
-		await step('logout', () => gotrue.logout(accessToken, 'others'));
 		inTime();
 		// C377: a pending email change or a factor enrolled meanwhile survives the logout.
 		const fresh = await readAccount(userId);
