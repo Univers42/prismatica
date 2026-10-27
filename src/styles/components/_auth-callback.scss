@@ -1,0 +1,133 @@
+// Provider sign-in result page. One column at every width: the card narrows to a readable
+// measure on laptops, and the actions stack full-width on phones where they are thumb targets.
+.auth-callback {
+	width: min(100%, 36rem);
+	gap: 1.25rem;
+}
+
+.auth-callback__badge {
+	display: grid;
+	place-items: center;
+	inline-size: 3.25rem;
+	block-size: 3.25rem;
+	border: 1.5px solid var(--system-info-border);
+	border-radius: 999px;
+	background: var(--system-info-bg);
+	color: var(--system-info-text);
+
+	svg {
+		inline-size: 1.6rem;
+		block-size: 1.6rem;
+	}
+}
+
+// The card's tone picks the one icon shown: a spinner while working, then notice or danger.
+.auth-callback [data-callback-icon] {
+	display: none;
+}
+
+.auth-callback[data-tone='loading'] [data-callback-icon='loading'],
+.auth-callback[data-tone='notice'] [data-callback-icon='notice'],
+.auth-callback[data-tone='danger'] [data-callback-icon='danger'] {
+	display: block;
+}
+
+.auth-callback[data-tone='danger'] .auth-callback__badge {
+	border-color: var(--system-danger-border);
+	background: var(--system-danger-bg);
+	color: var(--system-danger-text);
+}
+
+.auth-callback__spinner {
+	inline-size: 1.5rem;
+	block-size: 1.5rem;
+	border: 3px solid currentColor;
+	border-block-start-color: transparent;
+	border-radius: 999px;
+	animation: auth-callback-spin 800ms linear infinite;
+}
+
+@keyframes auth-callback-spin {
+	to { transform: rotate(1turn); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.auth-callback__spinner {
+		animation: none;
+	}
+}
+
+.auth-callback h1:focus {
+	outline: none;
+}
+
+.auth-callback__message {
+	max-width: 60ch;
+	font-size: 1.05rem;
+	line-height: 1.6;
+	color: var(--system-text);
+}
+
+.auth-callback__next {
+	display: grid;
+	gap: 0.6rem;
+	padding-block-start: 1.1rem;
+	border-block-start: 1px solid var(--system-border);
+}
+
+.auth-callback__next[hidden],
+.auth-callback__actions[hidden],
+.auth-callback__reference[hidden] {
+	display: none;
+}
+
+.auth-callback__subtitle {
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.3;
+	color: var(--system-text-strong);
+}
+
+.auth-callback__steps {
+	display: grid;
+	gap: 0.45rem;
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	line-height: 1.55;
+	color: var(--system-text);
+}
+
+.auth-callback__actions {
+	display: grid;
+	gap: 0.75rem;
+
+	.button {
+		inline-size: 100%;
+	}
+}
+
+@media (min-width: 40rem) {
+	.auth-callback__actions {
+		display: flex;
+		flex-wrap: wrap;
+
+		.button {
+			inline-size: auto;
+		}
+	}
+}
+
+.auth-callback__reference {
+	font-size: 0.82rem;
+	color: var(--system-text-muted);
+
+	code {
+		margin-inline-start: 0.35rem;
+		padding: 0.1rem 0.4rem;
+		border-radius: 0.3rem;
+		background: var(--system-surface-sunken);
+		color: var(--system-text-strong);
+		font-family: var(--font-mono-sketch);
+		overflow-wrap: anywhere;
+	}
+}

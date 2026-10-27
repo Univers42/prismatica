@@ -118,6 +118,12 @@
 	margin: 0;
 }
 
+// The reset sizes every h1 for the homepage hero (up to 12rem); a card title needs its own scale.
+.auth-card h1 {
+	font-size: clamp(1.75rem, 1.35rem + 1.8vw, 2.5rem);
+	line-height: 1.1;
+}
+
 .auth-card__hint {
 	color: var(--ink-mid);
 }

@@ -50,24 +50,38 @@ describe('completeOAuthCallback', () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it('maps provider and gateway refusals to fixed text', async () => {
-		const denied = await completeOAuthCallback('/api/auth', callback('?error=access_denied&error_description=<b>x</b>'), history(), sessionStorage, gateway({}));
-		expect(denied).toEqual({ kind: 'error', message: 'Sign-in was cancelled at the provider.' });
+	it('maps provider and gateway refusals to a problem and a plain reference code', async () => {
+		startFlow();
+		const denied = await completeOAuthCallback('/api/auth', callback('?error=access_denied&error_code=&error_description=<b>x</b>'), history(), sessionStorage, gateway({}));
+		expect(denied).toEqual({ kind: 'error', problem: 'cancelled', code: 'access_denied', provider: 'google' });
 		startFlow();
 		const collision = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({ error: 'oauth_email_collision', message: '<b>raw</b>' }, 409));
-		expect(collision).toEqual({ kind: 'error', message: 'This email already has a Prismatica account. Sign in with your password instead.' });
+		expect(collision).toEqual({ kind: 'error', problem: 'email_in_use', code: 'oauth_email_collision', provider: 'google' });
+	});
+
+	it('never echoes a hostile code and falls back to a generic failure', async () => {
+		const hostile = await completeOAuthCallback('/api/auth', callback('?error=<img src=x>'), history(), sessionStorage, gateway({}));
+		expect(hostile).toEqual({ kind: 'error', problem: 'failed', code: 'unknown_error', provider: null });
+		startFlow();
+		const unlisted = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({}, 500));
+		expect(unlisted).toMatchObject({ problem: 'failed', code: 'http_500' });
+	});
+
+	it('reports a missing or used flow as expired', async () => {
+		const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({}));
+		expect(outcome).toEqual({ kind: 'error', problem: 'expired', code: 'oauth_flow_missing', provider: null });
 	});
 
 	it('blocks a redirect to an unknown origin', async () => {
 		startFlow();
 		const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, gateway({ redirectUrl: 'https://evil.example/' }));
-		expect(outcome.kind).toBe('error');
+		expect(outcome).toMatchObject({ kind: 'error', problem: 'redirect_blocked' });
 	});
 
 	it('reports an unreachable gateway', async () => {
 		startFlow();
 		const outcome = await completeOAuthCallback('/api/auth', callback('?code=code-1'), history(), sessionStorage, vi.fn(async () => Promise.reject(new Error('offline'))));
-		expect(outcome).toEqual({ kind: 'error', message: 'The sign-in service did not answer. Try again in a minute.' });
+		expect(outcome).toEqual({ kind: 'error', problem: 'service_down', code: 'oauth_network_failed', provider: 'google' });
 	});
 });
 
