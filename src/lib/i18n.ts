@@ -88,6 +88,37 @@ export interface UIStrings {
     readonly q5: string;
     readonly a5: string;
   };
+  readonly canvasWindows: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly lede: string;
+  };
+  readonly screenGallery: {
+    readonly title: string;
+    readonly lede: string;
+    readonly crmDealsTitle: string;
+    readonly crmDealsNote: string;
+    readonly crmPipelineTitle: string;
+    readonly crmPipelineNote: string;
+    readonly crmCalendarTitle: string;
+    readonly crmCalendarNote: string;
+    readonly crmGalleryTitle: string;
+    readonly crmGalleryNote: string;
+    readonly crmForecastTitle: string;
+    readonly crmForecastNote: string;
+    readonly dashboardTitle: string;
+    readonly dashboardNote: string;
+    readonly mapTitle: string;
+    readonly mapNote: string;
+    readonly timelineTitle: string;
+    readonly timelineNote: string;
+    readonly splitTitle: string;
+    readonly splitNote: string;
+    readonly analyticsTitle: string;
+    readonly analyticsNote: string;
+    readonly themesTitle: string;
+    readonly themesNote: string;
+  };
   readonly pricing: {
     readonly eyebrow: string;
     readonly title: string;
@@ -227,6 +258,37 @@ export const DICTIONARY: TranslationDictionary = {
       q5: 'What about security audits?',
       a5: 'Auth flows ship with Turnstile, rate-limit and CSP defaults. The repo includes a published threat model, breach-response runbook, and OWASP ASVS L2 mapping in /docs/gdpr/.',
     },
+    canvasWindows: {
+      eyebrow: 'Workspace anatomy',
+      title: 'One canvas, many windows.',
+      lede: 'Notes, auth, metrics, Postgres rows, email events, and product workflows all live in one place without losing the backend wiring underneath.',
+    },
+    screenGallery: {
+      title: 'Screens from the running app',
+      lede: 'Unedited screenshots of osionos on two demo workspaces, a sales CRM and a product catalog, shown the ways your team needs them.',
+      crmDealsTitle: 'A CRM from two databases',
+      crmDealsNote: 'Deals with formulas for weighted value and health, coloured by stage and odds.',
+      crmPipelineTitle: 'The pipeline as a board',
+      crmPipelineNote: 'One column per stage, each card a deal with its amount, owner and close date.',
+      crmCalendarTitle: 'Next steps on a calendar',
+      crmCalendarNote: 'The same deals by follow-up date, coloured by stage.',
+      crmGalleryTitle: 'Big deals as cards',
+      crmGalleryNote: 'One filter turns the table into a gallery of deals above 60,000.',
+      crmForecastTitle: 'Forecast and regions',
+      crmForecastNote: 'Deals closing soon, win odds and accounts on a map, read from the same rows.',
+      dashboardTitle: 'Dashboards over your rows',
+      dashboardNote: 'Totals, charts and breakdowns, next to every database the workspace reads.',
+      mapTitle: 'Rows on a map',
+      mapNote: 'Each product pinned at its warehouse address, coloured by category.',
+      timelineTitle: 'Projects on a timeline',
+      timelineNote: 'Start and end dates drawn as bars, labelled with their status.',
+      splitTitle: 'Two views side by side',
+      splitNote: 'Split the editor to keep the board and the numbers in sight.',
+      analyticsTitle: 'Same data, any theme',
+      analyticsNote: 'The analytics view in Midnight, one of nine colour themes.',
+      themesTitle: 'Set up the way you work',
+      themesNote: 'Light or dark, an accent colour, density, corners and text size.',
+    },
     pricing: {
       eyebrow: 'Pricing',
       title: 'Pick a tier. Switch anytime.',
@@ -350,6 +412,37 @@ faq: {
       q5: '¿Qué hay de las auditorías de seguridad?',
       a5: 'Los flujos de autenticación incluyen Turnstile, límites de tasa y CSP por defecto. El repositorio incluye un modelo de amenazas publicado, guía de respuesta a brechas y correspondencia con OWASP ASVS L2 en /docs/gdpr/.',
     },
+    canvasWindows: {
+      eyebrow: 'Anatomía del espacio de trabajo',
+      title: 'Un lienzo, múltiples ventanas.',
+      lede: 'Notas, autenticación, métricas, filas de Postgres, eventos de email y flujos de producto conviven en un solo lugar sin perder la conexión con el backend subyacente.',
+    },
+    screenGallery: {
+      title: 'Capturas de la aplicación en ejecución',
+      lede: 'Capturas sin editar de osionos en dos espacios de demostración: un CRM de ventas y un catálogo de productos, mostrados según las necesidades de tu equipo.',
+      crmDealsTitle: 'Un CRM a partir de dos bases de datos',
+      crmDealsNote: 'Oportunidades con fórmulas para valor ponderado y salud, coloreadas por etapa y probabilidad.',
+      crmPipelineTitle: 'El pipeline en formato tablero',
+      crmPipelineNote: 'Una columna por etapa, cada tarjeta una oportunidad con su importe, responsable y fecha de cierre.',
+      crmCalendarTitle: 'Próximos pasos en un calendario',
+      crmCalendarNote: 'Las mismas oportunidades ordenadas por fecha de seguimiento, coloreadas por etapa.',
+      crmGalleryTitle: 'Grandes operaciones en tarjetas',
+      crmGalleryNote: 'Un solo filtro convierte la tabla en una galería de oportunidades superiores a 60.000.',
+      crmForecastTitle: 'Previsión y regiones',
+      crmForecastNote: 'Operaciones próximas a cerrar, probabilidades de éxito y cuentas en un mapa, leídas de las mismas filas.',
+      dashboardTitle: 'Cuadros de mando sobre tus filas',
+      dashboardNote: 'Totales, gráficos y desgloses, junto a cada base de datos que lee el espacio de trabajo.',
+      mapTitle: 'Filas en un mapa',
+      mapNote: 'Cada producto ubicado en la dirección de su almacén, coloreado por categoría.',
+      timelineTitle: 'Proyectos en una línea temporal',
+      timelineNote: 'Fechas de inicio y fin representadas como barras, etiquetadas con su estado.',
+      splitTitle: 'Dos vistas en paralelo',
+      splitNote: 'Divide el editor para mantener el tablero y las cifras a la vista.',
+      analyticsTitle: 'Los mismos datos, cualquier tema',
+      analyticsNote: 'La vista analítica en Medianoche, uno de los nueve temas de color.',
+      themesTitle: 'Configurado a tu forma de trabajar',
+      themesNote: 'Claro u oscuro, color de acento, densidad, esquinas y tamaño de texto.',
+    },
     pricing: {
       eyebrow: 'Precios',
       title: 'Elige un plan. Cambia cuando quieras.',
@@ -463,15 +556,46 @@ faq: {
       eyebrow: 'الأسئلة الشائعة',
       title: 'إجابات، قبل أن تسأل.',
       q1: 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟',
-      a1: 'نعم. مستودع البنية التحتية الخلفية بأكمله مرخص بموجب MIT: Kong و GoTrue و PostgREST و Postgres و MailHog. أمر واحد: docker compose up وستعمل محلياً؛ كما تُنشر الصور ذاتها على أي VPS.',
+      a1: 'نعم. مستودع البنية التحتية backend بأكمله مرخص بموجب MIT: Kong و GoTrue و PostgREST و Postgres و MailHog. أمر واحد: docker compose up وستعمل محلياً؛ كما تُنشر الصور ذاتها على أي VPS.',
       q2: 'أين تستقر بياناتي؟',
       a2: 'أينما تضعها. الخطة السحابية المستضافة تعمل في مناطق الاتحاد الأوروبي (باريس وفرانكفورت). والاستضافة الذاتية تعني أجهزتك، اختصاصك القضائي، واتفاقية DPA الخاصة بك — نحن لا نرى البيانات أبداً.',
       q3: 'كيف يعمل التسعير مع نمو مشروعي؟',
       a3: 'أنت تدفع لكل مشروع نشط، وليس لكل مستخدم. انتقل من Free إلى Team بنقرة واحدة. وإذا تجاوزت Team، استضف ذاتياً: نفس الكود وبدون أي ترحيل.',
       q4: 'كيف يمكنني الترحيل من BaaS آخر؟',
-      a4: 'بفضل PostgREST مخطط بياناتك هو واجهة API نفسها. معظم الفرق تستورد قاعدة بياناتها الحالية، وتوجه Kong إليها، وتطلق الإنتاج في أقل من يوم. لدينا إرشادات ترحيل من Supabase و Firebase و Hasura.',
+      a4: 'بفضل PostgREST مخطط بياناتك هو واجهة API نفسها. معظم فرق تستورد قاعدة بياناتها الحالية، وتوجه Kong إليها، وتطلق الإنتاج في أقل من يوم. لدينا إرشادات ترحيل من Supabase و Firebase و Hasura.',
       q5: 'ماذا عن تدقيق الأمان والامتثال؟',
       a5: 'مسارات المصادقة تأتي مدمجة مع Turnstile وحدود الاستخدام وسياسات CSP افتراضياً. يتضمن المستودع نموذج تهديد منشور، ودليل استجابة للخروقات، ومطابقة مع معيار OWASP ASVS L2 في /docs/gdpr/.',
+    },
+    canvasWindows: {
+      eyebrow: 'تشريح مساحة العمل',
+      title: 'لوحة واحدة، نوافذ متعددة.',
+      lede: 'الملاحظات والمصادقة والمقاييس وصفوف Postgres وأحداث البريد الإلكتروني ومسارات العمل كلها في مكان واحد دون فقدان الربط بالبنية الخلفية.',
+    },
+    screenGallery: {
+      title: 'لقطات من التطبيق أثناء التشغيل',
+      lede: 'لقطات غير معدلة لـ osionos في مساحتي عمل تجريبيتين: CRM للمبيعات وكتالوج منتجات، معروضة بالطريقة التي يحتاجها فريقك.',
+      crmDealsTitle: 'نظام CRM مبني على قاعدتي بيانات',
+      crmDealsNote: 'صفقات مع معادلات للقيمة المرجحة ومستوى النجاح، ملونة بحسب المرحلة والاحتمالية.',
+      crmPipelineTitle: 'مسار المبيعات كلوحة مهام',
+      crmPipelineNote: 'عمود واحد لكل مرحلة، كل بطاقة تمثل صفقة بقيمتها ومسؤولها وتاريخ إغلاقها.',
+      crmCalendarTitle: 'الخطوات التالية على التقويم',
+      crmCalendarNote: 'الصفقات ذاتها مرتبة حسب تاريخ المتابعة وملونة بحسب المرحلة.',
+      crmGalleryTitle: 'الصفقات الكبرى كبطاقات',
+      crmGalleryNote: 'مرشح واحد يحول الجدول إلى معرض للصفقات التي تتجاوز 60,000.',
+      crmForecastTitle: 'التوقعات والمناطق',
+      crmForecastNote: 'صفقات تقترب من الإغلاق، واحتمالات الفوز والحسابات على الخريطة، مستخرجة من الصفوف نفسها.',
+      dashboardTitle: 'لوحات معلومات أعلى صفوفك',
+      dashboardNote: 'إجماليات ورسوم بيانية وتفاصيل، بجانب كل قاعدة بيانات تقرؤها مساحة العمل.',
+      mapTitle: 'الصفوف على خريطة',
+      mapNote: 'كل منتج مثبت في موقع مستودعه، ملون بحسب الفئة.',
+      timelineTitle: 'المشاريع على خط زمني',
+      timelineNote: 'تواريخ البدء والانتهاء مرسومة كأشرطة، وموسومة بحالتها.',
+      splitTitle: 'عرضان جنباً إلى جنب',
+      splitNote: 'قسّم المحرر لإبقاء اللوحة والأرقام في مرمى بصرك.',
+      analyticsTitle: 'نفس البيانات، بأي مظهر',
+      analyticsNote: 'عرض التحليلات بمظهر منتصف الليل، وهو أحد سمات الألوان التسع.',
+      themesTitle: 'مهيأ حسب أسلوب عملك',
+      themesNote: 'فاتح أو داكن، لون تمييز، كثافة، حواف وحجم النص.',
     },
     pricing: {
       eyebrow: 'الأسعار',

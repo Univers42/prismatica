@@ -30,7 +30,7 @@ const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 		<section class="swipe-stack__scene" data-stage="hero"><div class="swipe-stack__card swipe-stack__card--hero"><div class="swipe-stack__hero-combo"><HeroNew locale={requestedLocale} /><LogoStrip locale={requestedLocale} /></div></div></section>
 		<section class="swipe-stack__scene" data-stage="apps"><div class="swipe-stack__card"><AppTour /></div></section>
 		<section class="swipe-stack__scene" data-stage="product"><div class="swipe-stack__card"><FeatureTrio locale={requestedLocale} /></div></section>
-		<section class="swipe-stack__scene" data-stage="canvas"><div class="swipe-stack__card"><CanvasWindowsSection /></div></section>
+		<section class="swipe-stack__scene" data-stage="canvas"><div class="swipe-stack__card"><CanvasWindowsSection locale={requestedLocale} /></div></section>
 		<section class="swipe-stack__scene" data-stage="architecture"><div class="swipe-stack__card"><BackendArchitecture /></div></section>
 		<section class="swipe-stack__scene" data-stage="proof"><div class="swipe-stack__card"><SocialProof locale={requestedLocale} /></div></section>
 		<section class="swipe-stack__scene" data-stage="pricing"><div class="swipe-stack__card"><Pricing locale={requestedLocale} /></div></section>

@@ -114,6 +114,12 @@ it.each([
       ['en', 'pricing.selfName', 'Self-hosted'],
       ['es', 'pricing.selfName', 'Autoalojado'],
       ['ar', 'pricing.selfName', 'استضافة ذاتية'],
+      ['en', 'canvasWindows.eyebrow', 'Workspace anatomy'],
+      ['es', 'canvasWindows.eyebrow', 'Anatomía del espacio de trabajo'],
+      ['ar', 'canvasWindows.eyebrow', 'تشريح مساحة العمل'],
+      ['en', 'screenGallery.title', 'Screens from the running app'],
+      ['es', 'screenGallery.title', 'Capturas de la aplicación en ejecución'],
+      ['ar', 'screenGallery.title', 'لقطات من التطبيق أثناء التشغيل'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

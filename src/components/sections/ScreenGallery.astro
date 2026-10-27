@@ -1,29 +1,38 @@
 ---
-// Unedited screenshots of the running app, one per kind of window the canvas
-// copy promises. Phones swipe through them (scroll-snap, edge to edge); from
-// 768px they settle into a grid. Files and alt text live in media-shots.ts.
 import MediaSlot from '../ui/MediaSlot.astro';
 import { MEDIA_SHOTS } from '../../data/media-shots';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const SCREENS = [
-	{ shot: MEDIA_SHOTS.crmDeals, title: 'A CRM from two databases', note: 'Deals with formulas for weighted value and health, coloured by stage and odds.' },
-	{ shot: MEDIA_SHOTS.crmPipeline, title: 'The pipeline as a board', note: 'One column per stage, each card a deal with its amount, owner and close date.' },
-	{ shot: MEDIA_SHOTS.crmCalendar, title: 'Next steps on a calendar', note: 'The same deals by follow-up date, coloured by stage.' },
-	{ shot: MEDIA_SHOTS.crmGallery, title: 'Big deals as cards', note: 'One filter turns the table into a gallery of deals above 60,000.' },
-	{ shot: MEDIA_SHOTS.crmForecast, title: 'Forecast and regions', note: 'Deals closing soon, win odds and accounts on a map, read from the same rows.' },
-	{ shot: MEDIA_SHOTS.dashboard, title: 'Dashboards over your rows', note: 'Totals, charts and breakdowns, next to every database the workspace reads.' },
-	{ shot: MEDIA_SHOTS.map, title: 'Rows on a map', note: 'Each product pinned at its warehouse address, coloured by category.' },
-	{ shot: MEDIA_SHOTS.timeline, title: 'Projects on a timeline', note: 'Start and end dates drawn as bars, labelled with their status.' },
-	{ shot: MEDIA_SHOTS.split, title: 'Two views side by side', note: 'Split the editor to keep the board and the numbers in sight.' },
-	{ shot: MEDIA_SHOTS.analytics, title: 'Same data, any theme', note: 'The analytics view in Midnight, one of nine colour themes.' },
-	{ shot: MEDIA_SHOTS.themes, title: 'Set up the way you work', note: 'Light or dark, an accent colour, density, corners and text size.' },
-];
+	{ shot: MEDIA_SHOTS.crmDeals, titleKey: 'screenGallery.crmDealsTitle', noteKey: 'screenGallery.crmDealsNote' },
+	{ shot: MEDIA_SHOTS.crmPipeline, titleKey: 'screenGallery.crmPipelineTitle', noteKey: 'screenGallery.crmPipelineNote' },
+	{ shot: MEDIA_SHOTS.crmCalendar, titleKey: 'screenGallery.crmCalendarTitle', noteKey: 'screenGallery.crmCalendarNote' },
+	{ shot: MEDIA_SHOTS.crmGallery, titleKey: 'screenGallery.crmGalleryTitle', noteKey: 'screenGallery.crmGalleryNote' },
+	{ shot: MEDIA_SHOTS.crmForecast, titleKey: 'screenGallery.crmForecastTitle', noteKey: 'screenGallery.crmForecastNote' },
+	{ shot: MEDIA_SHOTS.dashboard, titleKey: 'screenGallery.dashboardTitle', noteKey: 'screenGallery.dashboardNote' },
+	{ shot: MEDIA_SHOTS.map, titleKey: 'screenGallery.mapTitle', noteKey: 'screenGallery.mapNote' },
+	{ shot: MEDIA_SHOTS.timeline, titleKey: 'screenGallery.timelineTitle', noteKey: 'screenGallery.timelineNote' },
+	{ shot: MEDIA_SHOTS.split, titleKey: 'screenGallery.splitTitle', noteKey: 'screenGallery.splitNote' },
+	{ shot: MEDIA_SHOTS.analytics, titleKey: 'screenGallery.analyticsTitle', noteKey: 'screenGallery.analyticsNote' },
+	{ shot: MEDIA_SHOTS.themes, titleKey: 'screenGallery.themesTitle', noteKey: 'screenGallery.themesNote' },
+] as const;
 ---
 
 <div class="screen-gallery">
 	<div class="screen-gallery__head">
-		<h3 class="screen-gallery__title" id="screen-gallery-title">Screens from the running app</h3>
-		<p class="screen-gallery__lede">Unedited screenshots of osionos on two demo workspaces, a sales CRM and a product catalog, shown the ways your team needs them.</p>
+		<h3 class="screen-gallery__title" id="screen-gallery-title" data-i18n="screenGallery.title">{t(activeLocale, 'screenGallery.title')}</h3>
+		<p class="screen-gallery__lede" data-i18n="screenGallery.lede">{t(activeLocale, 'screenGallery.lede')}</p>
 	</div>
 	<div class="screen-gallery__scroller" role="region" aria-labelledby="screen-gallery-title">
 		<ul class="screen-gallery__list" role="list">
@@ -32,8 +41,8 @@ const SCREENS = [
 					<figure class="screen-gallery__figure">
 						<MediaSlot shot={screen.shot} frame="browser" sizes="(min-width: 1200px) 360px, (min-width: 768px) 46vw, 82vw" />
 						<figcaption class="screen-gallery__caption">
-							<span class="screen-gallery__name">{screen.title}</span>
-							<span class="screen-gallery__note">{screen.note}</span>
+							<span class="screen-gallery__name" data-i18n={screen.titleKey}>{t(activeLocale, screen.titleKey as any)}</span>
+							<span class="screen-gallery__note" data-i18n={screen.noteKey}>{t(activeLocale, screen.noteKey as any)}</span>
 						</figcaption>
 					</figure>
 				</li>
@@ -58,94 +67,93 @@ const SCREENS = [
 
 	.screen-gallery__title {
 		margin: 0;
-		font-size: clamp(1.35rem, 4.4vw, 1.9rem);
-		font-weight: 600;
-		line-height: 1.15;
-		color: var(--brand-canvas-text);
+		font-family: var(--system-font-sans);
+		font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+		font-weight: 700;
+		letter-spacing: -0.015em;
+		color: var(--system-text-strong);
 	}
 
 	.screen-gallery__lede {
 		margin: 0;
-		line-height: 1.55;
-		color: var(--brand-canvas-text-dim);
+		font-size: 0.95rem;
+		line-height: 1.5;
+		color: var(--system-text-muted);
 	}
 
-	/* Phones: a swipeable row bleeding to the screen edge (4vw = the gutter
-	   left by .section__container at 92vw), the next card peeking in. */
 	.screen-gallery__scroller {
-		margin-inline: -4vw;
-		padding: 0.25rem 4vw 0.75rem;
+		min-width: 0;
 		overflow-x: auto;
 		scroll-snap-type: x mandatory;
-		scroll-padding-inline: 4vw;
-		overscroll-behavior-x: contain;
-		border-radius: var(--system-radius-md);
-	}
-
-	/* No tabindex: the row holds no controls, and Chrome and Firefox already put a
-	   scroller in the tab order. Caveat: Safari does not, so there a keyboard user
-	   reads the screens only in the 768px+ grid. */
-	.screen-gallery__scroller:focus-visible {
-		outline: 3px solid var(--system-focus-ring);
-		outline-offset: 2px;
+		scroll-padding-inline: 1rem;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.screen-gallery__list {
-		display: grid;
-		grid-auto-columns: 82vw;
-		grid-auto-flow: column;
-		gap: 0.85rem;
+		display: flex;
+		gap: 1.25rem;
 		margin: 0;
-		padding: 0;
+		padding: 0 0 1rem;
 		list-style: none;
 	}
 
+	@media (min-width: 768px) {
+		.screen-gallery__scroller { overflow-x: visible; }
+		.screen-gallery__list {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 1.5rem;
+			padding-bottom: 0;
+		}
+	}
+
 	.screen-gallery__item {
-		min-width: 0;
-		scroll-snap-align: start;
+		min-width: 82vw;
+		max-width: 82vw;
+		scroll-snap-align: center;
+	}
+
+	@media (min-width: 768px) {
+		.screen-gallery__item {
+			min-width: 0;
+			max-width: none;
+			scroll-snap-align: none;
+		}
 	}
 
 	.screen-gallery__figure {
-		display: grid;
-		gap: 0.65rem;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
 		margin: 0;
+		background: var(--system-surface);
+		border: 1px solid var(--system-border);
+		border-radius: var(--system-radius-md);
+		overflow: hidden;
+		transition: border-color var(--system-duration-base) var(--system-ease-standard);
 	}
 
-	.screen-gallery__figure .media-slot {
-		box-shadow: var(--system-shadow-2);
+	.screen-gallery__figure:hover {
+		border-color: var(--system-border-strong);
 	}
 
 	.screen-gallery__caption {
-		display: grid;
-		gap: 0.2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		padding: 1rem 1.1rem;
+		margin-top: auto;
 	}
 
 	.screen-gallery__name {
 		font-weight: 600;
-		color: var(--brand-canvas-text);
+		font-size: 0.95rem;
+		color: var(--system-text-strong);
 	}
 
 	.screen-gallery__note {
-		font-size: 0.9375rem;
+		font-size: 0.85rem;
+		color: var(--system-text-muted);
 		line-height: 1.45;
-		color: var(--brand-canvas-text-dim);
-	}
-
-	@media (min-width: 768px) {
-		.screen-gallery__scroller {
-			margin-inline: 0;
-			padding: 0;
-			overflow: visible;
-		}
-
-		.screen-gallery__list {
-			grid-auto-flow: row;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 1.75rem 1.25rem;
-		}
-	}
-
-	@media (min-width: 1200px) {
-		.screen-gallery__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 	}
 </style>
