@@ -413,6 +413,12 @@
 	.consent-banner__actions { flex-wrap: nowrap; }
 	.consent-banner__preferences { grid-column: 1 / -1; }
 
+	/* Tablets: the three unwrapped actions need ~580px, so beside them the
+	   message was squeezed into a ~110px column. Stack the actions under it. */
+	@media (width <= 1024px) {
+		.consent-banner__paper { grid-template-columns: 1fr; }
+	}
+
 	/* Phones: a compact two-row bar (title, then Accept / Reject with Manage
 	   beneath) instead of a panel covering a quarter of the screen. */
 	@media (width <= 720px) {
