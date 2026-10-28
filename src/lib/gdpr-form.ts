@@ -1,30 +1,4 @@
-function formDataString(formData: FormData, key: string): string {
-	const value = formData.get(key);
-	return typeof value === 'string' ? value : '';
-}
-
-function generateSafeToken(): string {
-	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-		return crypto.randomUUID();
-	}
-	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-const ALLOWED_REQUEST_TYPES = new Set([
-	'access',
-	'deletion',
-	'rectification',
-	'portability',
-	'restriction',
-	'objection',
-	'withdrawal',
-]);
-
 export interface GdprDependencies {
-	readStorage: (key: string) => string | null;
-	writeStorage: (key: string, val: string) => void;
-	csrfStorageKey: string;
-	policyVersion: string;
 	privacyContact: string;
 }
 
@@ -82,7 +56,6 @@ function downloadExport(data: unknown, filename = `prismatica-data-export-${new 
 }
 
 export function bindGdprSelfService(deps: {
-	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 }): void {
 	const container = document.querySelector<HTMLElement>('[data-gdpr-self-service]');
