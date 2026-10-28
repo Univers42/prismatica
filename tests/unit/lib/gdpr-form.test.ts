@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { bindDataRightsForm, bindGdprSelfService } from '../../../src/lib/gdpr-form';
 
-describe('GDPR Form', () => {
-	let mockCallGdprEndpoint: ReturnType<typeof vi.fn>;
-
+describe('GDPR UI controls', () => {
 	beforeEach(() => {
 		document.body.innerHTML = `
 			<form data-gdpr-request-form>
@@ -15,16 +13,16 @@ describe('GDPR Form', () => {
 				<button type="submit">Submit</button>
 			</form>
 		`;
-		mockCallGdprEndpoint = vi.fn();
 	});
 
-	it('explains generic rights requests require the privacy contact', () => {
+	it('directs unsupported generic rights requests to the privacy contact', () => {
 		bindDataRightsForm({ privacyContact: 'privacy@example.com' });
+
 		expect(document.querySelector('[data-gdpr-request-status]')?.textContent).toContain('privacy@example.com');
 		expect(document.querySelector('form button[type="submit"]')).toHaveProperty('disabled', true);
 	});
 
-	describe('GDPR self-service actions', () => {
+	describe('authenticated self-service actions', () => {
 		beforeEach(() => {
 			document.body.innerHTML = `
 				<section data-gdpr-self-service>
@@ -36,8 +34,8 @@ describe('GDPR Form', () => {
 			vi.spyOn(window, 'confirm').mockReturnValue(true);
 		});
 
-		it('downloads a scoped export returned by the authenticated export RPC', async () => {
-			const payload = { user: { email: 'test@example.com' }, preferences: { theme: 'dark' } };
+		it('downloads a data export returned by the Grobase endpoint', async () => {
+			const payload = { exportedAt: '2026-10-28T00:00:00.000Z', userId: 'user-1', data: { preferences: { theme: 'dark' } } };
 			const endpoint = vi.fn().mockResolvedValue({ ok: true, data: payload });
 			const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 			const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
@@ -52,9 +50,9 @@ describe('GDPR Form', () => {
 			expect(document.querySelector('[data-gdpr-self-service-status]')?.textContent).toContain('downloaded');
 		});
 
-		it('asks for confirmation before requesting account deletion', async () => {
+		it('confirms before submitting a deletion request to Grobase', async () => {
 			const endpoint = vi.fn().mockResolvedValue({ ok: true, data: { id: 1, status: 'pending' } });
-			bindGdprSelfService({ callGdprRpc: rpc, callGdprEndpoint: endpoint });
+			bindGdprSelfService({ callGdprEndpoint: endpoint });
 
 			(document.querySelector('[data-gdpr-delete]') as HTMLButtonElement).click();
 			await new Promise(resolve => setTimeout(resolve, 0));
@@ -64,16 +62,14 @@ describe('GDPR Form', () => {
 			expect(document.querySelector('[data-gdpr-self-service-status]')?.textContent).toContain('submitted');
 		});
 
-		it('does not request deletion when confirmation is cancelled', async () => {
+		it('does not request deletion when confirmation is cancelled', () => {
 			vi.spyOn(window, 'confirm').mockReturnValue(false);
 			const endpoint = vi.fn();
 			bindGdprSelfService({ callGdprEndpoint: endpoint });
 
 			(document.querySelector('[data-gdpr-delete]') as HTMLButtonElement).click();
 
-			expect(rpc).not.toHaveBeenCalled();
 			expect(endpoint).not.toHaveBeenCalled();
 		});
 	});
-
 });
