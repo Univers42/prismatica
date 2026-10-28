@@ -132,6 +132,12 @@ it.each([
       ['en', 'whySlide.title', 'What Prismatica takes off your plate'],
       ['es', 'whySlide.title', 'Lo que Prismatica resuelve por ti'],
       ['ar', 'whySlide.title', 'ما توفره عليك برزماتيكا'],
+      ['en', 'footer.tagline', 'Open-source backend for product teams.'],
+      ['es', 'footer.tagline', 'Backend de código abierto para equipos de producto.'],
+      ['ar', 'footer.tagline', 'خلفية برمجية مفتوحة المصدر لفرق المنتجات.'],
+      ['en', 'footer.newsletterButton', 'Subscribe'],
+      ['es', 'footer.newsletterButton', 'Suscribirse'],
+      ['ar', 'footer.newsletterButton', 'اشتراك'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

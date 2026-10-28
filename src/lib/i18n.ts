@@ -161,6 +161,28 @@ export interface UIStrings {
     readonly problem5: string;
     readonly answer5: string;
   };
+  readonly footer: {
+    readonly tagline: string;
+    readonly newsletterLabel: string;
+    readonly newsletterButton: string;
+    readonly newsletterConsent: string;
+    readonly newsletterMeta: string;
+    readonly groupProduct: string;
+    readonly linkOverview: string;
+    readonly linkPricing: string;
+    readonly linkFaq: string;
+    readonly groupResources: string;
+    readonly linkDocs: string;
+    readonly groupCompany: string;
+    readonly linkGithub: string;
+    readonly groupLegal: string;
+    readonly linkPrivacy: string;
+    readonly linkTerms: string;
+    readonly linkCookies: string;
+    readonly linkDataRights: string;
+    readonly copyright: string;
+    readonly gdprContact: string;
+  };
   readonly pricing: {
     readonly eyebrow: string;
     readonly title: string;
@@ -373,6 +395,28 @@ export const DICTIONARY: TranslationDictionary = {
       problem5: 'Owning your data is hard to prove.',
       answer5: 'Open source under MIT and self-hosted, with GDPR export and erasure built in.',
     },
+    footer: {
+      tagline: 'Open-source backend for product teams.',
+      newsletterLabel: 'Get release notes',
+      newsletterButton: 'Subscribe',
+      newsletterConsent: 'I agree to receive release emails and can unsubscribe from any footer.',
+      newsletterMeta: 'One email per release. No tracking pixels.',
+      groupProduct: 'Product',
+      linkOverview: 'Overview',
+      linkPricing: 'Pricing',
+      linkFaq: 'FAQ',
+      groupResources: 'Resources',
+      linkDocs: 'Docs',
+      groupCompany: 'Company',
+      linkGithub: 'GitHub',
+      groupLegal: 'Legal',
+      linkPrivacy: 'Privacy policy',
+      linkTerms: 'Terms',
+      linkCookies: 'Cookies',
+      linkDataRights: 'Data rights',
+      copyright: '© {year} Prismatica · Open source under MIT',
+      gdprContact: 'GDPR contact:',
+    },
     pricing: {
       eyebrow: 'Pricing',
       title: 'Pick a tier. Switch anytime.',
@@ -569,6 +613,28 @@ faq: {
       problem5: 'Demostrar que eres dueño de tus datos es difícil.',
       answer5: 'Código abierto bajo licencia MIT y autoalojado, con exportación y borrado GDPR integrados.',
     },
+    footer: {
+      tagline: 'Backend de código abierto para equipos de producto.',
+      newsletterLabel: 'Recibe notas de versiones',
+      newsletterButton: 'Suscribirse',
+      newsletterConsent: 'Acepto recibir correos sobre nuevas versiones y puedo cancelar la suscripción desde cualquier pie de página.',
+      newsletterMeta: 'Un correo por lanzamiento. Sin píxeles de seguimiento.',
+      groupProduct: 'Producto',
+      linkOverview: 'Visión general',
+      linkPricing: 'Precios',
+      linkFaq: 'FAQ',
+      groupResources: 'Recursos',
+      linkDocs: 'Documentación',
+      groupCompany: 'Compañía',
+      linkGithub: 'GitHub',
+      groupLegal: 'Legal',
+      linkPrivacy: 'Política de privacidad',
+      linkTerms: 'Términos',
+      linkCookies: 'Cookies',
+      linkDataRights: 'Derechos de datos',
+      copyright: '© {year} Prismatica · Código abierto bajo MIT',
+      gdprContact: 'Contacto GDPR:',
+    },
     pricing: {
       eyebrow: 'Precios',
       title: 'Elige un plan. Cambia cuando quieras.',
@@ -764,6 +830,28 @@ faq: {
       answer4: 'تعمل الحاويات نفسها على حاسوبك وعلى كوبرنيتيس، من مستوى بيانات واحد إلى 10.',
       problem5: 'إثبات ملكيتك لبياناتك أمر معقد.',
       answer5: 'مفتوح المصدر بترخيص MIT ومستضاف ذاتياً، مع إمكانية التصدير والحذف وفق معايير GDPR.',
+    },
+    footer: {
+      tagline: 'خلفية برمجية مفتوحة المصدر لفرق المنتجات.',
+      newsletterLabel: 'احصل على ملاحظات الإصدارات',
+      newsletterButton: 'اشتراك',
+      newsletterConsent: 'أوافق على تلقي رسائل البريد الإلكتروني الخاصة بالإصدارات ويمكنني إلغاء الاشتراك من أي تذييل.',
+      newsletterMeta: 'رسالة واحدة لكل إصدار. دون بكسلات تتبع.',
+      groupProduct: 'المنتج',
+      linkOverview: 'نظرة عامة',
+      linkPricing: 'الأسعار',
+      linkFaq: 'الأسئلة الشائعة',
+      groupResources: 'المصادر',
+      linkDocs: 'التوثيق',
+      groupCompany: 'الشركة',
+      linkGithub: 'GitHub',
+      groupLegal: 'قانوني',
+      linkPrivacy: 'سياسة الخصوصية',
+      linkTerms: 'الشروط',
+      linkCookies: 'ملفات تعريف الارتباط',
+      linkDataRights: 'حقوق البيانات',
+      copyright: '© {year} برزماتيكا · مفتوح المصدر بموجب ترخيص MIT',
+      gdprContact: 'مسؤول حماية البيانات GDPR:',
     },
     pricing: {
       eyebrow: 'الأسعار',

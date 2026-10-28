@@ -1,35 +1,47 @@
 ---
 import Button from '../ui/Button.astro';
 import PrismaticaLogo from '../brand/PrismaticaLogo.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const groups = [
 	{
-		heading: 'Product',
+		headingKey: 'footer.groupProduct',
 		links: [
-			{ href: '#product', label: 'Overview' },
-			{ href: '#pricing', label: 'Pricing' },
-			{ href: '#faq',     label: 'FAQ' },
+			{ href: '#product', labelKey: 'footer.linkOverview' },
+			{ href: '#pricing', labelKey: 'footer.linkPricing' },
+			{ href: '#faq',     labelKey: 'footer.linkFaq' },
 		],
 	},
 	{
-		heading: 'Resources',
+		headingKey: 'footer.groupResources',
 		links: [
-			{ href: '/docs/',                  label: 'Docs' },
+			{ href: '/docs/',   labelKey: 'footer.linkDocs' },
 		],
 	},
 	{
-		heading: 'Company',
+		headingKey: 'footer.groupCompany',
 		links: [
-			{ href: 'https://github.com/Univers42/track-binocle', label: 'GitHub' },
+			{ href: 'https://github.com/Univers42/track-binocle', labelKey: 'footer.linkGithub' },
 		],
 	},
 	{
-		heading: 'Legal',
+		headingKey: 'footer.groupLegal',
 		links: [
-			{ href: '/legal/privacy-policy', label: 'Privacy policy' },
-			{ href: '/legal/terms',          label: 'Terms' },
-			{ href: '/legal/cookies',        label: 'Cookies' },
-			{ href: '/legal/data-rights',    label: 'Data rights' },
+			{ href: '/legal/privacy-policy', labelKey: 'footer.linkPrivacy' },
+			{ href: '/legal/terms',          labelKey: 'footer.linkTerms' },
+			{ href: '/legal/cookies',        labelKey: 'footer.linkCookies' },
+			{ href: '/legal/data-rights',    labelKey: 'footer.linkDataRights' },
 		],
 	},
 ];
@@ -44,32 +56,32 @@ const year = new Date().getFullYear();
 				<span class="footer-new__logo" aria-hidden="true"><PrismaticaLogo decorative /></span>
 				<span class="footer-new__wordmark">Prismatica</span>
 			</a>
-			<p class="footer-new__tagline">Open-source backend for product teams.</p>
+			<p class="footer-new__tagline" data-i18n="footer.tagline">{t(activeLocale, 'footer.tagline')}</p>
 
 			<form class="footer-new__newsletter" action="/api/newsletter/subscribe" method="post" novalidate data-newsletter-signup>
-				<label for="footer-newsletter-email">Get release notes</label>
+				<label for="footer-newsletter-email" data-i18n="footer.newsletterLabel">{t(activeLocale, 'footer.newsletterLabel')}</label>
 				<div class="footer-new__newsletter-row">
 					<input id="footer-newsletter-email" type="email" name="email" autocomplete="email" placeholder="you@studio.io" required />
-					<Button variant="primary" size="sm" type="submit">Subscribe</Button>
+					<Button variant="primary" size="sm" type="submit"><span data-i18n="footer.newsletterButton">{t(activeLocale, 'footer.newsletterButton')}</span></Button>
 				</div>
 				<label class="footer-new__consent" for="footer-newsletter-consent">
 					<input id="footer-newsletter-consent" type="checkbox" name="newsletter_consent" required />
-					<span>I agree to receive release emails and can unsubscribe from any footer.</span>
+					<span data-i18n="footer.newsletterConsent">{t(activeLocale, 'footer.newsletterConsent')}</span>
 				</label>
 				<div class="footer-new__newsletter-turnstile" data-turnstile-slot></div>
 				<input type="hidden" name="turnstileToken" data-turnstile-token />
 				<output class="footer-new__newsletter-status" data-newsletter-status aria-live="polite"></output>
-				<p class="footer-new__newsletter-meta">One email per release. No tracking pixels.</p>
+				<p class="footer-new__newsletter-meta" data-i18n="footer.newsletterMeta">{t(activeLocale, 'footer.newsletterMeta')}</p>
 			</form>
 		</section>
 
 		<nav class="footer-new__nav" aria-label="Footer">
 			{groups.map((group) => (
 				<div class="footer-new__group">
-					<h3 class="footer-new__heading">{group.heading}</h3>
+					<h3 class="footer-new__heading" data-i18n={group.headingKey}>{t(activeLocale, group.headingKey as any)}</h3>
 					<ul role="list">
 						{group.links.map((link) => (
-							<li><a href={link.href}>{link.label}</a></li>
+							<li><a href={link.href} data-i18n={link.labelKey}>{t(activeLocale, link.labelKey as any)}</a></li>
 						))}
 					</ul>
 				</div>
@@ -78,8 +90,8 @@ const year = new Date().getFullYear();
 	</div>
 
 	<div class="footer-new__base">
-		<p>© {year} Prismatica · Open source under MIT</p>
-		<p class="footer-new__gdpr">GDPR contact: <a href="mailto:dpo@prismatica.dev">dpo@prismatica.dev</a></p>
+		<p data-i18n="footer.copyright">{t(activeLocale, 'footer.copyright', { year: String(year) })}</p>
+		<p class="footer-new__gdpr"><span data-i18n="footer.gdprContact">{t(activeLocale, 'footer.gdprContact')}</span> <a href="mailto:dpo@prismatica.dev">dpo@prismatica.dev</a></p>
 		<ul class="footer-new__social" role="list">
 			<li><a href="https://github.com/Univers42/track-binocle" aria-label="GitHub">GitHub</a></li>
 			<li><a href="https://x.com/prismatica" aria-label="X (Twitter)">X</a></li>
