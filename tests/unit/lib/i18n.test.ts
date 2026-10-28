@@ -138,6 +138,12 @@ it.each([
       ['en', 'footer.newsletterButton', 'Subscribe'],
       ['es', 'footer.newsletterButton', 'Suscribirse'],
       ['ar', 'footer.newsletterButton', 'اشتراك'],
+      ['en', 'appTour.title', 'Six apps that already talk to each other.'],
+      ['es', 'appTour.title', 'Seis aplicaciones que ya se comunican entre sí.'],
+      ['ar', 'appTour.title', 'ستة تطبيقات تتواصل مع بعضها البعض بالفعل.'],
+      ['en', 'appTour.appDocsName', 'Page'],
+      ['es', 'appTour.appDocsName', 'Página'],
+      ['ar', 'appTour.appDocsName', 'صفحة'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

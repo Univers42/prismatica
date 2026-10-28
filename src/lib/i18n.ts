@@ -183,6 +183,31 @@ export interface UIStrings {
     readonly copyright: string;
     readonly gdprContact: string;
   };
+readonly appTour: {
+    readonly title: string;
+    readonly lede: string;
+    readonly worksWith: string;
+    readonly pocketTitle: string;
+    readonly pocketLede: string;
+    readonly appDocsName: string;
+    readonly appDocsHint: string;
+    readonly appDocsSummary: string;
+    readonly appDatabaseName: string;
+    readonly appDatabaseHint: string;
+    readonly appDatabaseSummary: string;
+    readonly appBoardName: string;
+    readonly appBoardHint: string;
+    readonly appBoardSummary: string;
+    readonly appCalendarName: string;
+    readonly appCalendarHint: string;
+    readonly appCalendarSummary: string;
+    readonly appMailName: string;
+    readonly appMailHint: string;
+    readonly appMailSummary: string;
+    readonly appWhiteboardName: string;
+    readonly appWhiteboardHint: string;
+    readonly appWhiteboardSummary: string;
+  };
   readonly pricing: {
     readonly eyebrow: string;
     readonly title: string;
@@ -210,7 +235,7 @@ export interface UIStrings {
     readonly selfPrice: string;
     readonly selfCadence: string;
     readonly selfSummary: string;
-    readonly selfFeature1: string;
+    selfFeature1: string;
     readonly selfFeature2: string;
     readonly selfFeature3: string;
     readonly selfFeature4: string;
@@ -450,6 +475,31 @@ export const DICTIONARY: TranslationDictionary = {
       selfFeature4: 'Optional paid support',
       selfCta: 'See the docs',
     },
+    appTour: {
+      title: 'Six apps that already talk to each other.',
+      lede: 'Each one is a block you can drop into any page. They read the same data, so a client added in the database shows up on the board, in the calendar and in your mail.',
+      worksWith: 'Works with',
+      pocketTitle: 'Your workspace in your pocket.',
+      pocketLede: "The same pages, boards and inbox on your phone, synced as you work. Check today's tasks on the way in, answer a client from the train.",
+      appDocsName: 'Page',
+      appDocsHint: 'Notes, plans and wikis',
+      appDocsSummary: 'Write plans, notes and wikis. Mention a client, a task or an email and it stays linked, wherever it moves.',
+      appDatabaseName: 'Database',
+      appDatabaseHint: 'Clients, orders, stock',
+      appDatabaseSummary: 'Keep clients, orders or stock in tables. Every row opens as a page, and every view reads the same data.',
+      appBoardName: 'Board',
+      appBoardHint: 'Work moving through stages',
+      appBoardSummary: 'Move work across stages. Cards are rows of your database, not copies, so nothing goes stale.',
+      appCalendarName: 'Calendar',
+      appCalendarHint: 'Deadlines and meetings',
+      appCalendarSummary: 'See deadlines and meetings in one week. Dates come straight from your boards and your mail.',
+      appMailName: 'Mail',
+      appMailHint: 'Your inbox, next to the work',
+      appMailSummary: 'Read mail next to the work it is about. Turn any email into a task in one step.',
+      appWhiteboardName: 'Whiteboard',
+      appWhiteboardHint: 'Sketch flows and ideas',
+      appWhiteboardSummary: 'Sketch flows and ideas together, then drop the drawing into any page.',
+    },
   },
   es: {
     a11y: {
@@ -634,6 +684,31 @@ faq: {
       linkDataRights: 'Derechos de datos',
       copyright: '© {year} Prismatica · Código abierto bajo MIT',
       gdprContact: 'Contacto GDPR:',
+    },
+    appTour: {
+      title: 'Seis aplicaciones que ya se comunican entre sí.',
+      lede: 'Cada una es un bloque que puedes insertar en cualquier página. Leen los mismos datos, por lo que un cliente agregado en la base de datos aparece en el tablero, en el calendario y en tu correo.',
+      worksWith: 'Funciona con',
+      pocketTitle: 'Tu espacio de trabajo en tu bolsillo.',
+      pocketLede: 'Las mismas páginas, tableros y bandeja de entrada en tu teléfono, sincronizados mientras trabajas. Revisa las tareas del día de camino o responde a un cliente desde el tren.',
+      appDocsName: 'Página',
+      appDocsHint: 'Notas, planes y wikis',
+      appDocsSummary: 'Escribe planes, notas y wikis. Menciona un cliente, una tarea o un correo y se mantendrá vinculado, donde sea que se mueva.',
+      appDatabaseName: 'Base de datos',
+      appDatabaseHint: 'Clientes, pedidos, stock',
+      appDatabaseSummary: 'Mantén clientes, pedidos o existencias en tablas. Cada fila se abre como una página y cada vista lee los mismos datos.',
+      appBoardName: 'Tablero',
+      appBoardHint: 'El trabajo avanzando por etapas',
+      appBoardSummary: 'Mueve el trabajo a través de etapas. Las tarjetas son filas de tu base de datos, no copias, por lo que nada queda desactualizado.',
+      appCalendarName: 'Calendario',
+      appCalendarHint: 'Plazos y reuniones',
+      appCalendarSummary: 'Consulta plazos y reuniones en una sola semana. Las fechas provienen directamente de tus tableros y tu correo.',
+      appMailName: 'Correo',
+      appMailHint: 'Tu bandeja de entrada, junto al trabajo',
+      appMailSummary: 'Lee el correo junto al trabajo correspondiente. Convierte cualquier correo en una tarea en un solo paso.',
+      appWhiteboardName: 'Pizarra',
+      appWhiteboardHint: 'Esboza flujos e ideas',
+      appWhiteboardSummary: 'Esboza flujos e ideas en equipo y luego inserta el dibujo en cualquier página.',
     },
     pricing: {
       eyebrow: 'Precios',
@@ -885,6 +960,31 @@ faq: {
       selfFeature3: 'دليل إجراءات GDPR مدقق',
       selfFeature4: 'دعم مدفوع اختياري',
       selfCta: 'شاهد التوثيق',
+    },
+    appTour: {
+      title: 'ستة تطبيقات تتواصل مع بعضها البعض بالفعل.',
+      lede: 'كل منها عبارة عن قالب يمكنك إدراجه في أي صفحة. تقرأ البيانات نفسها، لذا فإن العميل المضاف في قاعدة البيانات يظهر في اللوحة والتقويم والبريد.',
+      worksWith: 'يعمل مع',
+      pocketTitle: 'مساحة عملك في جيبك.',
+      pocketLede: 'نفس الصفحات واللوحات والبريد على هاتفك، متزامنة أثناء عملك. راجع مهام اليوم في طريقك، وأجب العميل من القطار.',
+      appDocsName: 'صفحة',
+      appDocsHint: 'ملاحظات وخطط وويكي',
+      appDocsSummary: 'اكتب الخطط والملاحظات وويكي. اذكر عميلاً أو مهمة أو بريداً وسيظل مرتبطاً أينما انتقل.',
+      appDatabaseName: 'قاعدة بيانات',
+      appDatabaseHint: 'عملاء، طلبات، مخزون',
+      appDatabaseSummary: 'احتفظ بالعملاء أو الطلبات أو المخزون في جداول. يفتح كل صف كصفحة، وكل عرض يقرأ نفس البيانات.',
+      appBoardName: 'لوحة',
+      appBoardHint: 'مراحل سير العمل',
+      appBoardSummary: 'انقل العمل عبر المراحل. البطاقات هي صفوف من قاعدة بياناتك وليست نسخاً، فلا شيء يفقد تحديثه.',
+      appCalendarName: 'تقويم',
+      appCalendarHint: 'مواعيد ولقاءات',
+      appCalendarSummary: 'شاهد المواعيد والاجتماعات في أسبوع واحد. التواريخ تأتي مباشرة من لوحاتك وبريدك.',
+      appMailName: 'بريد',
+      appMailHint: 'بريدك بجانب مهامك',
+      appMailSummary: 'اقرأ البريد بجانب العمل المتعلق به. حوّل أي رسالة إلى مهمة في خطوة واحدة.',
+      appWhiteboardName: 'سبورة',
+      appWhiteboardHint: 'ارسم مسارات وأفكار',
+      appWhiteboardSummary: 'ارسم التدفقات والأفكار معاً، ثم أدرج الرسم في أي صفحة.',
     },
   },
 };
