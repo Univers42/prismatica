@@ -13,7 +13,7 @@
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
-import { bindDataRightsForm } from "../lib/gdpr-form";
+import { bindDataRightsForm, bindGdprSelfService } from "../lib/gdpr-form";
 import { readStorage, writeStorage } from '../lib/storage';
 import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
@@ -57,10 +57,10 @@ type RpcStatus = {
 	status: number;
 };
 
-async function callGdprRpc(name: string, body: Record<string, unknown>, token = getAccessToken()): Promise<RpcStatus> {
+async function callGdprRpc(name: string, body: Record<string, unknown>, token = getAccessToken()): Promise<RpcStatus & { data?: unknown }> {
 	try {
-		await createPublicBaasClient(token ?? undefined).rpc(name, body);
-		return { ok: true, status: 200 };
+		const data = await createPublicBaasClient(token ?? undefined).rpc(name, body);
+		return { ok: true, status: 200, data };
 	} catch (error) {
 		if (error instanceof MiniBaasError) return { ok: false, status: error.status };
 		throw error;
@@ -83,6 +83,7 @@ function bindInteractions(): void {
 	bindConsentBanner();
 	bindNewsletterSignup();
 	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
+	bindGdprSelfService({ callGdprRpc });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {
