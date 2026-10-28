@@ -16,7 +16,7 @@ import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
 import { bindGdprSelfService } from "../lib/gdpr-form";
 import { baasConfig } from "../lib/baas-config";
 import { readStorage, writeStorage } from '../lib/storage';
-import { DATA_CONTROLLER, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
+import { NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
 import { fetchSeededUsers } from "../lib/baas-client";
 import { queryElement, queryElements, isButton, isHtmlElement, isInput } from "../lib/dom-utils";
@@ -101,7 +101,6 @@ function bindInteractions(): void {
 	bindEmailFieldValidation(document);
 	bindConsentBanner();
 	bindNewsletterSignup();
-	bindDataRightsForm({ readStorage, writeStorage, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION, privacyContact: DATA_CONTROLLER.email });
 	bindGdprSelfService({ callGdprEndpoint });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
