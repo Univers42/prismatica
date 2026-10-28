@@ -24,6 +24,7 @@ export interface GdprDependencies {
 	readStorage: (key: string) => string | null;
 	writeStorage: (key: string, val: string) => void;
 	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
+	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 	csrfStorageKey: string;
 	policyVersion: string;
 }
@@ -87,6 +88,17 @@ function setActionState(container: HTMLElement, message: string, busy = false): 
 	container.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.disabled = busy; });
 }
 
+function endpointCaller(deps: {
+	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
+	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
+}) {
+	return deps.callGdprEndpoint ?? (async (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => {
+		// The previous implementation incorrectly called SQL RPC names that do
+		// not exist in Grobase. Do not silently fall back to a fake success.
+		return { ok: false, data: { error: `No authenticated GDPR endpoint configured for ${method} ${path}` } };
+	});
+}
+
 function downloadJson(data: unknown): void {
 	const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
@@ -102,6 +114,7 @@ function downloadJson(data: unknown): void {
 
 export function bindGdprSelfService(deps: {
 	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
+	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 }): void {
 	const container = document.querySelector<HTMLElement>('[data-gdpr-self-service]');
 	if (!container) return;
@@ -112,7 +125,8 @@ export function bindGdprSelfService(deps: {
 	exportButton?.addEventListener('click', async () => {
 		setActionState(container, 'Preparing your export…', true);
 		try {
-			const response = await deps.callGdprRpc('gdpr_export_my_data', {});
+			const callEndpoint = endpointCaller(deps);
+			const response = await callEndpoint('/gdpr/export', 'GET');
 			if (!response?.ok || response.data === undefined) {
 				setActionState(container, 'Could not export your data. Sign in and try again, or contact the privacy address.');
 				return;
@@ -130,8 +144,10 @@ export function bindGdprSelfService(deps: {
 		if (!window.confirm('Request deletion of your Prismatica account and associated personal data? This action may not be reversible.')) return;
 		setActionState(container, 'Submitting account deletion request…', true);
 		try {
-			const response = await deps.callGdprRpc('gdpr_request_deletion', {});
+			const callEndpoint = endpointCaller(deps);
+			const response = await callEndpoint('/gdpr/deletion-requests', 'POST', {});
 			setActionState(
+				container,
 				response?.ok
 					? 'Account deletion request submitted. Follow any confirmation steps provided by the service.'
 					: 'Could not submit deletion request. Sign in and try again, or contact the privacy address.',
