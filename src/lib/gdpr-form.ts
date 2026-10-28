@@ -99,17 +99,30 @@ function endpointCaller(deps: {
 	});
 }
 
-function downloadJson(data: unknown): void {
+function downloadExport(data: unknown, filename = `prismatica-data-export-${new Date().toISOString().slice(0, 10)}.json'): void {
+	if (data instanceof Blob) {
+		const url = URL.createObjectURL(data);
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+		anchor.hidden = true;
+		document.body.append(anchor);
+		anchor.click();
+		anchor.remove();
+		window.setTimeout(() => URL.revokeObjectURL(url), 0);
+		return;
+	}
+
 	const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
 	const anchor = document.createElement('a');
 	anchor.href = url;
-	anchor.download = `prismatica-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+	anchor.download = filename;
 	anchor.hidden = true;
 	document.body.append(anchor);
 	anchor.click();
 	anchor.remove();
-	URL.revokeObjectURL(url);
+	window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function bindGdprSelfService(deps: {
@@ -131,7 +144,7 @@ export function bindGdprSelfService(deps: {
 				setActionState(container, 'Could not export your data. Sign in and try again, or contact the privacy address.');
 				return;
 			}
-			downloadJson(response.data);
+			downloadExport(response.data);
 			setActionState(container, 'Your data export has been downloaded.');
 		} catch {
 			setActionState(container, 'Could not export your data. Sign in and try again, or contact the privacy address.');
