@@ -212,3 +212,46 @@ body:has(.consent-banner:not([hidden])) {
 		grid-column: 1 / -1;
 	}
 }
+
+.data-rights-account {
+	padding: 1rem;
+	margin-block: 1.5rem;
+}
+
+.data-rights-account h2,
+.data-rights-account h3,
+.data-rights-account p {
+	margin: 0;
+}
+
+.data-rights-account__body {
+	display: grid;
+	gap: 1.25rem;
+}
+
+.data-rights-account__item {
+	display: grid;
+	gap: 0.6rem;
+	justify-items: start;
+}
+
+.data-rights-account__item .field {
+	justify-self: stretch;
+}
+
+.data-rights-account__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+[data-gdpr-account-signed-out] {
+	display: grid;
+	gap: 0.75rem;
+	justify-items: start;
+}
+
+[data-gdpr-account-signed-out][hidden],
+[data-gdpr-account-signed-in][hidden] {
+	display: none;
+}

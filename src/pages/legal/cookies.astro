@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data/legal';
+import { CONSENT_MAX_AGE_MONTHS, CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data/legal';
 ---
 
 <Layout title="Cookie Policy — Prismatica" description="Prismatica cookie and local storage policy.">
@@ -19,13 +19,14 @@ import { CONSENT_STORAGE_KEY, CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_LA
 				<tr><td>osio_ide_preview</td><td>Cookie (HttpOnly, workspace code preview only)</td><td>Authorises the preview of your workspace code sandbox.</td><td>1 hour.</td><td>No, strictly necessary for that feature.</td></tr>
 				<tr><td>prismatica-theme</td><td>localStorage</td><td>Stores light, dark or night interface preference.</td><td>Until cleared or changed.</td><td>No, strictly necessary preference.</td></tr>
 				<tr><td>prismatica-motion-paused</td><td>localStorage</td><td>Stores reduced motion preference for accessibility.</td><td>Until cleared or changed.</td><td>No, accessibility preference.</td></tr>
-				<tr><td>{CONSENT_STORAGE_KEY}</td><td>localStorage</td><td>Stores consent choices, timestamp and policy version.</td><td>Until cleared or changed.</td><td>No for storing proof of choice; optional categories require consent.</td></tr>
+				<tr><td>{CONSENT_STORAGE_KEY}</td><td>localStorage</td><td>Stores consent choices, timestamp and policy version.</td><td>{CONSENT_MAX_AGE_MONTHS} months, or until this policy changes; you are then asked again.</td><td>No for storing proof of choice; optional categories require consent.</td></tr>
 				<tr><td>{NEWSLETTER_INTENT_KEY}</td><td>localStorage</td><td>Stores unauthenticated newsletter opt-in intent until login sync.</td><td>Until sync or manual clearing.</td><td>Yes, newsletter consent.</td></tr>
 				<tr><td>{CSRF_STORAGE_KEY}</td><td>localStorage</td><td>Stores a CSRF nonce for the public data-rights form.</td><td>Until cleared.</td><td>No, security necessity.</td></tr>
 				<tr><td>osio:* and osionos* keys</td><td>localStorage (workspace)</td><td>Your signed-in workspace session, a cache of your pages, favourites, contacts, unread counts and pending edits, and workspace settings.</td><td>Until cleared.</td><td>No, strictly necessary for the workspace.</td></tr>
 			</tbody>
 		</table>
 
+		<p>You can change or withdraw your choices at any time with the button below or the "Cookie settings" link in the site footer. Rejecting optional categories never limits access to the site.</p>
 		<button class="button button--ghost" type="button" data-manage-cookies aria-label="Manage cookie preferences">Manage cookie preferences</button>
 	</main>
 </Layout>
