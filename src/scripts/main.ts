@@ -17,11 +17,10 @@ import { bindDataRightsForm, bindGdprSelfService } from "../lib/gdpr-form";
 import { DATA_CONTROLLER } from "../data/legal";
 import { baasConfig } from "../lib/baas-config";
 import { readStorage, writeStorage } from '../lib/storage';
-import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
+import { NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
-import { fetchSeededUsers, createPublicBaasClient } from "../lib/baas-client";
+import { fetchSeededUsers } from "../lib/baas-client";
 import { queryElement, queryElements, isButton, isHtmlElement, isInput } from "../lib/dom-utils";
-import { MiniBaasError } from "@grobase/js";
 import "./premium";
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, announce, ensureButtonLabels, MOTION_KEY } from "./theme";
 import { initialLocale, applyLocale, bindLanguageControls } from "./language";
@@ -52,21 +51,6 @@ async function requestNewsletterSubscription(email: string, turnstileToken: stri
 		throw new Error(data.error ?? data.message ?? 'newsletter_failed');
 	}
 	return { ok: true, message: data.message ?? 'Subscription confirmed!' };
-}
-
-type RpcStatus = {
-	ok: boolean;
-	status: number;
-};
-
-async function callGdprRpc(name: string, body: Record<string, unknown>, token = getAccessToken()): Promise<RpcStatus & { data?: unknown }> {
-	try {
-		const data = await createPublicBaasClient(token ?? undefined).rpc(name, body);
-		return { ok: true, status: 200, data };
-	} catch (error) {
-		if (error instanceof MiniBaasError) return { ok: false, status: error.status };
-		throw error;
-	}
 }
 
 /**
@@ -119,7 +103,7 @@ function bindInteractions(): void {
 	bindConsentBanner();
 	bindNewsletterSignup();
 	bindDataRightsForm({ readStorage, writeStorage, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION, privacyContact: DATA_CONTROLLER.email });
-	bindGdprSelfService({ callGdprRpc, callGdprEndpoint });
+	bindGdprSelfService({ callGdprEndpoint });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {
