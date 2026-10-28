@@ -120,6 +120,18 @@ it.each([
       ['en', 'screenGallery.title', 'Screens from the running app'],
       ['es', 'screenGallery.title', 'Capturas de la aplicación en ejecución'],
       ['ar', 'screenGallery.title', 'لقطات من التطبيق أثناء التشغيل'],
+      ['en', 'backendArchitecture.title', 'One network for every database, app and team.'],
+      ['es', 'backendArchitecture.title', 'Una red para cada base de datos, app y equipo.'],
+      ['ar', 'backendArchitecture.title', 'شبكة واحدة لكل قاعدة بيانات وتطبيق وفريق.'],
+      ['en', 'studioNetwork.legendOrg', 'Organisation'],
+      ['es', 'studioNetwork.legendOrg', 'Organización'],
+      ['ar', 'studioNetwork.legendOrg', 'المؤسسة'],
+      ['en', 'stackShowcase.title', 'Run the stack yourself'],
+      ['es', 'stackShowcase.title', 'Ejecuta la infraestructura tú mismo'],
+      ['ar', 'stackShowcase.title', 'شغّل الحزمة التقنية بنفسك'],
+      ['en', 'whySlide.title', 'What Prismatica takes off your plate'],
+      ['es', 'whySlide.title', 'Lo que Prismatica resuelve por ti'],
+      ['ar', 'whySlide.title', 'ما توفره عليك برزماتيكا'],
     ])('resolves locale %s key %s to %s', (locale, key, expected) => {
       expect(t(locale, key as any)).toBe(expected);
     });

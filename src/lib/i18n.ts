@@ -119,6 +119,48 @@ export interface UIStrings {
     readonly themesTitle: string;
     readonly themesNote: string;
   };
+  readonly backendArchitecture: {
+    readonly eyebrow: string;
+    readonly title: string;
+    readonly lede: string;
+  };
+  readonly studioNetwork: {
+    readonly legendOrg: string;
+    readonly legendTeam: string;
+    readonly legendPublic: string;
+    readonly assistantPrompt: string;
+    readonly stepEnginesTitle: string;
+    readonly stepEnginesBody: string;
+    readonly stepAppsTitle: string;
+    readonly stepAppsBody: string;
+    readonly stepSpacesTitle: string;
+    readonly stepSpacesBody: string;
+    readonly stepAssistantTitle: string;
+    readonly stepAssistantBody: string;
+  };
+  readonly stackShowcase: {
+    readonly title: string;
+    readonly lede: string;
+    readonly tabServicesName: string;
+    readonly tabServicesProblem: string;
+    readonly tabScalingName: string;
+    readonly tabScalingProblem: string;
+    readonly tabWhyName: string;
+    readonly tabWhyProblem: string;
+  };
+  whySlide: {
+    readonly title: string;
+    readonly problem1: string;
+    readonly answer1: string;
+    readonly problem2: string;
+    readonly answer2: string;
+    readonly problem3: string;
+    readonly answer3: string;
+    readonly problem4: string;
+    readonly answer4: string;
+    readonly problem5: string;
+    readonly answer5: string;
+  };
   readonly pricing: {
     readonly eyebrow: string;
     readonly title: string;
@@ -289,6 +331,48 @@ export const DICTIONARY: TranslationDictionary = {
       themesTitle: 'Set up the way you work',
       themesNote: 'Light or dark, an accent colour, density, corners and text size.',
     },
+    backendArchitecture: {
+      eyebrow: 'Inside the studio',
+      title: 'One network for every database, app and team.',
+      lede: 'Prismatica joins your databases into one network. Each team builds on the part it is allowed to reach, and the tablet below lets you run the backend yourself.',
+    },
+    studioNetwork: {
+      legendOrg: 'Organisation',
+      legendTeam: 'Sales team',
+      legendPublic: 'Public space',
+      assistantPrompt: 'Make a space for the sales team: a pipeline map, shared notes, Postgres and Redis.',
+      stepEnginesTitle: 'Connect every engine',
+      stepEnginesBody: 'Ten engines, from Postgres and MongoDB to Redis, DynamoDB and any HTTP API, join one network. Create, read, update and delete through a single typed API.',
+      stepAppsTitle: 'Build on the same data',
+      stepAppsBody: 'Diagrams, views, maps and notes read the live records. The LLM trace draws how a model moves through your data, step by step.',
+      stepSpacesTitle: 'Decide who reaches what',
+      stepSpacesBody: 'Organisations, teams and public spaces are subnetworks. Attribute-based rules decide which engines and apps each one can reach.',
+      stepAssistantTitle: 'Ask for a space',
+      stepAssistantBody: 'Tell the assistant what your team needs. It lays out the engines, apps and rules, and you adjust the result.',
+    },
+    stackShowcase: {
+      title: 'Run the stack yourself',
+      lede: 'The real grobase backend on a tablet: start and stop any of its services, watch a request cross it, then see how it grows.',
+      tabServicesName: 'Services',
+      tabServicesProblem: 'Every new app needs its own backend. Here are 55 services, already wired.',
+      tabScalingName: 'Scaling',
+      tabScalingProblem: 'Growing usually means re-platforming. Here the same stack scales out.',
+      tabWhyName: 'Why us',
+      tabWhyProblem: 'Work and data scattered across tools, and what replaces them.',
+    },
+    whySlide: {
+      title: 'What Prismatica takes off your plate',
+      problem1: 'Your team\'s tools don\'t talk to each other.',
+      answer1: '6 apps share one workspace: pages, databases, boards, calendars, mail and whiteboards.',
+      problem2: 'Your data is split across databases.',
+      answer2: 'One network reaches 10 engines, from Postgres to DynamoDB, through one API.',
+      problem3: 'Every new app rebuilds sign-in, permissions and webhooks.',
+      answer3: '55 services come wired: sign-in, a permission check on every query, signed webhooks and live updates.',
+      problem4: 'Growing means a rewrite.',
+      answer4: 'The same images run on a laptop and on Kubernetes, from one data plane to 10.',
+      problem5: 'Owning your data is hard to prove.',
+      answer5: 'Open source under MIT and self-hosted, with GDPR export and erasure built in.',
+    },
     pricing: {
       eyebrow: 'Pricing',
       title: 'Pick a tier. Switch anytime.',
@@ -443,6 +527,48 @@ faq: {
       themesTitle: 'Configurado a tu forma de trabajar',
       themesNote: 'Claro u oscuro, color de acento, densidad, esquinas y tamaño de texto.',
     },
+    backendArchitecture: {
+      eyebrow: 'Dentro del estudio',
+      title: 'Una red para cada base de datos, app y equipo.',
+      lede: 'Prismatica une tus bases de datos en una sola red. Cada equipo construye sobre la parte a la que tiene acceso permitido, y la tableta inferior te permite ejecutar el backend tú mismo.',
+    },
+    studioNetwork: {
+      legendOrg: 'Organización',
+      legendTeam: 'Equipo de ventas',
+      legendPublic: 'Espacio público',
+      assistantPrompt: 'Crea un espacio para el equipo de ventas: un mapa de embudo, notas compartidas, Postgres y Redis.',
+      stepEnginesTitle: 'Conecta cada motor',
+      stepEnginesBody: 'Diez motores, desde Postgres y MongoDB hasta Redis, DynamoDB y cualquier API HTTP, se unen en una red. Crea, lee, actualiza y elimina mediante una única API tipada.',
+      stepAppsTitle: 'Construye sobre los mismos datos',
+      stepAppsBody: 'Diagramas, vistas, mapas y notas leen los registros en vivo. El rastreo de LLM dibuja cómo se mueve un modelo a través de tus datos, paso a paso.',
+      stepSpacesTitle: 'Decide quién accede a qué',
+      stepSpacesBody: 'Organizaciones, equipos y espacios públicos son subredes. Reglas basadas en atributos deciden a qué motores y aplicaciones puede acceder cada uno.',
+      stepAssistantTitle: 'Pide un espacio',
+      stepAssistantBody: 'Dile al asistente lo que tu equipo necesita. Diseña los motores, aplicaciones y reglas, y tú ajustas el resultado.',
+    },
+    stackShowcase: {
+      title: 'Ejecuta la infraestructura tú mismo',
+      lede: 'El backend real de grobase en una tableta: inicia y detén cualquiera de sus servicios, observa cómo viaja una petición y mira cómo escala.',
+      tabServicesName: 'Servicios',
+      tabServicesProblem: 'Cada nueva aplicación necesita su propio backend. Aquí hay 55 servicios, ya interconectados.',
+      tabScalingName: 'Escalabilidad',
+      tabScalingProblem: 'Crecer suele requerir cambiar de plataforma. Aquí la misma arquitectura escala horizontalmente.',
+      tabWhyName: 'Por qué nosotros',
+      tabWhyProblem: 'Trabajo y datos dispersos entre herramientas, y cómo unificarlos.',
+    },
+    whySlide: {
+      title: 'Lo que Prismatica resuelve por ti',
+      problem1: 'Las herramientas de tu equipo no se comunican entre sí.',
+      answer1: '6 aplicaciones comparten un único espacio: páginas, bases de datos, tableros, calendarios, correo y pizarras.',
+      problem2: 'Tus datos están divididos entre múltiples bases de datos.',
+      answer2: 'Una sola red conecta 10 motores, desde Postgres hasta DynamoDB, a través de una sola API.',
+      problem3: 'Cada nueva app vuelve a crear inicio de sesión, permisos y webhooks.',
+      answer3: '55 servicios ya conectados: inicio de sesión, verificación de permisos en cada consulta, webhooks firmados y actualizaciones en tiempo real.',
+      problem4: 'Crecer significa reescribir código.',
+      answer4: 'Las mismas imágenes se ejecutan en un portátil y en Kubernetes, desde un plano de datos hasta 10.',
+      problem5: 'Demostrar que eres dueño de tus datos es difícil.',
+      answer5: 'Código abierto bajo licencia MIT y autoalojado, con exportación y borrado GDPR integrados.',
+    },
     pricing: {
       eyebrow: 'Precios',
       title: 'Elige un plan. Cambia cuando quieras.',
@@ -596,6 +722,48 @@ faq: {
       analyticsNote: 'عرض التحليلات بمظهر منتصف الليل، وهو أحد سمات الألوان التسع.',
       themesTitle: 'مهيأ حسب أسلوب عملك',
       themesNote: 'فاتح أو داكن، لون تمييز، كثافة، حواف وحجم النص.',
+    },
+    backendArchitecture: {
+      eyebrow: 'داخل الاستوديو',
+      title: 'شبكة واحدة لكل قاعدة بيانات وتطبيق وفريق.',
+      lede: 'تدمج برزماتيكا قواعد بياناتك في شبكة واحدة. يبني كل فريق على الجزء المصرح له بالوصول إليه، ويتيح لك الجهاز اللوحي أدناه تشغيل الواجهة الخلفية بنفسك.',
+    },
+    studioNetwork: {
+      legendOrg: 'المؤسسة',
+      legendTeam: 'فريق المبيعات',
+      legendPublic: 'المساحة العامة',
+      assistantPrompt: 'أنشئ مساحة لفريق المبيعات: خريطة للمسار، ملاحظات مشتركة، وبوستغرس وريديس.',
+      stepEnginesTitle: 'اربط كل محرك',
+      stepEnginesBody: 'عشرة محركات، من بوستغرس ومونغو إلى ريديس ودينامو وأي واجهة HTTP، تنضم لشبكة واحدة. أنشئ واقرأ وحدّث واحذف عبر واجهة برمجية موحدة ومكتوبة الأنواع.',
+      stepAppsTitle: 'ابنِ على نفس البيانات',
+      stepAppsBody: 'تقرأ المخططات والعروض والخرائط والملاحظات السجلات الحية. يوضح تتبع النموذج اللغوي كيف يتحرك النموذج عبر بياناتك خطوة بخطوة.',
+      stepSpacesTitle: 'حدد من يصل إلى ماذا',
+      stepSpacesBody: 'المؤسسات وفرق العمل والمساحات العامة هي شبكات فرعية. تحدد rules المبنية على السمات المحركات والتطبيقات التي يمكن لكل منها الوصول إليها.',
+      stepAssistantTitle: 'اطلب مساحة',
+      stepAssistantBody: 'أخبر المساعد بما يحتاجه فريقك. سيقوم بترتيب المحركات والتطبيقات والقواعد، وتقوم أنت بضبط النتيجة.',
+    },
+    stackShowcase: {
+      title: 'شغّل الحزمة التقنية بنفسك',
+      lede: 'خادم grobase الحقيقي على جهاز لوحي: شغّل وأوقف أي خدمة، راقب الطلب، وانظر كيف ينمو.',
+      tabServicesName: 'الخدمات',
+      tabServicesProblem: 'يحتاج كل تطبيق جديد إلى خلفية خاصة به. إليك 55 خدمة متصلة وجاهزة.',
+      tabScalingName: 'التوسع',
+      tabScalingProblem: 'النمو يعني عادة إعادة بناء المنصة. هنا تتوسع نفس الحزمة بسلاسة.',
+      tabWhyName: 'لماذا برزماتيكا',
+      tabWhyProblem: 'العمل والبيانات مشتتة عبر الأدوات، والبديل الموحد لها.',
+    },
+    whySlide: {
+      title: 'ما توفره عليك برزماتيكا',
+      problem1: 'أدوات فريقك لا تتواصل مع بعضها البعض.',
+      answer1: '6 تطبيقات تشترك في مساحة عمل واحدة: الصفحات وقواعد البيانات واللوحات والتقويم والبريد والسبورات.',
+      problem2: 'بياناتك موزعة عبر قواعد بيانات متعددة.',
+      answer2: 'شبكة واحدة تصل إلى 10 محركات، من بوستغرس إلى دينامو، عبر واجهة برمجية واحدة.',
+      problem3: 'كل تطبيق جديد يعيد بناء تسجيل الدخول والصلاحيات وخطافات الويب.',
+      answer3: '55 خدمة جاهزة ومترابطة: تسجيل الدخول، فحص الصلاحيات مع كل استعلام، خطافات ويب موقعة وتحديثات حية.',
+      problem4: 'النمو يعني إعادة كتابة الكود.',
+      answer4: 'تعمل الحاويات نفسها على حاسوبك وعلى كوبرنيتيس، من مستوى بيانات واحد إلى 10.',
+      problem5: 'إثبات ملكيتك لبياناتك أمر معقد.',
+      answer5: 'مفتوح المصدر بترخيص MIT ومستضاف ذاتياً، مع إمكانية التصدير والحذف وفق معايير GDPR.',
     },
     pricing: {
       eyebrow: 'الأسعار',
