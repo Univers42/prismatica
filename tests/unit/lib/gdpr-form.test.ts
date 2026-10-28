@@ -137,39 +137,45 @@ describe('GDPR Form', () => {
 		it('downloads a scoped export returned by the authenticated export RPC', async () => {
 			const payload = { user: { email: 'test@example.com' }, preferences: { theme: 'dark' } };
 			const rpc = vi.fn().mockResolvedValue({ ok: true, data: payload });
+			const endpoint = vi.fn().mockResolvedValue({ ok: true, data: payload });
 			const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 			const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-			bindGdprSelfService({ callGdprRpc: rpc });
+			bindGdprSelfService({ callGdprRpc: rpc, callGdprEndpoint: endpoint });
 
 			(document.querySelector('[data-gdpr-export]') as HTMLButtonElement).click();
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			expect(rpc).toHaveBeenCalledWith('gdpr_export_my_data', {});
+			expect(endpoint).toHaveBeenCalledWith('/gdpr/export', 'GET');
+			expect(rpc).not.toHaveBeenCalled();
 			expect(click).toHaveBeenCalledOnce();
 			expect(revoke).toHaveBeenCalledOnce();
 			expect(document.querySelector('[data-gdpr-self-service-status]')?.textContent).toContain('downloaded');
 		});
 
 		it('asks for confirmation before requesting account deletion', async () => {
-			const rpc = vi.fn().mockResolvedValue({ ok: true });
-			bindGdprSelfService({ callGdprRpc: rpc });
+			const rpc = vi.fn();
+			const endpoint = vi.fn().mockResolvedValue({ ok: true, data: { id: 1, status: 'pending' } });
+			bindGdprSelfService({ callGdprRpc: rpc, callGdprEndpoint: endpoint });
 
 			(document.querySelector('[data-gdpr-delete]') as HTMLButtonElement).click();
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(window.confirm).toHaveBeenCalledOnce();
-			expect(rpc).toHaveBeenCalledWith('gdpr_request_deletion', {});
+			expect(endpoint).toHaveBeenCalledWith('/gdpr/deletion-requests', 'POST', {});
+			expect(rpc).not.toHaveBeenCalled();
 			expect(document.querySelector('[data-gdpr-self-service-status]')?.textContent).toContain('submitted');
 		});
 
 		it('does not request deletion when confirmation is cancelled', async () => {
 			vi.spyOn(window, 'confirm').mockReturnValue(false);
 			const rpc = vi.fn();
-			bindGdprSelfService({ callGdprRpc: rpc });
+			const endpoint = vi.fn();
+			bindGdprSelfService({ callGdprRpc: rpc, callGdprEndpoint: endpoint });
 
 			(document.querySelector('[data-gdpr-delete]') as HTMLButtonElement).click();
 
 			expect(rpc).not.toHaveBeenCalled();
+			expect(endpoint).not.toHaveBeenCalled();
 		});
 	});
 
