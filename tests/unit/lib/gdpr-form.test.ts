@@ -40,60 +40,18 @@ describe('GDPR Form', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('submits successfully when CSRF token matches', async () => {
+	it('explains that generic rights requests must use the privacy contact', () => {
 		bindDataRightsForm({
 			readStorage: mockReadStorage,
 			writeStorage: mockWriteStorage,
-			callGdprRpc: mockCallGdprRpc,
 			csrfStorageKey: 'CSRF_KEY',
-			policyVersion: '1.0'
+			policyVersion: '1.0',
+			privacyContact: 'privacy@example.com',
 		});
 
-		expect(mockWriteStorage).toHaveBeenCalledWith('CSRF_KEY', 'mock-uuid-1234');
-
-		const form = document.querySelector('form')!;
-		// Simulate successful submit
-		form.dispatchEvent(new Event('submit', { cancelable: true }));
-
-		// Wait for promise resolution
-		await new Promise(resolve => setTimeout(resolve, 10));
-
-		expect(mockCallGdprRpc).toHaveBeenCalledWith('gdpr_submit_request', {
-			request_type: 'delete',
-			email: 'test@example.com',
-			details: {
-				message: 'Please delete',
-				csrf: 'mock-uuid-1234',
-				policyVersion: '1.0'
-			}
-		});
-
-		const status = document.querySelector('output')!;
-		expect(status.textContent).toContain('recorded');
-	});
-
-	it('aborts submission if CSRF token is mismatched (Devil Condition 2)', async () => {
-		bindDataRightsForm({
-			readStorage: mockReadStorage,
-			writeStorage: mockWriteStorage,
-			callGdprRpc: mockCallGdprRpc,
-			csrfStorageKey: 'CSRF_KEY',
-			policyVersion: '1.0'
-		});
-
-		const form = document.querySelector('form')!;
-		const csrfInput = form.querySelector('[name="csrf"]') as HTMLInputElement;
-		// Tamper with the token
-		csrfInput.value = 'hacker-token';
-
-		form.dispatchEvent(new Event('submit', { cancelable: true }));
-		await new Promise(resolve => setTimeout(resolve, 10));
-
-		// MUST NOT call RPC
 		expect(mockCallGdprRpc).not.toHaveBeenCalled();
-
-		const status = document.querySelector('output')!;
-		expect(status.textContent).toContain('mismatch');
+		expect(document.querySelector('[data-gdpr-request-status]')?.textContent).toContain('privacy@example.com');
+		expect(document.querySelector('form button[type="submit"]')).toHaveProperty('disabled', true);
 	});
 
 	it('falls back safely if crypto.randomUUID is undefined (Devil Condition 1)', () => {
