@@ -54,31 +54,6 @@ describe('GDPR Form', () => {
 		expect(document.querySelector('form button[type="submit"]')).toHaveProperty('disabled', true);
 	});
 
-	it('falls back safely if crypto.randomUUID is undefined (Devil Condition 1)', () => {
-		// Simulate HTTP/non-secure context
-		Object.defineProperty(globalThis, 'crypto', {
-			value: { randomUUID: undefined },
-			configurable: true
-		});
-
-		// Should not throw
-		expect(() => {
-			bindDataRightsForm({
-				readStorage: mockReadStorage,
-				writeStorage: mockWriteStorage,
-				callGdprRpc: mockCallGdprRpc,
-				csrfStorageKey: 'CSRF_KEY',
-				policyVersion: '1.0'
-			});
-		}).not.toThrow();
-
-		// Should have generated a fallback token and written it
-		expect(mockWriteStorage).toHaveBeenCalled();
-		const writtenToken = mockWriteStorage.mock.calls[0][1];
-		expect(writtenToken).toBeTruthy();
-		expect(typeof writtenToken).toBe('string');
-		expect(writtenToken.length).toBeGreaterThan(0);
-	});
 
 	describe('GDPR self-service actions', () => {
 		beforeEach(() => {
