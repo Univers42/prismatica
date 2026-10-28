@@ -23,63 +23,24 @@ const ALLOWED_REQUEST_TYPES = new Set([
 export interface GdprDependencies {
 	readStorage: (key: string) => string | null;
 	writeStorage: (key: string, val: string) => void;
-	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
-	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 	csrfStorageKey: string;
 	policyVersion: string;
+	privacyContact: string;
 }
 
 export function bindDataRightsForm(deps: GdprDependencies): void {
 	const form = document.querySelector<HTMLFormElement>('[data-gdpr-request-form]');
 	if (!form) return;
 
-	let csrf = deps.readStorage(deps.csrfStorageKey);
-	if (!csrf) {
-		csrf = generateSafeToken();
-		deps.writeStorage(deps.csrfStorageKey, csrf);
+	// Grobase currently has authenticated export, consent and deletion-request
+	// routes, but no public generic DSAR-submission endpoint. Do not call a
+	// made-up SQL RPC or tell users a request was recorded when it was not.
+	const status = form.querySelector('[data-gdpr-request-status]');
+	const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+	if (status instanceof HTMLOutputElement) {
+		status.textContent = `For access, correction, restriction or objection requests, contact ${deps.privacyContact}. This form cannot submit those requests yet.`;
 	}
-
-	const csrfInput = form.querySelector('[data-csrf-token]');
-	if (csrfInput instanceof HTMLInputElement) csrfInput.value = csrf;
-
-	form.addEventListener('submit', async (event) => {
-		event.preventDefault();
-		const status = form.querySelector('[data-gdpr-request-status]');
-		const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
-		const formData = new FormData(form);
-		if (!(status instanceof HTMLOutputElement)) return;
-
-		if (formData.get('csrf') !== csrf) {
-			status.textContent = 'Security token mismatch. Refresh and try again.';
-			return;
-		}
-
-		const requestType = formDataString(formData, 'request_type');
-		const email = formDataString(formData, 'email').trim();
-		const message = formDataString(formData, 'message').trim();
-		if (!ALLOWED_REQUEST_TYPES.has(requestType)) {
-			status.textContent = 'Choose a valid data-rights request type.';
-			return;
-		}
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-			status.textContent = 'Enter a valid email address.';
-			const emailInput = form.elements.namedItem('email');
-			if (emailInput instanceof HTMLInputElement) emailInput.focus();
-			return;
-		}
-
-		if (submitButton) submitButton.disabled = true;
-		status.textContent = 'Submitting your request…';
-		const response = await deps.callGdprRpc('gdpr_submit_request', {
-			request_type: requestType,
-			email,
-			details: { message, csrf, policyVersion: deps.policyVersion },
-		}).catch(() => null);
-		status.textContent = response?.ok
-			? 'Your request has been recorded. We may contact you to verify identity.'
-			: 'Could not record the request right now. Please try again or contact the privacy address.';
-		if (submitButton) submitButton.disabled = false;
-	});
+	if (submitButton) submitButton.disabled = true;
 }
 
 function setActionState(container: HTMLElement, message: string, busy = false): void {
