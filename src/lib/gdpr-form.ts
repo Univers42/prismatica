@@ -89,14 +89,9 @@ function setActionState(container: HTMLElement, message: string, busy = false): 
 }
 
 function endpointCaller(deps: {
-	callGdprRpc: (method: string, payload: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 	callGdprEndpoint?: (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => Promise<{ ok: boolean; data?: unknown } | null>;
 }) {
-	return deps.callGdprEndpoint ?? (async (path: string, method: 'GET' | 'POST' | 'DELETE', payload?: Record<string, unknown>) => {
-		// The previous implementation incorrectly called SQL RPC names that do
-		// not exist in Grobase. Do not silently fall back to a fake success.
-		return { ok: false, data: { error: `No authenticated GDPR endpoint configured for ${method} ${path}` } };
-	});
+	return deps.callGdprEndpoint ?? (async (_path: string, _method: 'GET' | 'POST' | 'DELETE', _payload?: Record<string, unknown>) => ({ ok: false }));
 }
 
 function downloadExport(data: unknown, filename = `prismatica-data-export-${new Date().toISOString().slice(0, 10)}.json'): void {
