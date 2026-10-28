@@ -14,6 +14,7 @@ import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
 import { bindDataRightsForm, bindGdprSelfService } from "../lib/gdpr-form";
+import { DATA_CONTROLLER } from "../data/legal";
 import { baasConfig } from "../lib/baas-config";
 import { readStorage, writeStorage } from '../lib/storage';
 import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
@@ -117,7 +118,7 @@ function bindInteractions(): void {
 	bindEmailFieldValidation(document);
 	bindConsentBanner();
 	bindNewsletterSignup();
-	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
+	bindDataRightsForm({ readStorage, writeStorage, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION, privacyContact: DATA_CONTROLLER.email });
 	bindGdprSelfService({ callGdprRpc, callGdprEndpoint });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
