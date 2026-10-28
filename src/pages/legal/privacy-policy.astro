@@ -31,13 +31,13 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 
 		<section>
 			<h2>Retention</h2>
-			<p>There is no automatic deletion. No scheduled job deletes or anonymises accounts, content, sessions, tokens or logs, so data is kept until it is deleted from the database. Some items you delete, such as whiteboards and chat messages, are marked as deleted rather than erased.</p>
+			<p>Data is retained only as long as needed for the purposes described here or to meet legal obligations. Some workspace items may be soft-deleted to preserve referential integrity or abuse-prevention records. A soft-deleted record is not the same as erasure; verified erasure requests must be reviewed against applicable retention requirements and propagated to relevant storage systems.</p>
 		</section>
 
 		<section>
 			<h2>Where your data is stored and who receives it</h2>
-			<p>Prismatica is self-hosted. All data is stored on the machine that runs the service, in its PostgreSQL, MongoDB and MinIO (file storage) databases. Emails the service sends are delivered to Mailpit, a mail catcher running on the same machine, and do not leave it. We do not sell personal data.</p>
-			<p>Personal data leaves that machine only in these cases:</p>
+			<p>Prismatica is self-hosted. Data is stored on the machine that runs the service, in its PostgreSQL, MongoDB and MinIO (file storage) databases. Emails the service sends are delivered to Mailpit, a mail catcher running on the same machine, and do not leave it. We do not sell personal data.</p>
+			<p>Personal data may leave that machine in these cases:</p>
 			<ul>
 				<li>When Cloudflare Turnstile is enabled, the sign-up and sign-in pages load Cloudflare's script, and the sign-in service sends the Turnstile token and your IP address to Cloudflare to check that you are not a bot.</li>
 				<li>When you connect a Gmail, Outlook or Google Calendar account, the service fetches your mail and events from that provider.</li>
@@ -46,19 +46,19 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 
 		<section>
 			<h2>International transfers</h2>
-			<p>The service is hosted on a single machine. Personal data reaches other countries only through the third parties listed above.</p>
+			<p>Where a provider processes personal data outside the country where you are located, the applicable transfer safeguards and provider terms must be reviewed for that integration.</p>
 		</section>
 
 		<section>
 			<h2>Your rights</h2>
 			<p>You can exercise your rights of access, rectification, erasure, restriction, portability and objection under GDPR Articles 15 to 21. You can also withdraw consent at any time where processing is based on consent.</p>
-			<p>Use the <a href="/legal/data-rights/">Data Rights form</a> or contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>. There is no self-service data export or account deletion yet: requests are handled through this contact.</p>
-			<p>You also have the right to lodge a complaint with the CNIL: <a href="https://www.cnil.fr/fr/plaintes" rel="noreferrer">https://www.cnil.fr/fr/plaintes</a>.</p>
+			<p>Visit <a href="/legal/data-rights/">Data Rights</a> to submit a request or, while signed in, use the available data export and account-deletion controls. Some requests may require identity verification and may be limited by applicable legal retention obligations. Contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a> for help.</p>
+			<p>You also have the right to lodge a complaint with the relevant supervisory authority, such as the CNIL in France: <a href="https://www.cnil.fr/fr/plaintes" rel="noreferrer">https://www.cnil.fr/fr/plaintes</a>.</p>
 		</section>
 
 		<section>
 			<h2>Cookies and local storage</h2>
-			<p>The service uses a sign-in cookie and stores your preferences, consent choices and a workspace cache in your browser's local storage. It has no analytics or marketing scripts: the consent banner records your choice, and nothing else loads. See the <a href="/legal/cookies/">Cookie Policy</a> for the full list.</p>
+			<p>The service uses a sign-in cookie and stores preferences, consent choices and a workspace cache in your browser's local storage. Optional analytics and marketing choices are off by default. You can revisit your choices at any time from the <a href="/legal/cookies/">Cookie Policy</a>.</p>
 		</section>
 	</main>
 </Layout>
