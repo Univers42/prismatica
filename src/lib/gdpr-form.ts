@@ -1,22 +1,3 @@
-export interface GdprDependencies {
-	privacyContact: string;
-}
-
-export function bindDataRightsForm(deps: GdprDependencies): void {
-	const form = document.querySelector<HTMLFormElement>('[data-gdpr-request-form]');
-	if (!form) return;
-
-	// Grobase currently has authenticated export, consent and deletion-request
-	// routes, but no public generic DSAR-submission endpoint. Do not call a
-	// made-up SQL RPC or tell users a request was recorded when it was not.
-	const status = form.querySelector('[data-gdpr-request-status]');
-	const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
-	if (status instanceof HTMLOutputElement) {
-		status.textContent = `For access, correction, restriction or objection requests, contact ${deps.privacyContact}. This form cannot submit those requests yet.`;
-	}
-	if (submitButton) submitButton.disabled = true;
-}
-
 function setActionState(container: HTMLElement, message: string, busy = false): void {
 	const status = container.querySelector('[data-gdpr-self-service-status]');
 	if (status instanceof HTMLOutputElement) status.textContent = message;
