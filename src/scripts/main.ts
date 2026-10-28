@@ -13,7 +13,7 @@
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
-import { bindDataRightsForm, bindGdprSelfService } from "../lib/gdpr-form";
+import { bindGdprSelfService } from "../lib/gdpr-form";
 import { baasConfig } from "../lib/baas-config";
 import { readStorage, writeStorage } from '../lib/storage';
 import { DATA_CONTROLLER, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
