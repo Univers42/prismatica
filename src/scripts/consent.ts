@@ -2,6 +2,8 @@ import { CONSENT_STORAGE_KEY, POLICY_VERSION } from '../data/legal';
 import { readStorage, writeStorage } from '../lib/storage';
 import { queryElement, queryElements, isButton, isHtmlElement } from '../lib/dom-utils';
 import { announce } from './theme';
+import { baasConfig } from '../lib/baas-config';
+import { getAccessToken } from './portal';
 
 export type ConsentPreferences = {
 	analytics: boolean;
@@ -66,10 +68,45 @@ export function bindConsentBanner(): void {
 		}).observe(banner);
 	}
 
-	const save = (analytics: boolean, newsletter: boolean, marketing: boolean): void => {
-		storeConsentPreferences({ analytics, newsletter, marketing });
+	const save = async (analytics: boolean, newsletter: boolean, marketing: boolean): Promise<void> => {
+		const preferences = { analytics, newsletter, marketing };
+		const previous = readConsentPreferences();
+		storeConsentPreferences(preferences);
+
+		// Persist each choice in the Grobase GDPR service whenever the user is
+		// authenticated. Local preferences remain available if the service is offline.
+		const token = getAccessToken();
+		if (token) {
+			const entries = [
+				['analytics', analytics],
+				['newsletter', newsletter],
+				['marketing', marketing],
+			] as const;
+			try {
+				const results = await Promise.all(entries.map(async ([type, consented]) => {
+					const response = await fetch(`${baasConfig.url}/gdpr/consents`, {
+						method: 'POST',
+						headers: {
+							apikey: baasConfig.anonKey,
+							Authorization: `Bearer ${token}`,
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ consent_type: type, consented }),
+					});
+					return response.ok;
+				}));
+				if (results.some((ok) => !ok)) {
+					announce('Preferences saved on this device. Some server consent records could not be updated.');
+				} else {
+					announce('Consent preferences saved.');
+				}
+			} catch {
+				announce('Preferences saved on this device. Server consent records could not be updated.');
+			}
+		} else {
+			announce('Consent preferences saved on this device. Sign in to sync them to your account.');
+		}
 		hideBanner();
-		announce('Consent preferences saved.');
 	};
 
 	if (!readConsentPreferences()) {
@@ -78,6 +115,17 @@ export function bindConsentBanner(): void {
 	}
 
 	queryElements('[data-manage-cookies]', isButton).forEach((button) => button.addEventListener('click', () => {
+		const saved = readConsentPreferences();
+		if (form instanceof HTMLFormElement) {
+			const analytics = form.elements.namedItem('analytics');
+			const newsletter = form.elements.namedItem('newsletter');
+			const marketing = form.elements.namedItem('marketing');
+			if (analytics instanceof HTMLInputElement) analytics.checked = saved?.analytics ?? false;
+			if (newsletter instanceof HTMLInputElement) newsletter.checked = saved?.newsletter ?? false;
+			if (marketing instanceof HTMLInputElement) marketing.checked = saved?.marketing ?? false;
+			form.hidden = false;
+		}
+		if (manageButton instanceof HTMLButtonElement) manageButton.setAttribute('aria-expanded', 'true');
 		showBanner();
 		banner.focus({ preventScroll: false });
 	}));
@@ -93,7 +141,7 @@ export function bindConsentBanner(): void {
 			const analytics = form.elements.namedItem('analytics');
 			const newsletter = form.elements.namedItem('newsletter');
 			const marketing = form.elements.namedItem('marketing');
-			save(
+			void save(
 				analytics instanceof HTMLInputElement && analytics.checked,
 				newsletter instanceof HTMLInputElement && newsletter.checked,
 				marketing instanceof HTMLInputElement && marketing.checked,
@@ -101,6 +149,6 @@ export function bindConsentBanner(): void {
 		});
 	}
 
-	acceptAll?.addEventListener('click', () => save(true, true, true));
-	rejectAll?.addEventListener('click', () => save(false, false, false));
+	acceptAll?.addEventListener('click', () => { void save(true, true, true); });
+	rejectAll?.addEventListener('click', () => { void save(false, false, false); });
 }
