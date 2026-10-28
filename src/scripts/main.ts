@@ -14,6 +14,7 @@ import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
 import { bindDataRightsForm, bindGdprSelfService } from "../lib/gdpr-form";
+import { baasConfig } from "../lib/baas-config";
 import { readStorage, writeStorage } from '../lib/storage';
 import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
@@ -67,6 +68,40 @@ async function callGdprRpc(name: string, body: Record<string, unknown>, token = 
 	}
 }
 
+/**
+ * Calls the GDPR service routes exposed by Grobase's authenticated Kong gateway.
+ * These are HTTP endpoints, not Postgres RPCs. Never call them without the
+ * current user's bearer token, and never use a service-role credential in the browser.
+ */
+async function callGdprEndpoint(
+	path: string,
+	method: 'GET' | 'POST' | 'DELETE',
+	body?: Record<string, unknown>,
+	token = getAccessToken(),
+): Promise<{ ok: boolean; data?: unknown }> {
+	if (!token) return { ok: false };
+	try {
+		const response = await fetch(`${baasConfig.url}${path}`, {
+			method,
+			headers: {
+				apikey: baasConfig.anonKey,
+				Authorization: `Bearer ${token}`,
+				...(body ? { 'Content-Type': 'application/json' } : {}),
+			},
+			...(body ? { body: JSON.stringify(body) } : {}),
+		});
+		const contentType = response.headers.get('content-type') ?? '';
+		const data: unknown = contentType.includes('application/json')
+			? await response.json().catch(() => undefined)
+			: response.ok
+				? await response.blob()
+				: await response.text().catch(() => undefined);
+		return { ok: response.ok, data };
+	} catch {
+		return { ok: false };
+	}
+}
+
 async function logoutSession(): Promise<void> {
 	clearAccessToken();
 	announce('Logged out successfully');
@@ -83,7 +118,7 @@ function bindInteractions(): void {
 	bindConsentBanner();
 	bindNewsletterSignup();
 	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
-	bindGdprSelfService({ callGdprRpc });
+	bindGdprSelfService({ callGdprRpc, callGdprEndpoint });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {
