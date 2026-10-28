@@ -388,7 +388,6 @@
 :root[data-theme='swiss'] {
 	.consent-banner {
 		inset: auto 0 0 0;
-		z-index: 90;
 	}
 	.consent-banner__paper {
 		max-width: none;
@@ -413,10 +412,12 @@
 	.consent-banner__version { display: none; }
 	.consent-banner__actions { flex-wrap: nowrap; }
 	.consent-banner__preferences { grid-column: 1 / -1; }
-	/* Keep the bar SLIM: the preferences form stays collapsed until "Manage"
-	   is clicked. The base .consent-banner__preferences{display:grid} overrode
-	   the [hidden] attribute, so the toggle could never hide it. */
-	.consent-banner__preferences[hidden] { display: none !important; }
+
+	/* Tablets: the three unwrapped actions need ~580px, so beside them the
+	   message was squeezed into a ~110px column. Stack the actions under it. */
+	@media (width <= 1024px) {
+		.consent-banner__paper { grid-template-columns: 1fr; }
+	}
 
 	/* Phones: a compact two-row bar (title, then Accept / Reject with Manage
 	   beneath) instead of a panel covering a quarter of the screen. */

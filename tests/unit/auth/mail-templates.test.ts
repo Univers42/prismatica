@@ -15,6 +15,9 @@ const vars = {
 	userAgent: 'Mozilla/5.0 (X11 Linux x86_64) Firefox/131.0',
 	ipAddress: '203.0.113.7',
 	location: 'Unknown location',
+	aiTokensRevoked: '2',
+	patsRevoked: '1',
+	membersToReview: '3',
 };
 const PALETTE = ['#F6F5F1', '#15151A', '#56565F', '#B93A0C'];
 

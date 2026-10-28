@@ -1,0 +1,47 @@
+---
+// The card every e-mail link and sign-in landing page shows: a spinner while the page works, then
+// one outcome (src/scripts/auth-result.ts fills it). Rendered static, so it reads before JS runs.
+
+interface Props {
+	id: string;
+	eyebrow: string;
+	title: string;
+	message: string;
+	hidden?: boolean;
+}
+
+const { id, eyebrow, title, message, hidden = false } = Astro.props;
+---
+
+<section class="auth-card auth-result" aria-labelledby={`${id}-title`} data-auth-result data-tone="loading" hidden={hidden}>
+	<div class="auth-result__badge" aria-hidden="true">
+		<span class="auth-result__spinner" data-result-icon="loading"></span>
+		<svg data-result-icon="notice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+			<circle cx="12" cy="12" r="10"></circle>
+			<path d="M12 16v-4"></path>
+			<path d="M12 8h.01"></path>
+		</svg>
+		<svg data-result-icon="danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+			<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+			<path d="M12 9v4"></path>
+			<path d="M12 17h.01"></path>
+		</svg>
+		<svg data-result-icon="success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+			<path d="M20 6 9 17l-5-5"></path>
+		</svg>
+	</div>
+	<p class="eyebrow">{eyebrow}</p>
+	<h1 id={`${id}-title`} tabindex="-1" data-result-title>{title}</h1>
+	<p class="auth-result__message" data-result-message role="status" aria-live="polite">{message}</p>
+	<noscript><p class="auth-result__message">This page needs JavaScript. Turn it on, then open the link again.</p></noscript>
+	<div class="auth-result__next" data-result-next hidden>
+		<h2 class="auth-result__subtitle">What you can do</h2>
+		<ol class="auth-result__steps" data-result-steps></ol>
+	</div>
+	<div class="auth-result__actions" data-result-actions hidden>
+		<button class="button button--primary" type="button" data-open-connect data-result-action></button>
+		<a class="button button--primary" href="/" data-result-continue hidden>Open your workspace</a>
+		<a class="button button--ghost" href="/">Back to homepage</a>
+	</div>
+	<p class="auth-result__reference" data-result-reference hidden>Reference <code data-result-code></code></p>
+</section>

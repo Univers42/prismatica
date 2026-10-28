@@ -1,0 +1,30 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AuthResult from '../../components/ui/AuthResult.astro';
+---
+
+<Layout title="Signing in · Prismatica" description="Completing your Prismatica sign-in." noindex referrerPolicy="no-referrer">
+	<main id="main-content" class="auth-page" data-auth-callback>
+		<AuthResult id="callback" eyebrow="Sign in" title="Finishing your sign-in…" message="Confirming your account with the provider and opening your workspace. This takes a few seconds." />
+	</main>
+	<script>
+		import { authConfig } from '../../lib/auth-config';
+		import { completeOAuthCallback } from '../../scripts/auth-callback';
+		import { callbackCopy, credentialResetCopy } from '../../scripts/auth-callback-copy';
+		import { showAuthResult } from '../../scripts/auth-result';
+
+		const card = document.querySelector<HTMLElement>('[data-auth-callback] [data-auth-result]');
+
+		void completeOAuthCallback(authConfig.gatewayUrl, window.location, window.history, window.sessionStorage).then((outcome) => {
+			if (outcome.kind === 'redirect' && outcome.credentialReset) {
+				if (card) showAuthResult(card, { ...credentialResetCopy(outcome.provider), continueUrl: outcome.url });
+				return;
+			}
+			if (outcome.kind === 'redirect') {
+				window.location.assign(outcome.url);
+				return;
+			}
+			if (card) showAuthResult(card, { ...callbackCopy(outcome.problem, outcome.provider), code: outcome.code });
+		});
+	</script>
+</Layout>

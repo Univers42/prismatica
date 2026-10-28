@@ -4,11 +4,14 @@ import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from
 describe('Portal Script Module', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
+		// Opening the portal asks the gateway for OAuth providers; keep that off the network.
+		vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 404 })));
 	});
 
 	afterEach(() => {
 		closePortal();
 		document.body.innerHTML = '';
+		vi.unstubAllGlobals();
 	});
 
 	it('opens portal and adds modal dialog to body', () => {
@@ -152,6 +155,11 @@ describe('Portal Script Module', () => {
 });
 
 describe('Portal login code step', () => {
+	// Opening the portal asks the gateway for OAuth providers; keep that off the network.
+	beforeEach(() => {
+		gateway({});
+	});
+
 	afterEach(() => {
 		closePortal();
 		document.body.innerHTML = '';

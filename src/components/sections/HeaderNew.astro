@@ -71,7 +71,7 @@ const navItems = [
 	<div class="header-new__drawer" id="header-new-menu" hidden>
 		<ul class="header-new__list header-new__list--mobile">
 			{navItems.map((item) => (
-				<li><a class="header-new__link" href={item.href}>{item.label}</a></li>
+				<li><a class="header-new__link" href={item.href} data-i18n={item.i18nKey}>{item.label}</a></li>
 			))}
 		</ul>
 		<div class="header-new__drawer-actions">
@@ -105,11 +105,28 @@ const navItems = [
 		const toggle = root.querySelector('[data-header-toggle]');
 		const drawer = root.querySelector('#header-new-menu');
 		if (!(toggle instanceof HTMLElement) || !(drawer instanceof HTMLElement)) return;
+
+		const setOpen = (open: boolean) => {
+			toggle.setAttribute('aria-expanded', String(open));
+			drawer.hidden = !open;
+			document.body.classList.toggle('drawer-open', open);
+		};
+
 		toggle.addEventListener('click', () => {
 			const open = toggle.getAttribute('aria-expanded') === 'true';
-			toggle.setAttribute('aria-expanded', String(!open));
-			drawer.hidden = open;
-			document.body.classList.toggle('drawer-open', !open);
+			setOpen(!open);
+		});
+
+		// Mobile: close the drawer after choosing a section so the page is usable.
+		drawer.querySelectorAll('a[href]').forEach((link) => {
+			link.addEventListener('click', () => setOpen(false));
+		});
+
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+				setOpen(false);
+				toggle.focus();
+			}
 		});
 	})();
 </script>

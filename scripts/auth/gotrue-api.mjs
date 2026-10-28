@@ -1,5 +1,6 @@
 /**
- * The GoTrue calls behind the account flows, through Kong (`${baseUrl}/auth/v1/...`).
+ * The GoTrue calls behind the account flows, through Kong (`${baseUrl}/auth/v1/...`), plus the
+ * service-key PostgREST reads and writes they need (`serviceRest`, `${baseUrl}/rest/v1/...`).
  * Every method resolves to `{ ok, status, body }` and never throws: a network failure is
  * status 0, an unreadable body is `{}`. Work queued after a 202 therefore cannot turn a GoTrue
  * outage into an unhandled rejection (verdict B, B12).
@@ -21,11 +22,12 @@ async function readBody(response) {
 export function createGotrueApi({ baseUrl, anonKey, serviceKey, fetch: fetchImpl = globalThis.fetch, timeoutMs = 8_000 }) {
 	const root = String(baseUrl).replace(/\/+$/, '');
 
-	async function call(path, { method = 'POST', body, bearer = anonKey, admin = false } = {}) {
+	async function call(path, { method = 'POST', body, bearer = anonKey, admin = false, prefer } = {}) {
 		if (admin && !serviceKey) return { ok: false, status: 0, body: { message: 'Missing service role key.' } };
 		const key = admin ? serviceKey : anonKey;
 		const headers = { apikey: key, authorization: `Bearer ${admin ? serviceKey : bearer}`, accept: 'application/json' };
 		if (body !== undefined) headers['content-type'] = 'application/json';
+		if (prefer) headers.prefer = prefer;
 		try {
 			const response = await fetchImpl(`${root}${path}`, {
 				method,
@@ -41,13 +43,20 @@ export function createGotrueApi({ baseUrl, anonKey, serviceKey, fetch: fetchImpl
 
 	const id = (value) => encodeURIComponent(String(value));
 	return {
+		settings: () => call('/auth/v1/settings', { method: 'GET' }),
 		verify: (type, tokenHash) => call('/auth/v1/verify', { body: { type, token_hash: tokenHash } }),
 		refresh: (refreshToken) => call('/auth/v1/token?grant_type=refresh_token', { body: { refresh_token: refreshToken } }),
+		exchangePkce: (authCode, codeVerifier) => call('/auth/v1/token?grant_type=pkce', { body: { auth_code: authCode, code_verifier: codeVerifier } }),
 		logout: (accessToken, scope) => call(`/auth/v1/logout?scope=${scope}`, { bearer: accessToken }),
 		updatePassword: (accessToken, password) => call('/auth/v1/user', { method: 'PUT', body: { password }, bearer: accessToken }),
 		generateLink: (input) => call('/auth/v1/admin/generate_link', { body: input, admin: true }),
 		listFactors: (userId) => call(`/auth/v1/admin/users/${id(userId)}/factors`, { method: 'GET', admin: true }),
+		getUser: (userId) => call(`/auth/v1/admin/users/${id(userId)}`, { method: 'GET', admin: true }),
+		updateUser: (userId, body) => call(`/auth/v1/admin/users/${id(userId)}`, { method: 'PUT', body, admin: true }),
+		deleteFactor: (userId, factorId) => call(`/auth/v1/admin/users/${id(userId)}/factors/${id(factorId)}`, { method: 'DELETE', admin: true }),
 		mfaChallenge: (accessToken, factorId) => call(`/auth/v1/factors/${id(factorId)}/challenge`, { body: {}, bearer: accessToken }),
 		mfaVerify: (accessToken, factorId, challengeId, code) => call(`/auth/v1/factors/${id(factorId)}/verify`, { body: { challenge_id: challengeId, code }, bearer: accessToken }),
+		/** @param {string} pathAndQuery @param {{ method?: string, body?: unknown, prefer?: string }} [options] */
+		serviceRest: (pathAndQuery, { method = 'GET', body, prefer } = {}) => call(`/rest/v1/${pathAndQuery}`, { method, body, prefer, admin: true }),
 	};
 }

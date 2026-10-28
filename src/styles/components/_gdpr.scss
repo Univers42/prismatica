@@ -13,11 +13,13 @@
 .consent-banner {
 	position: fixed;
 	inset: auto 1rem 1rem;
-	z-index: 80;
+	// Above the footer card (.swipe-stack__tail, 9999, 88 % canvas) and the mascot (10000):
+	// below them the bar showed through the footer as a faded strip.
+	z-index: 10001;
 }
 
-.consent-banner[hidden] {
-	display: none;
+body:has(.consent-banner:not([hidden])) {
+	padding-block-end: var(--consent-banner-height, 0px);
 }
 
 .consent-banner__paper,
@@ -118,6 +120,12 @@
 	margin: 0;
 }
 
+// The reset sizes every h1 for the homepage hero (up to 12rem); a card title needs its own scale.
+.auth-card h1 {
+	font-size: clamp(1.75rem, 1.35rem + 1.8vw, 2.5rem);
+	line-height: 1.1;
+}
+
 .auth-card__hint {
 	color: var(--ink-mid);
 }
@@ -149,41 +157,6 @@
 
 .auth-card .password-match {
 	color: var(--ink-mid);
-}
-
-.auth-loading {
-	display: flex;
-	gap: 0.35rem;
-	align-items: center;
-	min-height: 2rem;
-}
-
-.auth-loading[hidden] {
-	display: none;
-}
-
-.auth-loading span {
-	width: 0.72rem;
-	height: 0.72rem;
-	border: 1.5px solid var(--ink);
-	border-radius: 999px;
-	background: var(--hl-yellow);
-	animation: auth-loading-bounce 900ms ease-in-out infinite alternate;
-}
-
-.auth-loading span:nth-child(2) {
-	animation-delay: 120ms;
-	background: var(--hl-blue);
-}
-
-.auth-loading span:nth-child(3) {
-	animation-delay: 240ms;
-	background: var(--hl-green);
-}
-
-@keyframes auth-loading-bounce {
-	from { transform: translateY(0); }
-	to { transform: translateY(-0.35rem); }
 }
 
 .auth-card [role='status'].is-error,
@@ -238,4 +211,47 @@
 	.consent-banner__preferences {
 		grid-column: 1 / -1;
 	}
+}
+
+.data-rights-account {
+	padding: 1rem;
+	margin-block: 1.5rem;
+}
+
+.data-rights-account h2,
+.data-rights-account h3,
+.data-rights-account p {
+	margin: 0;
+}
+
+.data-rights-account__body {
+	display: grid;
+	gap: 1.25rem;
+}
+
+.data-rights-account__item {
+	display: grid;
+	gap: 0.6rem;
+	justify-items: start;
+}
+
+.data-rights-account__item .field {
+	justify-self: stretch;
+}
+
+.data-rights-account__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+[data-gdpr-account-signed-out] {
+	display: grid;
+	gap: 0.75rem;
+	justify-items: start;
+}
+
+[data-gdpr-account-signed-out][hidden],
+[data-gdpr-account-signed-in][hidden] {
+	display: none;
 }

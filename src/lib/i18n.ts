@@ -167,6 +167,7 @@ export interface UIStrings {
     readonly newsletterButton: string;
     readonly newsletterConsent: string;
     readonly newsletterMeta: string;
+    readonly cookieSettings: string;
     readonly groupProduct: string;
     readonly linkOverview: string;
     readonly linkPricing: string;
@@ -330,8 +331,8 @@ export const DICTIONARY: TranslationDictionary = {
       authLede: 'Auth with GoTrue under the hood, social providers, magic links, and Turnstile-protected sign-ups out of the box.',
       dbTitle: 'PostgREST + Postgres',
       dbLede: 'Your schema is your API. Row-level security, typed queries, instant realtime — no glue code.',
-      privacyTitle: 'GDPR by default',
-      privacyLede: 'GDPR by default: consent ledger, DSAR exports, breach response runbook, and EU data residency baked in.',
+      privacyTitle: 'Privacy-first design',
+      privacyLede: 'GDPR-minded defaults: consent banner, documented data flows, and a breach-response runbook. Your data stays on the host you choose — self-service export and erasure are on the roadmap.',
     },
     faq: {
       eyebrow: 'FAQ',
@@ -339,7 +340,7 @@ export const DICTIONARY: TranslationDictionary = {
       q1: 'Can I really self-host the whole stack?',
       a1: 'Yes. The entire backend infrastructure repo is MIT licensed: Kong, GoTrue, PostgREST, Postgres, MailHog. One docker compose up and you are running locally; the same images deploy to any VPS.',
       q2: 'Where does my data live?',
-      a2: 'Wherever you put it. The hosted tier runs in EU regions (Paris and Frankfurt). Self-hosted means your machines, your jurisdiction, your DPA — we never see the data.',
+      a2: 'On the host you choose. Self-hosted means your machines, your jurisdiction, your DPA — we never see the data. The current hosted beta runs on a single deployment; multi-region EU residency is not claimed until it is real.',
       q3: 'How does pricing work as I grow?',
       a3: 'You pay per active project, not per seat. Move from Free → Team in one click. If you outgrow Team, self-host: same code, no migration.',
       q4: 'How do I migrate from another BaaS?',
@@ -441,6 +442,7 @@ export const DICTIONARY: TranslationDictionary = {
       linkDataRights: 'Data rights',
       copyright: '© {year} Prismatica · Open source under MIT',
       gdprContact: 'GDPR contact:',
+      cookieSettings: 'Cookie settings',
     },
     pricing: {
       eyebrow: 'Pricing',
@@ -454,7 +456,7 @@ export const DICTIONARY: TranslationDictionary = {
       freeFeature1: '1 project · 5K MAU',
       freeFeature2: 'Auth, Database, Storage',
       freeFeature3: 'Community support',
-      freeFeature4: 'EU data residency',
+      freeFeature4: 'Your data stays on your host',
       freeCta: 'Start free',
       teamName: 'Team',
       teamPrice: '€39',
@@ -573,8 +575,8 @@ socialProof: {
       authLede: 'Autenticación con GoTrue por debajo, proveedores sociales, enlaces mágicos y registros protegidos con Turnstile de fábrica.',
       dbTitle: 'PostgREST + Postgres',
       dbLede: 'Tu esquema es tu API. Seguridad a nivel de fila, consultas tipadas y tiempo real instantáneo — sin código pegamento.',
-      privacyTitle: 'RGPD por defecto',
-      privacyLede: 'RGPD por defecto: registro de consentimientos, exportaciones ARCO/DSAR, guía de respuesta a brechas y residencia de datos en la UE.',
+      privacyTitle: 'Diseño centrado en la privacidad',
+      privacyLede: 'Valores predeterminados orientados al RGPD: banner de consentimiento, flujos de datos documentados y protocolo de respuesta a brechas. Tus datos permanecen en el servidor que elijas: la exportación y borrado autoservicio están en la hoja de ruta.',
     },
 faq: {
       eyebrow: 'Preguntas frecuentes',
@@ -582,7 +584,7 @@ faq: {
       q1: '¿Realmente puedo autoalojar todo el stack?',
       a1: 'Sí. Todo el repositorio de infraestructura backend tiene licencia MIT: Kong, GoTrue, PostgREST, Postgres, MailHog. Un docker compose up y funciona en local; las mismas imágenes se despliegan en cualquier VPS.',
       q2: '¿Dónde residen mis datos?',
-      a2: 'Donde tú decida. El plan alojado opera en regiones de la UE (París y Fráncfort). Autoalojado significa tus máquinas, tu jurisdicción, tu DPA — nunca vemos los datos.',
+      a2: 'En el servidor que elijas. Autoalojado significa tus máquinas, tu jurisdicción, tu DPA — nosotros nunca vemos los datos. La beta alojada actual se ejecuta en un único despliegue; la residencia multirregión en la UE no se promete hasta que sea real.',
       q3: '¿Cómo funciona el precio a medida que crezco?',
       a3: 'Pagas por proyecto activo, no por usuario. Pasa de Free a Team con un solo clic. Si superas Team, autoaloja: el mismo código, sin migración.',
       q4: '¿Cómo migro desde otro BaaS?',
@@ -684,6 +686,7 @@ faq: {
       linkDataRights: 'Derechos de datos',
       copyright: '© {year} Prismatica · Código abierto bajo MIT',
       gdprContact: 'Contacto GDPR:',
+      cookieSettings: 'Ajustes de cookies',
     },
     appTour: {
       title: 'Seis aplicaciones que ya se comunican entre sí.',
@@ -722,7 +725,7 @@ faq: {
       freeFeature1: '1 proyecto · 5K MAU',
       freeFeature2: 'Autenticación, Base de datos, Almacenamiento',
       freeFeature3: 'Soporte comunitario',
-      freeFeature4: 'Residencia de datos en la UE',
+      freeFeature4: 'Tus datos permanecen en tu servidor',
       freeCta: 'Empezar gratis',
       teamName: 'Equipo',
       teamPrice: '€39',
@@ -816,8 +819,8 @@ faq: {
       authLede: 'مصادقة مدعومة بـ GoTrue، مع تسجيل دخول اجتماعي، وروابط سحرية، وحماية Turnstile مدمجة عند التسجيل.',
       dbTitle: 'PostgREST + Postgres',
       dbLede: 'مخطط بياناتك هو واجهة برمجة تطبيقاتك (API). أمان على مستوى الصف، استعلامات منمطة، وبث فوري دون كود وسيط.',
-      privacyTitle: 'متوافق مع GDPR افتراضياً',
-      privacyLede: 'توافق تام مع GDPR افتراضياً: سجل للموافقات، تصدير طلبات DSAR، دليل استجابة للخروقات، وإقامة بيانات في الاتحاد الأوروبي.',
+      privacyTitle: 'تصميم يركز على الخصوصية أولاً',
+      privacyLede: 'إعدادات افتراضية تراعي GDPR: شريط موافقة، وتدفقات بيانات موثقة، ودليل استجابة للانتهاكات. تبقى بياناتك على الخادم الذي تختاره — التصدير والحذف الذاتي قيد التطوير.',
     },
 faq: {
       eyebrow: 'الأسئلة الشائعة',
@@ -825,7 +828,7 @@ faq: {
       q1: 'هل يمكنني حقاً استضافة كامل البنية التحتية ذاتياً؟',
       a1: 'نعم. مستودع البنية التحتية backend بأكمله مرخص بموجب MIT: Kong و GoTrue و PostgREST و Postgres و MailHog. أمر واحد: docker compose up وستعمل محلياً؛ كما تُنشر الصور ذاتها على أي VPS.',
       q2: 'أين تستقر بياناتي؟',
-      a2: 'أينما تضعها. الخطة السحابية المستضافة تعمل في مناطق الاتحاد الأوروبي (باريس وفرانكفورت). والاستضافة الذاتية تعني أجهزتك، اختصاصك القضائي، واتفاقية DPA الخاصة بك — نحن لا نرى البيانات أبداً.',
+      a2: 'على الخادم الذي تختاره. الاستضافة الذاتية تعني أجهزتك، ونطاقك القضائي، واتفاقية معالجة البيانات الخاصة بك — نحن لا نرى البيانات أبداً. تعمل النسخة التجريبية الحالية على نشر واحد؛ لا يُزعم وجود إقامة متعددة regions في الاتحاد الأوروبي حتى تصبح حقيقية.',
       q3: 'كيف يعمل التسعير مع نمو مشروعي؟',
       a3: 'أنت تدفع لكل مشروع نشط، وليس لكل مستخدم. انتقل من Free إلى Team بنقرة واحدة. وإذا تجاوزت Team، استضف ذاتياً: نفس الكود وبدون أي ترحيل.',
       q4: 'كيف يمكنني الترحيل من BaaS آخر؟',
@@ -927,6 +930,7 @@ faq: {
       linkDataRights: 'حقوق البيانات',
       copyright: '© {year} برزماتيكا · مفتوح المصدر بموجب ترخيص MIT',
       gdprContact: 'مسؤول حماية البيانات GDPR:',
+      cookieSettings: 'إعدادات ملفات تعريف الارتباط',
     },
     pricing: {
       eyebrow: 'الأسعار',
@@ -940,7 +944,7 @@ faq: {
       freeFeature1: 'مشروع واحد · 5 آلاف مستخدم نشط',
       freeFeature2: 'مصادقة، قواعد بيانات، تخزين',
       freeFeature3: 'دعم المجتمع',
-      freeFeature4: 'إقامة البيانات في الاتحاد الأوروبي',
+      freeFeature4: 'بياناتك تبقى على خادمك',
       freeCta: 'ابدأ مجاناً',
       teamName: 'فريق',
       teamPrice: '€39',

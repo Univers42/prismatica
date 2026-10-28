@@ -13,7 +13,29 @@ export type Hit = { method: string; path: string; body: string; apikey?: string 
 export type Gateway = { base: string; logs: () => string };
 
 export const hits: Hit[] = [];
-export const upstream = { otpRequestStatus: 200, mailStatus: 200, passwordStatus: 200, auditDelayMs: 0, existingEmails: [] as string[] };
+export const upstream = {
+	otpRequestStatus: 200,
+	mailStatus: 200,
+	passwordStatus: 200,
+	auditDelayMs: 0,
+	existingEmails: [] as string[],
+	// /auth/v1/user: the caller's own lookup, with the fields the collision guard reads.
+	userStatus: 200,
+	user: {} as Record<string, unknown>,
+	amr: [{ method: 'password' }] as { method: string }[],
+	// /auth/v1/token?grant_type=pkce: 200 only for this exact pair, 404 flow_state_not_found otherwise.
+	pkce: { auth_code: 'code-1', code_verifier: 'verifier-1' },
+	pkceTokenStatus: 200,
+	pkceError: { error: 'invalid_grant', error_description: 'bad code' } as Record<string, unknown>,
+	// /auth/v1/settings: the GoTrue autoconfirm switch (F15).
+	settingsStatus: 200,
+	settings: { mailer_autoconfirm: false } as Record<string, unknown>,
+	logoutStatus: 204,
+	// /auth/v1/admin/users/<id> and its /factors: what oauth-link.mjs reads; null serves `user`.
+	adminUser: null as Record<string, unknown> | null,
+	factorsStatus: 200,
+	factors: [] as unknown[],
+};
 export const servers: { close: () => void }[] = [];
 const gateways: ChildProcess[] = [];
 let kongPort = 0;
@@ -52,7 +74,16 @@ function fakeKong() {
 				return send(200, { access_token: 'at-0', refresh_token: 'rt-0', token_type: 'bearer', expires_in: 3600, user: { id: 'u1', email: parsed.email } });
 			}
 			if (path.startsWith('/auth/v1/token?grant_type=refresh_token')) return send(200, { access_token: 'at-1', refresh_token: 'rt-2', token_type: 'bearer', expires_in: 3600, user: { id: 'u1' } });
-			if (path.startsWith('/auth/v1/logout')) return send(204, {});
+			if (path.startsWith('/auth/v1/token?grant_type=pkce')) {
+				const pair = upstream.pkce;
+				const matches = parsed.auth_code === pair.auth_code && parsed.code_verifier === pair.code_verifier;
+				if (upstream.pkceTokenStatus !== 200) return send(upstream.pkceTokenStatus, upstream.pkceError);
+				if (!matches) return send(404, { error_code: 'flow_state_not_found', msg: 'invalid flow state' });
+				return send(200, { access_token: 'oauth-at', refresh_token: 'oauth-rt', token_type: 'bearer', expires_in: 3600, user: { id: 'u1' } });
+			}
+			if (path.startsWith('/auth/v1/settings')) return send(upstream.settingsStatus, upstream.settings);
+			if (path.startsWith('/auth/v1/user')) return send(upstream.userStatus, { ...upstream.user, amr: upstream.amr });
+			if (path.startsWith('/auth/v1/logout')) return send(upstream.logoutStatus, {});
 			if (path === '/v1/auth/otp/request') return send(upstream.otpRequestStatus, upstream.otpRequestStatus === 200 ? { sent: true } : { error: 'x' });
 			if (path === '/email/v1/send') return send(upstream.mailStatus, {});
 			if (path === '/v1/auth/otp/verify') {
@@ -61,6 +92,8 @@ function fakeKong() {
 				if (parsed.code === '888888') return send(429, { error: 'too_many_attempts' });
 				return send(401, { error: 'invalid_code' });
 			}
+			if (/^\/auth\/v1\/admin\/users\/[^/]+\/factors$/.test(path) && request.method === 'GET') return send(upstream.factorsStatus, upstream.factors);
+			if (/^\/auth\/v1\/admin\/users\/[^/]+$/.test(path) && request.method === 'GET') return send(200, upstream.adminUser ?? upstream.user);
 			if (path.startsWith('/auth/v1/admin/generate_link')) return send(200, { hashed_token: 'd'.repeat(56) });
 			if (path.startsWith('/rest/v1/users') && request.method === 'GET') {
 				const taken = upstream.existingEmails.some((email) => decodeURIComponent(path).includes(`email=eq.${email}`));

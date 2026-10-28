@@ -1,41 +1,83 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data/legal';
+import { DELETION_CONFIRMATION_PHRASE } from '../../lib/gdpr-account';
 ---
 
-<Layout title="Data Rights — Prismatica" description="Submit GDPR data rights requests to Prismatica.">
+<Layout title="Data Rights — Prismatica" description="Download, correct or delete your Prismatica data and exercise your GDPR rights.">
 	<main id="main-content" class="legal-page section-shell">
 		<a href="/" class="legal-page__back">← Back to Prismatica</a>
-		<h1>Data Rights Request</h1>
+		<h1>Data Rights</h1>
 		<p><strong>Version:</strong> {POLICY_VERSION} · <strong>Last updated:</strong> {POLICY_LAST_UPDATED}</p>
-		<p>Use this form to request access, deletion, correction, portability, restriction or objection. Unauthenticated requests are recorded by email and manually verified before any disclosure or deletion.</p>
+		<p>Under the GDPR you can access, correct, delete, export, restrict or object to the processing of your personal data, and withdraw any consent you gave. Signed-in users can do the most common actions themselves below; anything else goes through the request form.</p>
 
-		<form class="data-rights-form" data-gdpr-request-form novalidate>
-			<input type="hidden" name="csrf" data-csrf-token />
-			<div class="field">
-				<label for="rights-email">Email address</label>
-				<input id="rights-email" name="email" type="email" autocomplete="email" required />
+		<section class="data-rights-form data-rights-account" data-gdpr-account aria-labelledby="account-rights-title">
+			<h2 id="account-rights-title">Your account</h2>
+			<div data-gdpr-account-signed-out>
+				<p>Sign in to download your data, withdraw newsletter consent or request deletion of your account yourself. You can also use the request form below without signing in.</p>
+				<button class="button button--ghost" type="button" data-open-portal>Sign in</button>
 			</div>
-			<div class="field">
-				<label for="rights-type">Request type</label>
-				<select id="rights-type" name="request_type" required>
-					<option value="access">Access my data</option>
-					<option value="deletion">Delete my account/data</option>
-					<option value="rectification">Correct my data</option>
-					<option value="portability">Export portable data</option>
-					<option value="restriction">Restrict processing</option>
-					<option value="objection">Object to processing</option>
-				</select>
+			<div class="data-rights-account__body" data-gdpr-account-signed-in hidden>
+				<div class="data-rights-account__item">
+					<h3>Download your data</h3>
+					<p class="form-note">A machine-readable JSON copy of your account, sessions, activity and consent records (access and portability, GDPR Articles 15 and 20).</p>
+					<button class="button button--primary" type="button" data-gdpr-export>Download my data</button>
+				</div>
+				<div class="data-rights-account__item">
+					<h3>Consent</h3>
+					<p class="form-note">Withdrawing consent is as easy as giving it and does not affect processing done before.</p>
+					<div class="data-rights-account__actions">
+						<button class="button button--ghost" type="button" data-gdpr-withdraw-newsletter>Withdraw newsletter consent</button>
+						<button class="button button--ghost" type="button" data-manage-cookies>Cookie settings</button>
+					</div>
+				</div>
+				<form class="data-rights-account__item" data-gdpr-deletion-form novalidate>
+					<h3>Delete your account</h3>
+					<p class="form-note">Your account is deactivated straight away and erased or anonymised within one month, unless the law requires us to keep something. This cannot be undone. Download your data first if you want a copy.</p>
+					<div class="field">
+						<label for="deletion-confirmation">Type {DELETION_CONFIRMATION_PHRASE} to confirm</label>
+						<input id="deletion-confirmation" name="confirmation" type="text" autocomplete="off" spellcheck="false" />
+					</div>
+					<button class="button button--ghost" type="submit">Request account deletion</button>
+				</form>
 			</div>
-			<div class="field">
-				<label for="rights-message">Additional details</label>
-				<textarea id="rights-message" name="message" rows="5" maxlength="1000"></textarea>
-			</div>
-			<p class="form-note">We may request proof of identity before processing your request. The normal response period is one month.</p>
-			<button class="button button--primary" type="submit" aria-label="Submit data rights request">Submit request</button>
-			<output class="form-status" aria-live="polite" data-gdpr-request-status></output>
-		</form>
+			<output class="form-status" aria-live="polite" data-gdpr-account-status></output>
+		</section>
 
-		<p>Alternatively, contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
+		<section aria-labelledby="request-form-title">
+			<h2 id="request-form-title">Request form</h2>
+			<p>Use this form for any right, including correcting data you cannot edit yourself. Requests are recorded by email and verified before any disclosure or deletion.</p>
+			<form class="data-rights-form" data-gdpr-request-form novalidate>
+				<input type="hidden" name="csrf" data-csrf-token />
+				<div class="field">
+					<label for="rights-email">Email address</label>
+					<input id="rights-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+				</div>
+				<div class="field">
+					<label for="rights-type">Request type</label>
+					<select id="rights-type" name="request_type" required>
+						<option value="access">Access my data</option>
+						<option value="deletion">Delete my account/data</option>
+						<option value="rectification">Correct my data</option>
+						<option value="portability">Export portable data</option>
+						<option value="restriction">Restrict processing</option>
+						<option value="objection">Object to processing</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="rights-message">Additional details</label>
+					<textarea id="rights-message" name="message" rows="5" maxlength="1000"></textarea>
+				</div>
+				<p class="form-note">We may ask for proof of identity before acting on a request. We answer within one month; for complex requests this can be extended by two more months, and we will tell you why.</p>
+				<button class="button button--primary" type="submit" aria-label="Submit data rights request">Submit request</button>
+				<output class="form-status" aria-live="polite" data-gdpr-request-status></output>
+			</form>
+			<p>Alternatively, contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
+		</section>
+
+		<section aria-labelledby="complaint-title">
+			<h2 id="complaint-title">Complaints</h2>
+			<p>If you are not satisfied with our answer, you can lodge a complaint with a data protection authority, such as the CNIL (<a href="https://www.cnil.fr/fr/plaintes" rel="noreferrer">cnil.fr/fr/plaintes</a>) or the authority of the EU country where you live or work.</p>
+		</section>
 	</main>
 </Layout>

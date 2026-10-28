@@ -7,7 +7,7 @@
 /*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
+/*   Updated: 2026/10/25 12:00:00 by dlesieur         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,9 +31,11 @@ import { escapeHtml, renderHtmlTemplate, renderMessage } from './auth/mail-templ
 import { loginAlertMailFields } from './auth/request-display.mjs';
 import { deriveClientIp, ipBucket } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
+import { createOauthLink, parseLinkMode } from './auth/oauth-link.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
 import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
+import { enabledOauthProviders, isS256Challenge, oauthAuthorizeUrl } from './auth/oauth-providers.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
@@ -83,6 +85,8 @@ const config = {
 	registerHourlyLimit: Number(process.env.AUTH_REGISTER_RATE_LIMIT_PER_HOUR || 10),
 	loginOtpResendGapSec: Number(process.env.AUTH_LOGIN_OTP_RESEND_GAP_SEC ?? 30),
 	loginApproveLink: process.env.AUTH_LOGIN_EMAIL_OTP === 'true' && process.env.AUTH_LOGIN_APPROVE_LINK === 'true',
+	// Throws at boot on a typo: a misspelt `on` must not silently run as off or as on.
+	oauthLinkExisting: parseLinkMode(process.env.AUTH_OAUTH_LINK_EXISTING),
 };
 config.linkSigningKeyProblem = linkSigningKeyProblem(process.env.AUTH_LINK_SIGNING_KEY ?? '', [config.serviceKey, config.anonKey, config.osionosBridgeSecret, config.turnstileSecret, process.env.JWT_SECRET ?? '']);
 config.mailDailyCap = resolveMailDailyCap(process.env.AUTH_MAIL_DAILY_CAP, isProductionOrigin(config.siteUrl));
@@ -94,7 +98,7 @@ config.linkSigningKey = config.linkSigningKeyProblem ? '' : process.env.AUTH_LIN
 
 const store = createStore({ redisUrl: config.redisUrl, logger: console });
 // otpResend is hourly (below Kong's 200/h on the grobase request route); the others are per minute.
-const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30 };
+const RATE_LIMITS = { login: 8, register: 12, recover: 12, resend: 12, verify: 20, reset: 10, newsletter: 12, otpVerify: 10, otpResend: 20, otpStatus: 120, otpApprove: 30, osionosSession: 30, oauthSession: 30 };
 const RATE_WINDOWS_SEC = { otpResend: 3600 };
 // Open signup swaps the per-minute register allowance for an hourly one: a mail cannon needs volume.
 if (config.signupOpen && config.registerHourlyLimit > 0) {
@@ -105,6 +109,7 @@ const RATE_WINDOW_SEC = 60;
 const NEWSLETTER_TARGET_LIMIT = Number(process.env.AUTH_NEWSLETTER_TARGET_LIMIT ?? 3);
 const NEWSLETTER_TARGET_WINDOW_SEC = 3600;
 const SIGN_IN_NOTICE_TTL_SEC = 600;
+const SUCCESS_NOTICE_TTL_SEC = 24 * 3600;
 const MAIL_DOMAIN_CACHE_MS = 10 * 60 * 1000;
 const DNS_LOOKUP_TIMEOUT_MS = 3500;
 const GOTRUE_MANAGED_PROFILE_MARKER = 'managed-by-gotrue';
@@ -260,9 +265,12 @@ async function localProfileExists(column, value) {
 	return serviceBaas.from('users').exists({ filters: { [column]: value } });
 }
 
-async function restRpc(name, body, authorization = config.anonKey) {
+// The newsletter RPCs are granted to service_role only: an anon grant let anyone request and
+// confirm an opt-in for someone else's address with a token of their choosing.
+async function serviceRpc(name, body) {
+	if (!serviceBaas) return sdkErrorResult(new Error('The service key is not configured.'));
 	try {
-		return sdkResult(await publicBaas.rpc(name, body, { bearerToken: authorization }));
+		return sdkResult(await serviceBaas.rpc(name, body, { apiKey: config.serviceKey, bearerToken: config.serviceKey }));
 	} catch (error) {
 		return sdkErrorResult(error);
 	}
@@ -346,22 +354,34 @@ function loginAlertContext(request, email, outcome = 'success') {
 	};
 }
 
-async function shouldSendSignInNotice(email, outcome) {
-	if (outcome === 'success') return true;
-	const key = `notice:${outcome}:${keyHash(email)}`;
-	const existing = await store.get(key);
-	if (existing !== null) return false;
-	await store.set(key, '1', SIGN_IN_NOTICE_TTL_SEC);
-	return true;
+// A success alert per sign-in spent 77 of the 50-mail daily cap on 2026-10-27, so it goes
+// once per (address, client IP, user agent) a day; a new IP or browser still alerts at once.
+// The key is written only after the mail is accepted, so a failed send suppresses nothing, and
+// a store error sends the alert (fail open).
+// Caveat: an attacker on the owner's IP (same NAT) with the owner's exact user agent, within
+// 24h of the owner's own sign-in, gets no success alert; failed-attempt alerts are unaffected.
+function signInNotice(request, email, outcome) {
+	if (outcome !== 'success') return { key: `notice:${outcome}:${keyHash(email)}`, ttlSec: SIGN_IN_NOTICE_TTL_SEC };
+	const client = keyHash(`${clientIp(request) || 'unknown'}|${request.headers?.['user-agent'] ?? ''}`);
+	return { key: `notice:success:${keyHash(email)}:${client}`, ttlSec: SUCCESS_NOTICE_TTL_SEC };
 }
 
-async function sendLoginSecurityNotification(email, outcome, context) {
+async function signInNoticeRecentlySent(notice) {
+	try {
+		return (await store.get(notice.key)) !== null;
+	} catch (error) {
+		console.warn(`[auth-gateway] sign-in notice lookup failed, sending the alert: ${error instanceof Error ? error.message : 'unknown error'}`);
+		return false;
+	}
+}
+
+async function sendLoginSecurityNotification(email, outcome, context, notice, alwaysSend) {
 	if (!mailConfigured()) {
 		console.warn(`[auth-gateway] login security alert skipped for ${email}: the email service is not configured.`);
 		await audit('login_alert_skipped', null, { email, reason: 'mail_not_configured' });
 		return;
 	}
-	if (!(await shouldSendSignInNotice(email, outcome))) {
+	if (!alwaysSend && (await signInNoticeRecentlySent(notice))) {
 		await audit('login_alert_suppressed', null, { email, outcome, reason: 'recent_notice_sent' });
 		return;
 	}
@@ -371,18 +391,22 @@ async function sendLoginSecurityNotification(email, outcome, context) {
 		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
 	});
 	if (!wasSent(sendResult)) return;
+	await store.set(notice.key, '1', notice.ttlSec).catch((error) => {
+		console.warn(`[auth-gateway] sign-in notice key not stored: ${error instanceof Error ? error.message : 'unknown error'}`);
+	});
 	console.info(`[auth-gateway] login security alert accepted by the email service for ${email} from ${context.ipAddress}.`);
 	await audit('login_alert_sent', null, { email, outcome, ip_address: context.ipAddress, location: context.location });
 }
 
 // A failed-login alert goes only to an existing profile; looking that up before answering
 // told an attacker which addresses have accounts (verdict B, B2), so the lookup and the
-// send run after the 401, in the queue (C5).
-function scheduleLoginAlert(request, email, outcome) {
+// send run after the 401, in the queue (C5). A sign-in that removed a password always alerts (C373).
+function scheduleLoginAlert(request, email, outcome, alwaysSend = false) {
 	const context = loginAlertContext(request, email, outcome);
+	const notice = signInNotice(request, email, outcome);
 	mailQueue.push('login-alert', async () => {
 		if (outcome === 'failed' && !(await localProfileExists('email', email))) return;
-		await sendLoginSecurityNotification(email, outcome, context);
+		await sendLoginSecurityNotification(email, outcome, context, notice, alwaysSend);
 	});
 }
 
@@ -500,15 +524,27 @@ const accountMail = createAccountMail({
 	signupAllowed,
 });
 
+const writeCutoff = createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey });
+const utcNow = () => `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`;
+
 const linkFlows = createLinkFlows({
 	gotrue,
 	store,
 	linkKey: config.linkSigningKey,
 	nowMs: () => Date.now(),
 	passwordAcceptable: (password) => PASSWORD_REGEX.test(password),
-	writeCutoff: createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey }),
-	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`),
+	writeCutoff,
+	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, utcNow()),
 	audit: flowAudit,
+});
+
+const oauthLink = createOauthLink({
+	gotrue,
+	store,
+	writeCutoff,
+	notifyLinked: (email, counts) => accountMail.scheduleAccountLinked(email, utcNow(), counts),
+	audit: flowAudit,
+	mode: config.oauthLinkExisting,
 });
 
 const sessionFlows = createSessionFlows({ gotrue, audit: flowAudit });
@@ -832,7 +868,7 @@ async function handleResetPassword(request, response) {
 
 async function requestNewsletterOptIn(request, email) {
 	const token = randomBytes(32).toString('hex');
-	const result = await restRpc('gdpr_request_newsletter_optin', { email, token });
+	const result = await serviceRpc('gdpr_request_newsletter_optin', { email, token });
 	if (!result.response.ok) {
 		return {
 			ok: false,
@@ -896,7 +932,7 @@ async function handleNewsletterConfirm(request, response) {
 		json(response, 422, { message: 'Confirmation token is required.' });
 		return;
 	}
-	const result = await restRpc('gdpr_confirm_newsletter_optin', { token });
+	const result = await serviceRpc('gdpr_confirm_newsletter_optin', { token });
 	if (!result.response.ok) {
 		json(response, result.response.status, { message: humanAuthMessage(result.payload, 'This confirmation link is invalid or expired.') });
 		return;
@@ -918,7 +954,7 @@ async function handleNewsletterUnsubscribe(request, response) {
 		json(response, 422, { message: 'Unsubscribe token is required.' });
 		return;
 	}
-	const result = await restRpc('gdpr_withdraw_consent', { consent_type: 'newsletter', token });
+	const result = await serviceRpc('gdpr_withdraw_consent', { consent_type: 'newsletter', token });
 	if (!result.response.ok) {
 		json(response, result.response.status, { message: humanAuthMessage(result.payload, 'This unsubscribe link is invalid or has already been used.') });
 		return;
@@ -947,15 +983,21 @@ function handleHealth(_request, response) {
 	json(response, 200, { status: 'ok' });
 }
 
-async function handleOsionosSession(request, response) {
-	const accessToken = bearerToken(request);
+async function mintOsionosSession(request, response, options = {}) {
+	const accessToken = typeof options.accessToken === 'string' ? options.accessToken : bearerToken(request);
 	if (!accessToken) {
 		json(response, 401, { message: 'Missing bearer token.' });
-		return;
+		return 'failed';
 	}
 	if (!config.osionosBridgeSecret) {
 		json(response, 503, { message: 'osionos bridge is not configured.' });
-		return;
+		return 'failed';
+	}
+
+	const retryAfter = await rateLimit(clientIp(request), 'osionosSession');
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return 'failed';
 	}
 
 	const userClient = createClient({ url: config.baasUrl, anonKey: config.anonKey, accessToken, persistSession: false });
@@ -964,14 +1006,62 @@ async function handleOsionosSession(request, response) {
 		user = await userClient.auth.getUser();
 	} catch {
 		json(response, 401, { message: 'Invalid or expired Prismatica session.' });
-		return;
+		return 'failed';
 	}
+
+	const identityUnavailable = () => {
+		json(response, 503, { error: 'oauth_identity_unavailable', message: 'Prismatica user identities are unavailable.' });
+		return 'failed';
+	};
+	const identities = user?.identities;
+	if (!Array.isArray(identities) || identities.length === 0) return identityUnavailable();
+	// Fail closed before the one-identity shortcut: a malformed entry never proves a provider.
+	if (!identities.every((identity) => identity !== null && typeof identity === 'object' && typeof identity.provider === 'string')) return identityUnavailable();
 
 	const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
 	const subject = typeof user.id === 'string' ? user.id : '';
 	if (!subject || !EMAIL_REGEX.test(email)) {
 		json(response, 422, { message: 'Prismatica user identity is incomplete.' });
-		return;
+		return 'failed';
+	}
+
+	const isUnverifiedIdentity = (identity) => {
+		const provider = typeof identity?.provider === 'string' ? identity.provider : '';
+		if (provider === 'fortytwo' || provider === 'custom:fortytwo') return true;
+		if (provider.startsWith('custom:')) return true;
+		return identity?.identity_data?.email_verified !== true;
+	};
+	const nonEmailIdentities = identities.filter((identity) => identity?.provider !== 'email');
+	const allNonEmailVerified = nonEmailIdentities.every((identity) => !isUnverifiedIdentity(identity));
+	const confirmedAt = Date.parse(typeof user.email_confirmed_at === 'string' ? user.email_confirmed_at : '');
+	// An unknown provider date is not dropped: it makes the recency rule fail closed.
+	const nonEmailDates = nonEmailIdentities.map((identity) => Date.parse(typeof identity?.created_at === 'string' ? identity.created_at : ''));
+	const datesKnown = nonEmailDates.every((value) => Number.isFinite(value));
+	const earliest = datesKnown && nonEmailDates.length > 0 ? Math.min(...nonEmailDates) : Number.NaN;
+	const confirmedBeforeIdentities = datesKnown && Number.isFinite(confirmedAt) && Number.isFinite(earliest) && confirmedAt <= earliest;
+	// A provider sign-in only reaches a single-identity account. GoTrue links a provider by email into
+	// an existing account, and with autoconfirm on that account may be a /signup row whose holder never
+	// proved the mailbox yet looks confirmed before the provider identity (F1). Password sign-in keeps
+	// the dated rule, so a user whose account GoTrue linked is not locked out of it.
+	const allowed = datesKnown && (identities.length === 1 || (!options.singleIdentityOnly && allNonEmailVerified && Boolean(user.email_confirmed_at) && confirmedBeforeIdentities));
+	// AUTH_OAUTH_LINK_EXISTING: the provider sign-in may still reach the account once oauth-link.mjs
+	// removed every credential the provider did not prove; off keeps the refusal below untouched.
+	const linked = !allowed && options.singleIdentityOnly && oauthLink.mode !== 'off' ? await oauthLink.link({ userId: subject, accessToken, email }) : null;
+	if (linked && !linked.allow) {
+		json(response, linked.status, linked.body);
+		return 'failed';
+	}
+
+	if (!allowed && !linked) {
+		await audit('osionos_bridge_refused', request, { email, reason: 'oauth_email_collision' });
+		const logoutPromise = gotrue.logout(accessToken, 'local').then((result) => {
+			if (!result.ok) audit('osionos_bridge_refused_logout_failed', request, { email, reason: 'oauth_email_collision' }).catch(() => undefined);
+		}).catch(() => {
+			audit('osionos_bridge_refused_logout_failed', request, { email, reason: 'oauth_email_collision' }).catch(() => undefined);
+		});
+		void logoutPromise;
+		json(response, 409, { error: 'oauth_email_collision', message: 'This email is already linked to another sign-in method.' });
+		return 'refused_logged_out';
 	}
 
 	const metadata = typeof user.user_metadata === 'object' && user.user_metadata !== null ? user.user_metadata : {};
@@ -1000,16 +1090,131 @@ async function handleOsionosSession(request, response) {
 	} catch (error) {
 		await audit('osionos_bridge_failed', request, { email, status: 502, error: error instanceof Error ? error.message : 'bridge_unreachable' });
 		json(response, 502, { message: 'osionos bridge is unreachable.' });
-		return;
+		return 'failed';
 	}
 	const body = await result.json().catch(() => ({}));
 	if (result.ok && config.osionosAppUrl && typeof body?.redirectUrl === 'string' && !body.redirectUrl.startsWith(config.osionosAppUrl)) {
 		await audit('osionos_bridge_redirect_rejected', request, { email, status: result.status });
 		json(response, 502, { message: 'osionos bridge returned an unexpected redirect target.' });
-		return;
+		return 'failed';
 	}
 	await audit(result.ok ? 'osionos_bridge_success' : 'osionos_bridge_failed', request, { email, status: result.status });
-	json(response, result.status, body);
+	if (!result.ok && result.status >= 500 && options.mapBridgeFailureTo502) {
+		json(response, 502, { message: 'osionos bridge is unreachable.' });
+		return 'failed';
+	}
+	const credentialReset = result.ok && linked?.credentialReset === true;
+	if (result.ok && options.scheduleAlertOnSuccess) scheduleLoginAlert(request, email, 'success', credentialReset);
+	// The refresh cookie is a success credential: a refused or failed mint never sends it.
+	// credential_reset tells the callback page to say the password is gone (C351).
+	json(response, result.status, { ...sanitizeAuthPayload(body), ...(credentialReset ? { credential_reset: true } : {}) }, result.ok ? options.responseHeaders ?? {} : {});
+	return result.ok ? 'minted' : 'failed';
+}
+
+async function handleOsionosSession(request, response) {
+	await mintOsionosSession(request, response, { accessToken: bearerToken(request) });
+}
+
+function oauthOrigin(request) {
+	const header = request.headers.origin;
+	const value = Array.isArray(header) ? header[0] : header;
+	if (!value) return false;
+	try {
+		return value === new URL(config.siteUrl).origin;
+	} catch {
+		return false;
+	}
+}
+
+// A post-exchange refusal must not leave the GoTrue session alive; the 409 path already logged out.
+function revokeOauthSession(accessToken, request) {
+	const failed = (status) => {
+		audit('oauth_session_logout_failed', request, { status }).catch(() => undefined);
+	};
+	gotrue.logout(accessToken, 'local').then((result) => {
+		if (!result.ok) failed(result.status);
+	}).catch(() => failed(0));
+}
+
+async function oauthProviders() {
+	const settings = await gotrue.settings();
+	return settings.ok ? enabledOauthProviders(settings.body) : [];
+}
+
+// origin lets a site served elsewhere (the beta) hide the buttons: the callback only returns to siteUrl.
+async function handleOauthProviders(request, response) {
+	json(response, 200, { providers: await oauthProviders(), origin: new URL(config.siteUrl).origin });
+}
+
+// A browser navigation, so every refusal lands on the callback page that explains it.
+async function handleOauthAuthorize(request, response) {
+	const query = new URL(request.url ?? '/', 'http://gateway').searchParams;
+	const provider = query.get('provider') ?? '';
+	const codeChallenge = query.get('code_challenge') ?? '';
+	const refuse = (error) => {
+		response.writeHead(302, { location: `${siteBaseUrl()}/auth/callback?error=${error}`, 'cache-control': 'no-store' });
+		response.end();
+	};
+	if (config.loginEmailOtp || !isS256Challenge(codeChallenge)) return refuse('oauth_invalid_request');
+	if (await rateLimit(clientIp(request), 'oauthSession')) return refuse('rate_limited');
+	if (!(await oauthProviders()).includes(provider)) return refuse('oauth_provider_unavailable');
+	response.writeHead(302, { location: oauthAuthorizeUrl({ siteUrl: config.siteUrl, anonKey: config.anonKey, provider, codeChallenge }), 'cache-control': 'no-store' });
+	response.end();
+}
+
+async function handleOauthSession(request, response) {
+	if (!oauthOrigin(request)) {
+		json(response, 403, { error: 'oauth_origin_refused', message: 'Sign-in must start from the Prismatica site.' });
+		return;
+	}
+	const contentType = String(request.headers['content-type'] ?? '').trim().toLowerCase();
+	if (!contentType.startsWith('application/json')) {
+		json(response, 415, { error: 'unsupported_media_type', message: 'Send JSON.' });
+		return;
+	}
+	if (config.loginEmailOtp) {
+		json(response, 409, { error: 'oauth_requires_password_login', message: 'OAuth sign-in requires password login.' });
+		return;
+	}
+	const retryAfter = await rateLimit(clientIp(request), 'oauthSession');
+	if (retryAfter) {
+		json(response, 429, { error: 'rate_limited', message: 'Too many attempts. Please retry later.' }, { 'retry-after': String(retryAfter) });
+		return;
+	}
+	let payload;
+	try {
+		payload = await readJson(request);
+	} catch {
+		json(response, 400, { message: 'Invalid request body.' });
+		return;
+	}
+	const code = String(payload?.code ?? '').trim();
+	const verifier = String(payload?.verifier ?? '').trim();
+	if (!code || !verifier || code.length > 512 || verifier.length > 512) {
+		json(response, 400, { message: 'OAuth code and verifier are required.' });
+		return;
+	}
+	// F1 measured the takeover with autoconfirm true; F15 measured /settings exposes it as a boolean.
+	if ((await oauthProviders()).length === 0) {
+		json(response, 503, { error: 'oauth_unsafe_config', message: 'Provider sign-in is not available right now.' });
+		return;
+	}
+	const exchanged = await gotrue.exchangePkce(code, verifier);
+	const accessToken = typeof exchanged.body?.access_token === 'string' ? exchanged.body.access_token : '';
+	if (!exchanged.ok || !accessToken) {
+		await audit('oauth_exchange_failed', request, { status: exchanged.status });
+		if (exchanged.status === 0 || exchanged.status >= 500) {
+			json(response, 502, { error: 'oauth_upstream_failed', message: 'The sign-in service did not answer. Try again in a minute.' });
+			return;
+		}
+		// Fixed text: GoTrue's own error body is never reflected.
+		json(response, 401, { error: 'oauth_exchange_failed', message: 'OAuth sign-in failed.' });
+		return;
+	}
+	const refreshToken = typeof exchanged.body.refresh_token === 'string' ? exchanged.body.refresh_token : '';
+	const responseHeaders = refreshToken ? { 'set-cookie': refreshCookie(refreshToken) } : {};
+	const outcome = await mintOsionosSession(request, response, { accessToken, responseHeaders, scheduleAlertOnSuccess: true, mapBridgeFailureTo502: true, singleIdentityOnly: true });
+	if (outcome === 'failed') revokeOauthSession(accessToken, request);
 }
 
 async function emailOtpAction(request, response, action, flow) {
@@ -1066,6 +1271,9 @@ const routes = new Map([
 	['POST /api/auth/refresh', handleRefresh],
 	['POST /api/auth/logout', handleLogout],
 	['POST /api/auth/osionos-session', handleOsionosSession],
+	['GET /api/auth/oauth/providers', handleOauthProviders],
+	['GET /api/auth/oauth/authorize', handleOauthAuthorize],
+	['POST /api/auth/oauth-session', handleOauthSession],
 	...(config.loginEmailOtp ? [['POST /api/auth/mfa/email/verify', handleMfaEmailVerify], ['POST /api/auth/mfa/email/resend', handleMfaEmailResend]] : []),
 	...(loginApprove ? [['POST /api/auth/mfa/email/status', handleMfaEmailStatus], ...approveRoutes({ loginApprove, rateLimit, clientIp, readJson, json })] : []),
 	['POST /api/newsletter/subscribe', handleNewsletterSubscribe],

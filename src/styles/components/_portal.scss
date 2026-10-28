@@ -50,6 +50,24 @@
 	color: var(--system-text-strong);
 }
 
+.password-control__toggle svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentcolor;
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.password-control__toggle .portal-eye__slash {
+	opacity: 0;
+}
+
+.password-control__toggle[aria-pressed='true'] .portal-eye__slash {
+	opacity: 1;
+}
+
 .password-control__toggle:focus-visible {
 	outline: 3px solid var(--system-focus-ring);
 	outline-offset: 2px;
@@ -61,12 +79,6 @@
 	display: grid;
 	gap: 0.9rem;
 	width: 100%;
-}
-
-.portal-login[hidden],
-.portal-login-code[hidden],
-.portal-login-approve[hidden] {
-	display: none;
 }
 
 .portal-approve-number {
@@ -262,25 +274,30 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	gap: 0.38rem;
 }
 
-.password-strength__rule::before,
-.password-match::before {
-	display: inline-grid;
-	place-items: center;
-	width: 1rem;
-	font-weight: 700;
-}
-
-// WCAG 1.4.1 Use of Color — icon + text both convey state.
+// WCAG 1.4.1 Use of Color — a mark + text both convey state. The marks are drawn, not typed: a
+// ✓ / ✗ glyph renders as a missing-glyph box where no installed font carries it.
 .password-strength__rule.is-met::before,
 .password-match.is-match::before {
-	content: '✓';
-	color: var(--system-success-text);
+	content: '';
+	flex: none;
+	inline-size: 0.35rem;
+	block-size: 0.65rem;
+	margin-inline: 0.32rem;
+	border: solid var(--system-success-text);
+	border-width: 0 2px 2px 0;
+	transform: translateY(-0.1rem) rotate(45deg);
 }
 
 .password-strength__rule.is-unmet::before,
 .password-match.is-mismatch::before {
-	content: '✗';
-	color: var(--system-danger-text);
+	--cross: transparent calc(50% - 1px), var(--system-danger-text) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px);
+
+	content: '';
+	flex: none;
+	inline-size: 0.7rem;
+	block-size: 0.7rem;
+	margin-inline: 0.15rem;
+	background: linear-gradient(45deg, var(--cross)), linear-gradient(-45deg, var(--cross));
 }
 
 .password-match {
@@ -426,18 +443,9 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	gap: 0.75rem;
 }
 
-.portal-recovery-actions[hidden],
-dialog.portal [hidden] {
-	display: none;
-}
-
 .turnstile-box {
 	min-height: 0;
 	padding: 0;
-}
-
-.turnstile-box[hidden] {
-	display: none;
 }
 
 .portal-error {

@@ -1,6 +1,7 @@
 ---
 import '../styles/main.scss';
 import favicon from '../assets/brand/favicon.svg';
+import ConsentBanner from '../components/gdpr/ConsentBanner.astro';
 import { authConfig } from '../lib/auth-config';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, t, type SupportedLocale } from '../lib/i18n';
 import { normalizeLocale, getLocaleDirection } from '../lib/locale';
@@ -11,6 +12,7 @@ type Props = {
 	image?: string;
 	canonical?: string;
 	noindex?: boolean;
+	referrerPolicy?: string;
 	locale?: string;
 };
 
@@ -20,6 +22,7 @@ const {
 	image,
 	canonical,
 	noindex = false,
+	referrerPolicy,
 	locale = DEFAULT_LOCALE,
 } = Astro.props;
 
@@ -77,6 +80,7 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		{referrerPolicy && <meta name="referrer" content={referrerPolicy} />}
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#ffffff" />
 		<meta name="description" content={description} />
@@ -108,6 +112,9 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 		<!-- Bypass block (WCAG 2.4.1): lives in the layout so every page has it,
 		     not just the home page. Targets the per-page <main id="main-content">. -->
 		<a href="#main-content" class="skip-link" data-i18n="a11y.skipToContent">{t(activeLocale, 'a11y.skipToContent')}</a>
+		<!-- Global screen-reader live region (WCAG 4.1.3): page scripts announce
+		     dynamic state changes here (theme switch, consent saves, auth results). -->
+		<div aria-live="polite" aria-atomic="true" class="visually-hidden" id="global-announcer"></div>
 		<!-- Animated aurora backdrop — decorative; gives the glass panels something
 		     to refract. Fixed, behind everything, pointer-events:none, and frozen
 		     under prefers-reduced-motion (see _premium.scss). -->
@@ -117,6 +124,9 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 			<span class="aurora-bg__blob aurora-bg__blob--c"></span>
 		</div>
 		<slot />
+		<!-- Consent lives in the layout so the choice can be reviewed or withdrawn from every
+		     page (GDPR Art. 7(3)), including the "Manage cookie preferences" controls. -->
+		<ConsentBanner />
 		{isBeta && <p class="beta-badge">Beta · {buildSha.slice(0, 7)}</p>}
 		<!-- premium.ts is imported by main.ts (a second bundled <script src> in
 		     this layout was dropped by Astro's script hoisting). -->

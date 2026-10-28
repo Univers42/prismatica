@@ -13,7 +13,9 @@
 import { bindSkipLinkFocus } from "../lib/a11y";
 import { bindScrollReveal } from "../lib/scroll-reveal";
 import { rehydrateAndReflectAuth, bindLogoutControls } from "../lib/auth-ui";
-import { bindDataRightsForm } from "../lib/gdpr-form";
+import { bindDataRightsForm, type GdprRpcResult } from "../lib/gdpr-form";
+import { bindAccountPrivacy, browserDownload } from "../lib/gdpr-account";
+import { useAuth } from "../hooks/useAuth";
 import { readStorage, writeStorage } from '../lib/storage';
 import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
@@ -25,7 +27,7 @@ import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, ann
 import { initialLocale, applyLocale, bindLanguageControls } from "./language";
 import { bindConsentBanner } from "./consent";
 import { mountMascot, setMountedMascotMood, notifyWithMascot } from "./mascot";
-import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
+import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, setAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
 
 /** Renders subtle noise over paper containers for hand-drawn grain. */
 function renderPaperGrain(): void {
@@ -52,19 +54,24 @@ async function requestNewsletterSubscription(email: string, turnstileToken: stri
 	return { ok: true, message: data.message ?? 'Subscription confirmed!' };
 }
 
-type RpcStatus = {
-	ok: boolean;
-	status: number;
-};
-
-async function callGdprRpc(name: string, body: Record<string, unknown>, token = getAccessToken()): Promise<RpcStatus> {
+async function callGdprRpc(name: string, body: Record<string, unknown>, token = getAccessToken()): Promise<GdprRpcResult> {
 	try {
-		await createPublicBaasClient(token ?? undefined).rpc(name, body);
-		return { ok: true, status: 200 };
+		const data: unknown = await createPublicBaasClient(token ?? undefined).rpc(name, body);
+		return { ok: true, status: 200, data };
 	} catch (error) {
 		if (error instanceof MiniBaasError) return { ok: false, status: error.status };
 		throw error;
 	}
+}
+
+/** Uses the in-memory session, or renews it from the HttpOnly refresh cookie. */
+async function resolveAccessToken(): Promise<string | null> {
+	const current = getAccessToken();
+	if (current) return current;
+	const refreshed = await useAuth().refresh().catch(() => null);
+	if (!refreshed?.ok || !refreshed.accessToken) return null;
+	setAccessToken(refreshed.accessToken);
+	return refreshed.accessToken;
 }
 
 async function logoutSession(): Promise<void> {
@@ -83,6 +90,7 @@ function bindInteractions(): void {
 	bindConsentBanner();
 	bindNewsletterSignup();
 	bindDataRightsForm({ readStorage, writeStorage, callGdprRpc, csrfStorageKey: CSRF_STORAGE_KEY, policyVersion: POLICY_VERSION });
+	void bindAccountPrivacy({ resolveAccessToken, callGdprRpc, downloadFile: browserDownload });
 	queryElements('[data-open-portal]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('start')));
 	queryElements('[data-open-connect]', isButton).forEach((button) => button.addEventListener('click', () => openPortal('connect')));
 	document.addEventListener('keydown', (event) => {

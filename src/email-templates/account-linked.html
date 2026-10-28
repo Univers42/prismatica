@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Your sign-in was linked and your password removed</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F5F1;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F6F5F1;">{{email}} signed in with Google or GitHub on {{changedAt}}; the old password was removed.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F5F1;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+<tr><td style="padding:0 0 20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:0.02em;color:#15151A;">Prismatica</td></tr>
+<tr><td style="background-color:#FFFFFF;border:1px solid #DCDAD2;border-radius:6px;padding:32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#15151A;">
+<h1 style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;line-height:1.25;font-weight:600;color:#15151A;">Your sign-in was linked and your password removed</h1>
+<p style="margin:0 0 16px 0;font-size:16px;line-height:1.5;color:#15151A;">On {{changedAt}}, someone signed in to the Prismatica account {{email}} with Google or GitHub. The account already had a password, so to make sure only the owner of this mailbox holds it, we removed that password and signed out every other device.</p>
+<p style="margin:0 0 8px 0;font-size:16px;line-height:1.5;font-weight:600;color:#15151A;">What changed</p>
+<ul style="margin:0 0 16px 0;padding:0 0 0 20px;font-size:16px;line-height:1.5;color:#15151A;">
+<li style="margin:0 0 8px 0;">The old password no longer works. To use a password again, choose <strong>Forgot password</strong> in the sign-in window.</li>
+<li style="margin:0 0 8px 0;">AI access tokens revoked: {{aiTokensRevoked}}. Personal access tokens revoked: {{patsRevoked}}. Create new ones if you still need them.</li>
+<li style="margin:0;">Members in workspaces you own, besides you: {{membersToReview}}. Check that you know each of them.</li>
+</ul>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#B93A0C" style="border-radius:4px;background-color:#B93A0C;"><a href="{{siteUrl}}" style="display:inline-block;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.25;color:#FFFFFF;text-decoration:none;border-radius:4px;">Open Prismatica</a></td></tr></table>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.5;color:#56565F;">This was not you? Open Prismatica, choose <strong>Forgot password</strong> in the sign-in window and set a new password at once, then review your workspace members.</p>
+</td></tr>
+<tr><td style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#56565F;">This is a security notice about your account; it is sent whatever your e-mail preferences. Sent by <a href="{{siteUrl}}" style="color:#56565F;">Prismatica</a> to {{email}}.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

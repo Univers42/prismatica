@@ -29,6 +29,7 @@
 @use 'components/cards';
 @use 'components/media';
 @use 'components/gdpr';
+@use 'components/auth-result';
 @use 'components/notifications';
 @use 'sections/content';
 @use 'sections/baas-status';
@@ -36,6 +37,7 @@
 @use 'components/portal';
 @use 'components/portal-dialog';
 @use 'components/portal-fields';
+@use 'components/portal-oauth';
 @use 'components/portal-sky';
 @use 'utilities/animations';
 @use 'utilities/responsive';

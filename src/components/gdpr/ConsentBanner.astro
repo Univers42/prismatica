@@ -2,7 +2,7 @@
 import { POLICY_VERSION } from '../../data/legal';
 ---
 
-<section class="consent-banner" data-consent-banner role="dialog" aria-modal="false" aria-labelledby="consent-title" aria-describedby="consent-description" hidden>
+<section class="consent-banner" data-consent-banner role="dialog" aria-modal="false" tabindex="-1" aria-labelledby="consent-title" aria-describedby="consent-description" hidden>
 	<div class="consent-banner__paper">
 		<div>
 			<p class="eyebrow">Privacy choices</p>
@@ -12,7 +12,7 @@ import { POLICY_VERSION } from '../../data/legal';
 		</div>
 		<div class="consent-banner__actions" role="group" aria-label="Quick consent choices">
 			<button class="button button--primary" type="button" data-consent-accept-all aria-label="Accept all optional cookies and preferences">Accept all</button>
-			<button class="button button--ghost" type="button" data-consent-reject-all aria-label="Reject all optional cookies and preferences">Reject all</button>
+			<button class="button button--primary" type="button" data-consent-reject-all aria-label="Reject all optional cookies and preferences">Reject all</button>
 			<button class="button button--ghost" type="button" data-consent-manage aria-expanded="false" aria-controls="consent-preferences" aria-label="Manage preferences for cookies and consent">Manage preferences</button>
 		</div>
 		<form id="consent-preferences" class="consent-banner__preferences" data-consent-form hidden>
