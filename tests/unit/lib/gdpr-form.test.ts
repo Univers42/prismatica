@@ -145,7 +145,7 @@ describe('GDPR Form', () => {
 			(document.querySelector('[data-gdpr-export]') as HTMLButtonElement).click();
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			expect(endpoint).toHaveBeenCalledWith('/gdpr/export', 'GET');
+			expect(endpoint).toHaveBeenCalledWith('/gdpr/v1/export', 'GET');
 			expect(rpc).not.toHaveBeenCalled();
 			expect(click).toHaveBeenCalledOnce();
 			expect(revoke).toHaveBeenCalledOnce();
@@ -161,7 +161,7 @@ describe('GDPR Form', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(window.confirm).toHaveBeenCalledOnce();
-			expect(endpoint).toHaveBeenCalledWith('/gdpr/deletion-requests', 'POST', {});
+			expect(endpoint).toHaveBeenCalledWith('/gdpr/v1/deletion-requests', 'POST', {});
 			expect(rpc).not.toHaveBeenCalled();
 			expect(document.querySelector('[data-gdpr-self-service-status]')?.textContent).toContain('submitted');
 		});
