@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readStorage, writeStorage } from '../../../src/lib/storage';
+import { bindConsentBanner } from '../../../src/scripts/consent';
 import { type ConsentPreferences, storeConsentPreferences, readConsentPreferences } from '../../../src/scripts/consent';
 
 describe('Consent Preferences', () => {
@@ -39,4 +40,34 @@ describe('Consent Preferences', () => {
 			expect(parsed).toEqual(preferences);
 		});
 	});
+
+	describe('bindConsentBanner', () => {
+		beforeEach(() => {
+			document.body.innerHTML = `
+				<section data-consent-banner hidden tabindex="-1">
+					<button type="button" data-consent-accept-all>Accept all</button>
+					<button type="button" data-consent-reject-all>Reject all</button>
+					<button type="button" data-consent-manage aria-expanded="false">Manage</button>
+					<form data-consent-form hidden>
+						<input type="checkbox" name="analytics">
+						<input type="checkbox" name="newsletter">
+						<input type="checkbox" name="marketing">
+						<button type="submit">Save</button>
+					</form>
+				</section>
+				<button type="button" data-manage-cookies>Cookie settings</button>
+			`;
+		});
+		it('restores saved choices and opens the preferences form', () => {
+			storeConsentPreferences({ analytics: true, newsletter: false, marketing: true });
+			bindConsentBanner();
+			(document.querySelector('[data-manage-cookies]') as HTMLButtonElement).click();
+			const form = document.querySelector('[data-consent-form]') as HTMLFormElement;
+			expect((form.elements.namedItem('analytics') as HTMLInputElement).checked).toBe(true);
+			expect((form.elements.namedItem('newsletter') as HTMLInputElement).checked).toBe(false);
+			expect((form.elements.namedItem('marketing') as HTMLInputElement).checked).toBe(true);
+			expect(form.hidden).toBe(false);
+		});
+	});
+
 });
