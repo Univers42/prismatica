@@ -70,7 +70,6 @@ export function bindConsentBanner(): void {
 
 	const save = async (analytics: boolean, newsletter: boolean, marketing: boolean): Promise<void> => {
 		const preferences = { analytics, newsletter, marketing };
-		const previous = readConsentPreferences();
 		storeConsentPreferences(preferences);
 
 		// Persist each choice in the Grobase GDPR service whenever the user is
