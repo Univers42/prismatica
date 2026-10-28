@@ -134,7 +134,7 @@ export function bindGdprSelfService(deps: {
 		setActionState(container, 'Preparing your export…', true);
 		try {
 			const callEndpoint = endpointCaller(deps);
-			const response = await callEndpoint('/gdpr/export', 'GET');
+			const response = await callEndpoint('/gdpr/v1/export', 'GET');
 			if (!response?.ok || response.data === undefined) {
 				setActionState(container, 'Could not export your data. Sign in and try again, or contact the privacy address.');
 				return;
@@ -153,7 +153,7 @@ export function bindGdprSelfService(deps: {
 		setActionState(container, 'Submitting account deletion request…', true);
 		try {
 			const callEndpoint = endpointCaller(deps);
-			const response = await callEndpoint('/gdpr/deletion-requests', 'POST', {});
+			const response = await callEndpoint('/gdpr/v1/deletion-requests', 'POST', {});
 			setActionState(
 				container,
 				response?.ok
