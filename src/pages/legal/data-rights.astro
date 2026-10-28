@@ -23,33 +23,8 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 
 		<section aria-labelledby="rights-request-title">
 			<h2 id="rights-request-title">Other data rights requests</h2>
-			<p>Use this form to request access, correction, erasure, portability, restriction or objection, or to withdraw consent. Unauthenticated requests are recorded for manual verification before any disclosure or deletion.</p>
-			<form class="data-rights-form" data-gdpr-request-form novalidate>
-				<input type="hidden" name="csrf" data-csrf-token />
-				<div class="field">
-					<label for="rights-email">Email address</label>
-					<input id="rights-email" name="email" type="email" autocomplete="email" required />
-				</div>
-				<div class="field">
-					<label for="rights-type">Request type</label>
-					<select id="rights-type" name="request_type" required>
-						<option value="access">Access my data</option>
-						<option value="deletion">Delete my account/data</option>
-						<option value="rectification">Correct my data</option>
-						<option value="portability">Export portable data</option>
-						<option value="restriction">Restrict processing</option>
-						<option value="objection">Object to processing</option>
-						<option value="withdrawal">Withdraw consent</option>
-					</select>
-				</div>
-				<div class="field">
-					<label for="rights-message">Additional details</label>
-					<textarea id="rights-message" name="message" rows="5" maxlength="1000"></textarea>
-				</div>
-				<p class="form-note">We may request proof of identity before processing your request. The normal response period is one month.</p>
-				<button class="button button--primary" type="submit" aria-label="Submit data rights request">Submit request</button>
-				<output class="form-status" aria-live="polite" data-gdpr-request-status></output>
-			</form>
+			<p>Grobase currently provides authenticated data export, consent management and account-deletion requests. It does not yet expose an API for generic access, correction, restriction or objection requests, so this page will not pretend to submit those requests automatically.</p>
+			<p>For those requests, contact the privacy team directly at <a href={`mailto:${DATA_CONTROLLER.email}?subject=Prismatica%20data%20rights%20request`}>{DATA_CONTROLLER.email}</a>. Please do not include passwords or authentication tokens in your message.</p>
 		</section>
 
 		<p>Alternatively, contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
