@@ -9,17 +9,30 @@ import StackGraph from './StackGraph.astro';
 import WhySlide from './WhySlide.astro';
 import '../../../styles/components/_devices.scss';
 
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../../lib/i18n';
+import { normalizeLocale } from '../../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
+
 const SLIDES = [
-	{ id: 'graph', name: 'Services', problem: 'Every new app needs its own backend. Here are 55 services, already wired.' },
-	{ id: 'scale', name: 'Scaling', problem: 'Growing usually means re-platforming. Here the same stack scales out.' },
-	{ id: 'why', name: 'Why us', problem: 'Work and data scattered across tools, and what replaces them.' },
+	{ id: 'graph', nameKey: 'stackShowcase.tabServicesName', problemKey: 'stackShowcase.tabServicesProblem' },
+	{ id: 'scale', nameKey: 'stackShowcase.tabScalingName', problemKey: 'stackShowcase.tabScalingProblem' },
+	{ id: 'why', nameKey: 'stackShowcase.tabWhyName', problemKey: 'stackShowcase.tabWhyProblem' },
 ];
 ---
 
 <div class="showcase" data-showcase>
 	<div class="showcase__intro">
-		<h3 class="showcase__title">Run the stack yourself</h3>
-		<p class="showcase__lede">The real grobase backend on a tablet: start and stop any of its services, watch a request cross it, then see how it grows.</p>
+		<h3 class="showcase__title" data-i18n="stackShowcase.title">{t(activeLocale, 'stackShowcase.title')}</h3>
+		<p class="showcase__lede" data-i18n="stackShowcase.lede">{t(activeLocale, 'stackShowcase.lede')}</p>
 		<div class="showcase__tabs" role="tablist" aria-label="Stack slides">
 			{SLIDES.map((slide, index) => (
 				<button
@@ -32,8 +45,8 @@ const SLIDES = [
 					tabindex={index === 0 ? 0 : -1}
 					data-showcase-tab={slide.id}
 				>
-					<span class="showcase__tab-name">{slide.name}</span>
-					<span class="showcase__tab-problem">{slide.problem}</span>
+					<span class="showcase__tab-name" data-i18n={slide.nameKey}>{t(activeLocale, slide.nameKey as any)}</span>
+					<span class="showcase__tab-problem" data-i18n={slide.problemKey}>{t(activeLocale, slide.problemKey as any)}</span>
 				</button>
 			))}
 		</div>
@@ -54,7 +67,7 @@ const SLIDES = [
 					>
 						{slide.id === 'graph' && <StackGraph />}
 						{slide.id === 'scale' && <ScaleDiagram />}
-						{slide.id === 'why' && <WhySlide />}
+						{slide.id === 'why' && <WhySlide locale={activeLocale} />}
 					</div>
 				))}
 			</div>

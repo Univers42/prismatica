@@ -1,35 +1,32 @@
 ---
 import Eyebrow from '../brand/Eyebrow.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const faqs = [
-	{
-		q: 'Can I really self-host the whole stack?',
-		a: 'Yes. The entire backend infrastructure repo is <abbr title="Massachusetts Institute of Technology license: a permissive open-source software license.">MIT</abbr> licensed: Kong, GoTrue, PostgREST, Postgres, MailHog. One <code>docker compose up</code> and you are running locally; the same images deploy to any <abbr title="Virtual Private Server: a rented server you control.">VPS</abbr>.',
-	},
-	{
-		q: 'Where does my data live?',
-		a: 'On the host you choose. Self-hosted means your machines, your jurisdiction, your <abbr title="Data Processing Agreement: a legal contract defining how a vendor handles personal data.">DPA</abbr> — we never see the data. The current hosted beta runs on a single deployment; multi-region <abbr title="European Union.">EU</abbr> residency is not claimed until it is real.',
-	},
-	{
-		q: 'How does pricing work as I grow?',
-		a: 'You pay per active project, not per seat. Move from Free → Team in one click. If you outgrow Team, self-host: same code, no migration.',
-	},
-	{
-		q: 'How do I migrate from another BaaS?',
-		a: 'PostgREST means your schema is the <abbr title="Application Programming Interface: the contract software uses to talk to other software.">API</abbr>. Most teams import their existing dump, point Kong at it, and ship in under a day. We have migration recipes for Supabase, Firebase and Hasura.',
-	},
-	{
-		q: 'What about security audits?',
-		a: '<span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> flows ship with Turnstile, rate-limit and <abbr title="Content Security Policy: browser rules limiting what a page may load or execute.">CSP</abbr> defaults. The repo includes a published threat model, breach-response runbook, and <abbr title="Open Worldwide Application Security Project: a nonprofit security standards community.">OWASP</abbr> <abbr title="Application Security Verification Standard: OWASP checklist for application security controls.">ASVS</abbr> <abbr title="Level 2: a stronger assurance target for applications handling sensitive data.">L2</abbr> mapping in /docs/gdpr/.',
-	},
-];
+	{ qKey: 'faq.q1', aKey: 'faq.a1' },
+	{ qKey: 'faq.q2', aKey: 'faq.a2' },
+	{ qKey: 'faq.q3', aKey: 'faq.a3' },
+	{ qKey: 'faq.q4', aKey: 'faq.a4' },
+	{ qKey: 'faq.q5', aKey: 'faq.a5' },
+] as const;
 ---
 
 <section class="section section--sunken faq" id="faq">
 	<div class="section__container faq__inner">
 		<header class="section__head">
-			<Eyebrow><abbr title="Frequently Asked Questions">FAQ</abbr></Eyebrow>
-			<h2 class="section__title">Answers, before you ask.</h2>
+			<Eyebrow data-i18n="faq.eyebrow">{t(activeLocale, 'faq.eyebrow')}</Eyebrow>
+			<h2 class="section__title" data-i18n="faq.title">{t(activeLocale, 'faq.title')}</h2>
 		</header>
 
 		<ul class="faq__list" role="list">
@@ -37,10 +34,10 @@ const faqs = [
 				<li class="faq__item" data-scroll-rise>
 					<details class="faq__details" open={index === 0}>
 						<summary class="faq__summary">
-							<span class="faq__question">{item.q}</span>
+							<span class="faq__question" data-i18n={item.qKey}>{t(activeLocale, item.qKey as any)}</span>
 							<span class="faq__icon" aria-hidden="true">+</span>
 						</summary>
-						<p class="faq__answer" set:html={item.a}></p>
+						<p class="faq__answer" data-i18n={item.aKey}>{t(activeLocale, item.aKey as any)}</p>
 					</details>
 				</li>
 			))}
