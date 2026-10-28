@@ -83,7 +83,7 @@ export function bindConsentBanner(): void {
 			] as const;
 			try {
 				const results = await Promise.all(entries.map(async ([type, consented]) => {
-					const response = await fetch(`${baasConfig.url}/gdpr/consents`, {
+					const response = await fetch(`${baasConfig.url}/gdpr/v1/consents`, {
 						method: 'POST',
 						headers: {
 							apikey: baasConfig.anonKey,
