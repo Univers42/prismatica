@@ -71,6 +71,9 @@ const year = new Date().getFullYear();
 						{group.links.map((link) => (
 							<li><a href={link.href}>{link.label}</a></li>
 						))}
+						{group.heading === 'Legal' && (
+							<li><button class="footer-new__link-button" type="button" data-manage-cookies>Cookie settings</button></li>
+						)}
 					</ul>
 				</div>
 			))}
@@ -224,13 +227,25 @@ const year = new Date().getFullYear();
 		padding: 0;
 		list-style: none;
 	}
-	.footer-new__group a {
+	.footer-new__group a,
+	.footer-new__link-button {
 		color: var(--system-text);
 		text-decoration: none;
 		font-size: 0.92rem;
 	}
-	.footer-new__group a:hover { color: var(--system-link-hover); text-decoration: underline; }
-	.footer-new__group a:focus-visible {
+	.footer-new__link-button {
+		padding: 0;
+		border: 0;
+		background: none;
+		font: inherit;
+		font-size: 0.92rem;
+		text-align: start;
+		cursor: pointer;
+	}
+	.footer-new__group a:hover,
+	.footer-new__link-button:hover { color: var(--system-link-hover); text-decoration: underline; }
+	.footer-new__group a:focus-visible,
+	.footer-new__link-button:focus-visible {
 		outline: 3px solid var(--system-focus-ring);
 		outline-offset: 2px;
 		border-radius: var(--system-radius-sm);

@@ -1,6 +1,7 @@
 ---
 import '../styles/main.scss';
 import favicon from '../assets/brand/favicon.svg';
+import ConsentBanner from '../components/gdpr/ConsentBanner.astro';
 import { authConfig } from '../lib/auth-config';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, t, type SupportedLocale } from '../lib/i18n';
 import { normalizeLocale, getLocaleDirection } from '../lib/locale';
@@ -123,6 +124,9 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 			<span class="aurora-bg__blob aurora-bg__blob--c"></span>
 		</div>
 		<slot />
+		<!-- Consent lives in the layout so the choice can be reviewed or withdrawn from every
+		     page (GDPR Art. 7(3)), including the "Manage cookie preferences" controls. -->
+		<ConsentBanner />
 		{isBeta && <p class="beta-badge">Beta · {buildSha.slice(0, 7)}</p>}
 		<!-- premium.ts is imported by main.ts (a second bundled <script src> in
 		     this layout was dropped by Astro's script hoisting). -->

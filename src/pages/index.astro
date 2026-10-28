@@ -15,7 +15,6 @@ import SocialProof from '../components/sections/SocialProof.astro';
 import MascotDock from '../components/layout/MascotDock.astro';
 import StoryStage from '../components/layout/StoryStage.astro';
 import Notification from '../components/ui/Notification.astro';
-import ConsentBanner from '../components/gdpr/ConsentBanner.astro';
 import Layout from '../layouts/Layout.astro';
 
 const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
@@ -38,7 +37,6 @@ const requestedLocale = Astro.url.searchParams.get('lang') ?? undefined;
 		<section class="swipe-stack__scene" data-stage="cta"><div class="swipe-stack__card"><FinalCta locale={requestedLocale} /></div></section>
 	</main>
 	<div class="swipe-stack__tail"><FooterNew /></div>
-	<ConsentBanner />
 	<MascotDock />
 </Layout>
 
