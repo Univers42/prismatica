@@ -10,8 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-export const POLICY_VERSION = '1.1.0';
-export const POLICY_LAST_UPDATED = '2026-10-26';
+export const POLICY_VERSION = '1.2.0';
+export const POLICY_LAST_UPDATED = '2026-10-28';
+
+/** Consent choices are asked again after this many months (CNIL guidance: 6 months). */
+export const CONSENT_MAX_AGE_MONTHS = 6;
 
 export const DATA_CONTROLLER = {
 	name: 'The Prismatica team (Dylan, Vadim, Sergio, Daniel and Mostafa)',
