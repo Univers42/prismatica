@@ -11,13 +11,19 @@ export type ConsentPreferences = {
 	savedAt: string;
 };
 
+type StoredConsentPreferences = ConsentPreferences & {
+	revision: number;
+};
+
 export function storeConsentPreferences(
 	preferences: Omit<ConsentPreferences, 'policyVersion' | 'savedAt'>,
 ): ConsentPreferences {
-	const record: ConsentPreferences = {
+	const previous = readConsentPreferences() as (ConsentPreferences & { revision?: number }) | null;
+	const record: StoredConsentPreferences = {
 		...preferences,
 		policyVersion: POLICY_VERSION,
 		savedAt: new Date().toISOString(),
+		revision: (previous?.revision ?? 0) + 1,
 	};
 	writeStorage(CONSENT_STORAGE_KEY, JSON.stringify(record));
 	return record;
@@ -25,11 +31,19 @@ export function storeConsentPreferences(
 
 export function readConsentPreferences(): ConsentPreferences | null {
 	const raw = readStorage(CONSENT_STORAGE_KEY);
-	if (!raw) {
-		return null;
-	}
+	if (!raw) return null;
 	try {
-		return JSON.parse(raw) as ConsentPreferences;
+		const parsed: unknown = JSON.parse(raw);
+		if (!parsed || typeof parsed !== 'object') return null;
+		const candidate = parsed as Partial<ConsentPreferences>;
+		if (
+			typeof candidate.analytics !== 'boolean' ||
+			typeof candidate.newsletter !== 'boolean' ||
+			typeof candidate.marketing !== 'boolean' ||
+			typeof candidate.policyVersion !== 'string' ||
+			typeof candidate.savedAt !== 'string'
+		) return null;
+		return candidate as ConsentPreferences;
 	} catch {
 		return null;
 	}
@@ -37,22 +51,21 @@ export function readConsentPreferences(): ConsentPreferences | null {
 
 export function bindConsentBanner(): void {
 	const banner = queryElement('[data-consent-banner]', isHtmlElement);
-	if (!banner) {
-		return;
-	}
+	if (!banner) return;
+
 	const form = banner.querySelector('[data-consent-form]');
 	const manageButton = banner.querySelector('[data-consent-manage]');
 	const acceptAll = banner.querySelector('[data-consent-accept-all]');
 	const rejectAll = banner.querySelector('[data-consent-reject-all]');
 	const showBanner = (): void => banner.removeAttribute('hidden');
 	const hideBanner = (): void => banner.setAttribute('hidden', '');
-	// The fixed bar covered the footer's last rows; the body reserves its live
-	// height (0 while hidden, taller when "Manage" expands).
+
 	if (typeof ResizeObserver !== 'undefined') {
 		new ResizeObserver(([entry]) => {
 			document.documentElement.style.setProperty('--consent-banner-height', `${entry?.borderBoxSize[0]?.blockSize ?? 0}px`);
 		}).observe(banner);
 	}
+
 	const save = (analytics: boolean, newsletter: boolean, marketing: boolean): void => {
 		storeConsentPreferences({ analytics, newsletter, marketing });
 		hideBanner();
@@ -61,8 +74,6 @@ export function bindConsentBanner(): void {
 
 	if (!readConsentPreferences()) {
 		showBanner();
-		// The banner appears without a focus change, so screen readers would
-		// not know it exists; announce it politely (WCAG 4.1.3).
 		announce('Privacy choices: choose your consent preferences.');
 	}
 
@@ -77,7 +88,6 @@ export function bindConsentBanner(): void {
 			manageButton.setAttribute('aria-expanded', String(!isExpanded));
 			form.hidden = isExpanded;
 		});
-
 		form.addEventListener('submit', (event) => {
 			event.preventDefault();
 			const analytics = form.elements.namedItem('analytics');
