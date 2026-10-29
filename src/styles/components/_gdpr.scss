@@ -316,3 +316,9 @@ body:has(.consent-banner:not([hidden])) {
 	text-decoration: underline;
 	color: var(--ink);
 }
+
+.legal-page p a,
+.gdpr-card p a {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
