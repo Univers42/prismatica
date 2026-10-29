@@ -89,7 +89,7 @@ export function createPortalMarkup(mode: PortalMode): string {
 									<input id="portal-password" name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required />
 									<button class="portal-eye" type="button" data-password-toggle aria-label="Show password" aria-pressed="false">${EYE}</button>
 								</div>
-								<p id="portal-password-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Min 8 chars with upper, lower, and digit.</p>
+								<p id="portal-password-inline-error" class="field-validation-message" data-validation-state="idle" aria-live="polite">Min 8 chars with upper, lower, digit, and symbol.</p>
 								<div class="portal-register-only" data-password-strength-container></div>
 							</div>
 							<div class="field portal-register-only">
