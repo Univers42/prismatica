@@ -255,3 +255,64 @@ body:has(.consent-banner:not([hidden])) {
 [data-gdpr-account-signed-in][hidden] {
 	display: none;
 }
+
+.legal-toc {
+	margin: 1.5rem 0 2rem;
+	padding: 1.25rem 1.5rem;
+	border: 1px solid var(--surface-line);
+	border-radius: var(--radius-sm, 12px);
+	background: var(--surface-muted);
+}
+
+.legal-toc__title {
+	margin: 0 0 0.75rem;
+	font-size: 0.92rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ink-mid);
+}
+
+.legal-toc__list {
+	margin: 0;
+	padding-inline-start: 1.25rem;
+	display: grid;
+	gap: 0.45rem;
+}
+
+.legal-toc__list a {
+	color: var(--ink);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	font-size: 0.95rem;
+}
+
+.legal-toc__list a:hover {
+	color: var(--system-link-hover);
+}
+
+.legal-toc__list a:focus-visible,
+.legal-page__top-link:focus-visible,
+.legal-page__back:focus-visible {
+	outline: 3px solid var(--system-focus-ring);
+	outline-offset: 2px;
+	border-radius: var(--system-radius-xs, 4px);
+}
+
+.legal-page__top-wrap {
+	margin-top: 2.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--surface-line);
+	text-align: end;
+}
+
+.legal-page__top-link {
+	font-size: 0.9rem;
+	color: var(--ink-mid);
+	text-decoration: none;
+}
+
+.legal-page__top-link:hover {
+	text-decoration: underline;
+	color: var(--ink);
+}
