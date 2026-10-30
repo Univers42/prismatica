@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { passwordRuleResults } from '../../../src/lib/auth-validation';
 import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
 
 describe('Portal Script Module', () => {
@@ -45,6 +46,16 @@ describe('Portal Script Module', () => {
 		expect(portal?.dataset.authMode).toBe('register');
 		expect(confirm?.closest<HTMLElement>('.portal-register-only')?.hidden).toBe(false);
 		expect(confirm?.required).toBe(true);
+	});
+
+	// osionos#84: the hint left the symbol out, so a password written to it was refused at submit.
+	it('hints every rule a sign-up password is checked against', () => {
+		openPortal('start');
+		const hint = document.querySelector('#portal-password-inline-error')?.textContent ?? '';
+		const classes: [RegExp, string][] = [[/upper/i, 'Q'], [/lower/i, 'k'], [/digit|number/i, '7'], [/symbol|special/i, '#']];
+		const followingTheHint = classes.filter(([word]) => word.test(hint)).map(([, character]) => character).join('').repeat(8);
+		expect(hint).toMatch(/\b8\b/);
+		expect(passwordRuleResults(followingTheHint).filter((rule) => !rule.passed).map((rule) => rule.label)).toEqual([]);
 	});
 
 	it('sends the token the auth gateway bypasses locally when no Turnstile site key is set', () => {

@@ -1,30 +1,52 @@
 ---
 import StudioNetworkFigure from './StudioNetworkFigure.astro';
-import { STEPS as steps, ASSISTANT_PROMPT as assistantPrompt } from '../../../data/studio-network';
+import { STEPS as steps } from '../../../data/studio-network';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../../lib/i18n';
+import { normalizeLocale } from '../../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
+
+const STEP_KEYS: Record<string, { titleKey: string; bodyKey: string }> = {
+	engines: { titleKey: 'studioNetwork.stepEnginesTitle', bodyKey: 'studioNetwork.stepEnginesBody' },
+	apps: { titleKey: 'studioNetwork.stepAppsTitle', bodyKey: 'studioNetwork.stepAppsBody' },
+	spaces: { titleKey: 'studioNetwork.stepSpacesTitle', bodyKey: 'studioNetwork.stepSpacesBody' },
+	assistant: { titleKey: 'studioNetwork.stepAssistantTitle', bodyKey: 'studioNetwork.stepAssistantBody' },
+};
 ---
 
 <div class="studio-net" data-studio-net>
 	<figure class="studio-net__figure">
 		<StudioNetworkFigure />
 		<ul class="studio-net__legend" aria-hidden="true">
-			<li><span class="studio-net__swatch studio-net__swatch--org"></span>Organisation</li>
-			<li><span class="studio-net__swatch studio-net__swatch--team"></span>Sales team</li>
-			<li><span class="studio-net__swatch studio-net__swatch--public"></span>Public space</li>
+			<li><span class="studio-net__swatch studio-net__swatch--org"></span><span data-i18n="studioNetwork.legendOrg">{t(activeLocale, 'studioNetwork.legendOrg')}</span></li>
+			<li><span class="studio-net__swatch studio-net__swatch--team"></span><span data-i18n="studioNetwork.legendTeam">{t(activeLocale, 'studioNetwork.legendTeam')}</span></li>
+			<li><span class="studio-net__swatch studio-net__swatch--public"></span><span data-i18n="studioNetwork.legendPublic">{t(activeLocale, 'studioNetwork.legendPublic')}</span></li>
 		</ul>
 		<figcaption class="studio-net__prompt" data-studio-prompt>
-			<span>{assistantPrompt}</span>
+			<span data-i18n="studioNetwork.assistantPrompt">{t(activeLocale, 'studioNetwork.assistantPrompt')}</span>
 		</figcaption>
 	</figure>
 
 	<ol class="studio-net__steps">
-		{steps.map((step) => (
-			<li class="studio-net__step" data-step-id={step.id}>
-				<div class="studio-net__step-body">
-					<h3>{step.title}</h3>
-					<p>{step.body}</p>
-				</div>
-			</li>
-		))}
+		{steps.map((step) => {
+			const keys = STEP_KEYS[step.id];
+			return (
+				<li class="studio-net__step" data-step-id={step.id}>
+					<div class="studio-net__step-body">
+						<h3 data-i18n={keys?.titleKey}>{keys ? t(activeLocale, keys.titleKey as any) : step.title}</h3>
+						<p data-i18n={keys?.bodyKey}>{keys ? t(activeLocale, keys.bodyKey as any) : step.body}</p>
+					</div>
+				</li>
+			);
+		})}
 	</ol>
 </div>
 

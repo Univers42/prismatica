@@ -2,20 +2,32 @@
 import Card from '../ui/Card.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
 import FeatureIcon from '../ui/FeatureIcon.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const features = [
-	{ title: 'Auth that just works', kind: 'auth' },
-	{ title: 'PostgREST + Postgres', kind: 'database' },
-	{ title: 'Privacy-first design', kind: 'privacy' },
+	{ titleKey: 'featureTrio.authTitle', ledeKey: 'featureTrio.authLede', kind: 'auth' },
+	{ titleKey: 'featureTrio.dbTitle', ledeKey: 'featureTrio.dbLede', kind: 'database' },
+	{ titleKey: 'featureTrio.privacyTitle', ledeKey: 'featureTrio.privacyLede', kind: 'privacy' },
 ] as const;
 ---
 
 <section class="section section--surface feature-trio" id="product">
 	<div class="section__container">
 		<header class="section__head">
-			<Eyebrow>What you get</Eyebrow>
-			<h2 class="section__title">A backend stack you would have built — already built.</h2>
-			<p class="section__lede">Three primitives, one Docker Compose file, full keys to the kingdom.</p>
+			<Eyebrow data-i18n="featureTrio.eyebrow">{t(activeLocale, 'featureTrio.eyebrow')}</Eyebrow>
+			<h2 class="section__title" data-i18n="featureTrio.title">{t(activeLocale, 'featureTrio.title')}</h2>
+			<p class="section__lede" data-i18n="featureTrio.lede">{t(activeLocale, 'featureTrio.lede')}</p>
 		</header>
 
 		<div class="feature-trio__grid">
@@ -23,16 +35,8 @@ const features = [
 				<div data-scroll-grow>
 					<Card variant="feature" class="feature-trio__card">
 						<span class="feature-trio__icon" aria-hidden="true"><FeatureIcon name={feature.kind} /></span>
-						<h3 class="ui-card__title">{feature.title}</h3>
-						{feature.kind === 'auth' && (
-							<p class="ui-card__lede"><span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> with GoTrue under the hood, social providers, magic links, and Turnstile-protected sign-ups out of the box.</p>
-						)}
-						{feature.kind === 'database' && (
-							<p class="ui-card__lede">Your schema is your <abbr title="Application Programming Interface: the contract software uses to talk to other software.">API</abbr>. <span class="term" title="Row-level security: database rules that limit which rows each user may read or change.">Row-level security</span>, typed queries, instant realtime — no glue code.</p>
-						)}
-						{feature.kind === 'privacy' && (
-							<p class="ui-card__lede"><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr>-minded defaults: consent banner, documented data flows, and a breach-response runbook. Your data stays on the host you choose — self-service export and erasure are on the roadmap.</p>
-						)}
+						<h3 class="ui-card__title" data-i18n={feature.titleKey}>{t(activeLocale, feature.titleKey as any)}</h3>
+						<p class="ui-card__lede" data-i18n={feature.ledeKey}>{t(activeLocale, feature.ledeKey as any)}</p>
 					</Card>
 				</div>
 			))}

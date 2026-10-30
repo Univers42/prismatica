@@ -2,13 +2,25 @@
 import Button from '../ui/Button.astro';
 import Card from '../ui/Card.astro';
 import Eyebrow from '../brand/Eyebrow.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 
 const links = [
-	{ href: '/docs/#guides/getting-started',                kind: 'quickstart' },
-	{ href: '/docs/#desktop/authentication-and-sessions',   kind: 'auth' },
-	{ href: '/docs/#backend/kong-api-gateway',              kind: 'postgrest' },
-	{ href: '/docs/#platform/gdpr-auth-security-migrations', kind: 'gdpr' },
-];
+	{ href: '/docs/#guides/getting-started',                kind: 'quickstart', key: 'docsTeaser.linkQuickstart' },
+	{ href: '/docs/#desktop/authentication-and-sessions',   kind: 'auth',       key: 'docsTeaser.linkAuth' },
+	{ href: '/docs/#backend/kong-api-gateway',              kind: 'postgrest',  key: 'docsTeaser.linkPostgrest' },
+	{ href: '/docs/#platform/gdpr-auth-security-migrations', kind: 'gdpr',       key: 'docsTeaser.linkGdpr' },
+] as const;
 
 const codeSample = `import { createClient } from '@grobase/js';
 
@@ -24,12 +36,10 @@ const codeLines = codeSample.split('\n');
 <section class="section section--surface docs-teaser" id="docs">
 	<div class="section__container docs-teaser__grid">
 		<div data-reveal="head">
-			<Eyebrow>Built for engineers</Eyebrow>
-			<h2 class="section__title docs-teaser__title">Read the docs.<br/>Ship in an afternoon.</h2>
-			<p class="section__lede docs-teaser__lede">
-				Every endpoint typed. Every recipe runnable. Every page versioned.
-			</p>
-			<Button variant="primary" size="lg" href="/docs/">Open the docs</Button>
+			<Eyebrow data-i18n="docsTeaser.eyebrow">{t(activeLocale, 'docsTeaser.eyebrow')}</Eyebrow>
+			<h2 class="section__title docs-teaser__title" data-i18n="docsTeaser.title">{t(activeLocale, 'docsTeaser.title')}</h2>
+			<p class="section__lede docs-teaser__lede" data-i18n="docsTeaser.lede">{t(activeLocale, 'docsTeaser.lede')}</p>
+			<Button variant="primary" size="lg" href="/docs/" data-i18n="docsTeaser.openDocs">{t(activeLocale, 'docsTeaser.openDocs')}</Button>
 		</div>
 
 		<div class="docs-teaser__panel" data-scroll-grow>
@@ -41,18 +51,13 @@ const codeLines = codeSample.split('\n');
 						<rect x="9" y="9" width="11" height="11" rx="2.5" />
 						<path d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A2.5 2.5 0 0 0 4 5.5v6A2.5 2.5 0 0 0 6.5 14" />
 					</svg>
-					<span class="docs-teaser__copy-label" data-copy-label>Copy</span>
+					<span class="docs-teaser__copy-label" data-copy-label data-i18n="docsTeaser.copy" data-copied-label={t(activeLocale, 'docsTeaser.copied')}>{t(activeLocale, 'docsTeaser.copy')}</span>
 				</button>
 				</div>
 				<ul class="docs-teaser__links" role="list">
 					{links.map((link) => (
 						<li><a href={link.href}>
-							<span class="docs-teaser__label">
-								{link.kind === 'quickstart' && <>Quickstart</>}
-								{link.kind === 'auth' && <><span class="term" title="Authentication: proving who a user is before giving access.">Auth</span> &amp; sessions</>}
-								{link.kind === 'postgrest' && <>PostgREST recipes</>}
-								{link.kind === 'gdpr' && <><abbr title="General Data Protection Regulation: European privacy law covering personal data.">GDPR</abbr> runbook</>}
-							</span>
+							<span class="docs-teaser__label" data-i18n={link.key}>{t(activeLocale, link.key as any)}</span>
 							<span class="docs-teaser__arrow" aria-hidden="true">→</span>
 						</a></li>
 					))}
@@ -61,7 +66,6 @@ const codeLines = codeSample.split('\n');
 		</div>
 	</div>
 </section>
-
 <style is:global>
 	.docs-teaser__grid {
 		display: grid;
@@ -180,14 +184,11 @@ const codeLines = codeSample.split('\n');
 		.docs-teaser__line:nth-child(4) { --line: 3; }
 		.docs-teaser__line:nth-child(5) { --line: 4; }
 		.docs-teaser__line:nth-child(6) { --line: 5; }
-		.docs-teaser__line:nth-child(7) { --line: 6; }
 		.docs-teaser__line:nth-child(n + 8) { --line: 7; }
 	}
 </style>
 
 <script>
-	// Bundled (not is:inline) so it runs under the strict production
-	// `script-src 'self'` CSP with no inline-hash allowance needed.
 	(() => {
 		for (const btn of document.querySelectorAll('[data-copy-code]')) {
 			const wrap = btn.closest('.docs-teaser__codewrap');
@@ -197,15 +198,15 @@ const codeLines = codeSample.split('\n');
 			btn.addEventListener('click', async () => {
 				try {
 					await navigator.clipboard.writeText(code.textContent ?? '');
-					label.textContent = 'Copied';
+					const initialText = label.textContent || 'Copy';
+					const copiedText = label.getAttribute('data-copied-label') || 'Copied';
+					label.textContent = copiedText;
 					btn.classList.add('is-copied');
 					window.setTimeout(() => {
-						label.textContent = 'Copy';
+						label.textContent = initialText;
 						btn.classList.remove('is-copied');
 					}, 1600);
-				} catch {
-					/* clipboard unavailable (insecure context / denied) */
-				}
+				} catch {}
 			});
 		}
 	})();

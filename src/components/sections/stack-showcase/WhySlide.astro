@@ -2,44 +2,37 @@
 // Third iPad slide: the problems Prismatica exists to remove, each paired
 // with what answers it. Counts come from the data files so the copy cannot
 // drift from the graph and the chart on the other slides.
-import { CONNECTED_APPS } from '../../../data/connected-apps';
-import { ENGINES, SERVICES } from '../../../data/grobase-services';
-import { PLANES } from '../../../data/stack-scale';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../../lib/i18n';
+import { normalizeLocale } from '../../../lib/locale';
 
-const dataPlane = PLANES.find((plane) => plane.id === 'data')!;
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
+
 const ITEMS = [
-	{
-		problem: 'Your team’s tools don’t talk to each other.',
-		answer: `${CONNECTED_APPS.length} apps share one workspace: pages, databases, boards, calendars, mail and whiteboards.`,
-	},
-	{
-		problem: 'Your data is split across databases.',
-		answer: `One network reaches ${ENGINES.length} engines, from Postgres to DynamoDB, through one API.`,
-	},
-	{
-		problem: 'Every new app rebuilds sign-in, permissions and webhooks.',
-		answer: `${SERVICES.length} services come wired: sign-in, a permission check on every query, signed webhooks and live updates.`,
-	},
-	{
-		problem: 'Growing means a rewrite.',
-		answer: `The same images run on a laptop and on Kubernetes, from one data plane to ${dataPlane.max}.`,
-	},
-	{
-		problem: 'Owning your data is hard to prove.',
-		answer: 'Open source under MIT and self-hosted, with GDPR export and erasure built in.',
-	},
+	{ problemKey: 'whySlide.problem1', answerKey: 'whySlide.answer1' },
+	{ problemKey: 'whySlide.problem2', answerKey: 'whySlide.answer2' },
+	{ problemKey: 'whySlide.problem3', answerKey: 'whySlide.answer3' },
+	{ problemKey: 'whySlide.problem4', answerKey: 'whySlide.answer4' },
+	{ problemKey: 'whySlide.problem5', answerKey: 'whySlide.answer5' },
 ];
 ---
 
 <div class="why">
-	<h4 class="why__title">What Prismatica takes off your plate</h4>
+	<h4 class="why__title" data-i18n="whySlide.title">{t(activeLocale, 'whySlide.title')}</h4>
 	<dl class="why__list">
 		{ITEMS.map((item) => (
 			<div class="why__item">
-				<dt class="why__problem"><span>{item.problem}</span></dt>
+				<dt class="why__problem"><span data-i18n={item.problemKey}>{t(activeLocale, item.problemKey as any)}</span></dt>
 				<dd class="why__answer">
 					<svg class="why__tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7" pathLength="1" /></svg>
-					<span>{item.answer}</span>
+					<span data-i18n={item.answerKey}>{t(activeLocale, item.answerKey as any)}</span>
 				</dd>
 			</div>
 		))}

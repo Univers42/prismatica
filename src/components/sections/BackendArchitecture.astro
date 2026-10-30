@@ -2,22 +2,33 @@
 import Eyebrow from '../brand/Eyebrow.astro';
 import StackShowcase from './stack-showcase/StackShowcase.astro';
 import StudioNetworkStory from './studio-network/StudioNetworkStory.astro';
+import { t, DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '../../lib/i18n';
+import { normalizeLocale } from '../../lib/locale';
+
+type Props = {
+	readonly locale?: string;
+};
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+const activeLocale = normalizeLocale(locale, {
+	defaultLocale: DEFAULT_LOCALE,
+	supportedLocales: SUPPORTED_LOCALES,
+}) as SupportedLocale;
 ---
 
 <section class="section section--surface backend-arch" id="architecture">
 	<div class="section__container">
 		<header class="section__head">
-			<Eyebrow icon="✶">Inside the studio</Eyebrow>
-			<h2 class="section__title">One network for every database, app and team.</h2>
-			<p class="section__lede">
-				Prismatica joins your databases into one network. Each team builds on the part it is
-				allowed to reach, and the tablet below lets you run the backend yourself.
+			<Eyebrow icon="✶" data-i18n="backendArchitecture.eyebrow">{t(activeLocale, 'backendArchitecture.eyebrow')}</Eyebrow>
+			<h2 class="section__title" data-i18n="backendArchitecture.title">{t(activeLocale, 'backendArchitecture.title')}</h2>
+			<p class="section__lede" data-i18n="backendArchitecture.lede">
+				{t(activeLocale, 'backendArchitecture.lede')}
 			</p>
 		</header>
 
-		<StudioNetworkStory />
+		<StudioNetworkStory locale={activeLocale} />
 
-		<StackShowcase />
+		<StackShowcase locale={activeLocale} />
 	</div>
 </section>
 
