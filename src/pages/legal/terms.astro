@@ -5,22 +5,38 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 
 <Layout title="Terms of Service — Prismatica" description="Prismatica terms of service.">
 	<main id="main-content" class="legal-page section-shell">
-		<a href="/" class="legal-page__back">← Back to Prismatica</a>
+		<a href="/" class="legal-page__back" aria-label="Back to Prismatica">← Back to Prismatica</a>
 		<h1>Terms of Service</h1>
 		<p><strong>Version:</strong> {POLICY_VERSION} · <strong>Last updated:</strong> {POLICY_LAST_UPDATED}</p>
 
+		<nav class="legal-toc" aria-label="Table of contents">
+			<h2 class="legal-toc__title">Table of contents</h2>
+			<ul class="legal-toc__list">
+				<li><a href="#service-description">Service description</a></li>
+				<li><a href="#acceptance">Acceptance of terms</a></li>
+				<li><a href="#account-security">Account registration and security</a></li>
+				<li><a href="#user-obligations">User responsibilities and acceptable use</a></li>
+				<li><a href="#user-content">User content and open source license</a></li>
+				<li><a href="#availability-modifications">Service availability and prototype status</a></li>
+				<li><a href="#liability">Limitation of liability</a></li>
+				<li><a href="#termination">Termination and account deletion</a></li>
+				<li><a href="#governing-law">Governing law and jurisdiction</a></li>
+				<li><a href="#contact">Contact</a></li>
+			</ul>
+		</nav>
+
 		<section>
-			<h2>Service description</h2>
+			<h2 id="service-description">Service description</h2>
 			<p>Prismatica is a workspace prototype for notes, dashboards, collaborative content, automations and data-connected interfaces.</p>
 		</section>
 
 		<section>
-			<h2>Acceptance</h2>
+			<h2 id="acceptance">Acceptance</h2>
 			<p>By creating an account or using the authenticated workspace, you accept these Terms of Service and the Privacy Policy. If you do not agree, do not create an account or use the service.</p>
 		</section>
 
 		<section>
-			<h2>User obligations</h2>
+			<h2 id="account-security">Account registration and security</h2>
 			<ul>
 				<li>Provide accurate account information.</li>
 				<li>Keep credentials confidential.</li>
@@ -30,23 +46,47 @@ import { DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VERSION } from '../../data
 		</section>
 
 		<section>
-			<h2>Prohibited uses</h2>
-			<p>You must not attempt unauthorised access, attack the service, upload unlawful content, interfere with other users, or use the service for spam, fraud, harassment or illegal surveillance.</p>
+			<h2 id="user-obligations">User obligations</h2>
+			<p>You agree not to:</p>
+			<ul>
+				<li>Attempt unauthorised access or attack the service.</li>
+				<li>Upload unlawful content.</li>
+				<li>Interfere with other users.</li>
+				<li>Use the service for spam, fraud, harassment or illegal surveillance.</li>
+			</ul>
 		</section>
 
 		<section>
-			<h2>Liability</h2>
+			<h2 id="user-content">User content and open source license</h2>
+			<p>You retain ownership of your content. The Prismatica codebase is open source under the MIT license.</p>
+		</section>
+
+		<section>
+			<h2 id="availability-modifications">Service availability and prototype status</h2>
+			<p>The service is provided as a development workspace and prototype unless a separate written agreement states otherwise.</p>
+		</section>
+
+		<section>
+			<h2 id="liability">Limitation of liability</h2>
 			<p>The service is provided as a development workspace and prototype unless a separate written agreement states otherwise. Liability is limited to direct, foreseeable damage caused by proven fault, to the maximum extent permitted by law.</p>
 		</section>
 
 		<section>
-			<h2>Governing law and jurisdiction</h2>
+			<h2 id="termination">Termination and account deletion</h2>
+			<p>We may terminate or suspend your account at any reason, without prior notice.</p>
+			<p>When you request account deletion, it is deactivated straight away and erased or anonymised within one month, unless the law requires us to keep something. See <a href="/legal/data-rights/">Data Rights</a> for more information.</p>
+		</section>
+
+		<section>
+			<h2 id="governing-law">Governing law and jurisdiction</h2>
 			<p>These terms are governed by French law. Subject to mandatory consumer rules, disputes fall under the jurisdiction of the competent courts of Paris, France.</p>
 		</section>
 
 		<section>
-			<h2>Contact</h2>
+			<h2 id="contact">Contact</h2>
 			<p>{DATA_CONTROLLER.name}. Contact: <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
 		</section>
 	</main>
+
+	<div class="legal-page__top-wrap"><a href="#main-content" class="legal-page__top-link">↑ Back to top</a></div>
 </Layout>
