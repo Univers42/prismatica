@@ -1,8 +1,8 @@
 ## Untested
-- 131 of 153 source files have no test naming their stem
-- 35 untested under `scripts/`
-- 26 untested under `vendor/grobase-js/lib/domains/`
+- 138 of 210 source files have no test naming their stem
+- 32 untested under `scripts/`
+- 25 untested under `vendor/grobase-js/lib/domains/`
 - 13 untested under `scripts/security/`
-- 11 untested under `vendor/grobase-js/lib/core/`
-- 8 untested under `.agents/tools/`
+- 10 untested under `vendor/grobase-js/lib/core/`
+- 10 untested under `src/scripts/`
 - full list: `.agents/tools/untested.sh`
