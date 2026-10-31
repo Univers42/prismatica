@@ -25,6 +25,7 @@ function setup(overrides: Parameters<typeof fakeGotrue>[0] = {}, extra: Record<s
 		passwordAcceptable: (value: string) => value.length >= 8 && /[A-Z]/.test(value),
 		writeCutoff: vi.fn(async () => true),
 		notifyPasswordChanged: vi.fn(),
+		clearLoginLockout: vi.fn(async () => undefined),
 		audit: vi.fn(),
 		...extra,
 	};
@@ -97,6 +98,15 @@ describe('resetPassword (C1, C4, C8)', () => {
 		expect(deps.notifyPasswordChanged).toHaveBeenCalledWith('ines@arlet.test');
 		const order = [api.updatePassword, api.logout, deps.writeCutoff, deps.notifyPasswordChanged].map((fn) => fn.mock.invocationCallOrder[0]);
 		expect(order).toEqual([...order].sort((left, right) => left - right));
+	});
+
+	it('lifts the sign-in lockout of the reset account: the lockout message says to reset, so a reset must work', async () => {
+		const { flows, deps } = setup();
+		await flows.resetPassword({ ...link('recovery'), password: PASSWORD });
+		expect(deps.clearLoginLockout).toHaveBeenCalledWith('ines@arlet.test');
+		const refused = setup({ updatePassword: async () => fail(422, { msg: 'Password is known to be weak' } as any) });
+		await refused.flows.resetPassword({ ...link('recovery'), password: PASSWORD });
+		expect(refused.deps.clearLoginLockout).not.toHaveBeenCalled();
 	});
 
 	it('leaves the mailbox proof only after a complete sign-out and cut-off (C341)', async () => {
