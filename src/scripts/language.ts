@@ -90,7 +90,7 @@ export function updateLanguageSwitchers(locale: SupportedLocale): void {
 		switcher.setAttribute('href', `?lang=${nextLocale}`);
 		switcher.setAttribute('data-current-lang', locale);
 		switcher.setAttribute('data-next-lang', nextLocale);
-		switcher.setAttribute('aria-label', `Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`);
+		switcher.setAttribute('aria-label', `${currentLabel.code} - Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`);
 		switcher.setAttribute('title', `Switch to ${nextLabel.nativeName} language`);
 
 		const badge = switcher.querySelector('.header-icon__lang-badge');

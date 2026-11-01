@@ -218,8 +218,8 @@ async function hasDeliverableEmailDomain(email) {
 // e-mail proof are the only anti-abuse controls left.
 async function verifyTurnstile(token, ip) {
 	if (config.turnstileBypassLocal && (!token || token === 'localhost-turnstile-token')) return true;
-	if (!config.turnstileSecret) return config.turnstileOptional;
 	if (!token) return false;
+	if (!config.turnstileSecret) return config.turnstileOptional;
 	const form = new URLSearchParams({ secret: config.turnstileSecret, response: token, remoteip: ip });
 	const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
 	const payload = await response.json().catch(() => ({}));
@@ -527,6 +527,17 @@ const accountMail = createAccountMail({
 const writeCutoff = createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey });
 const utcNow = () => `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`;
 
+// One account's sign-in lockout: the lock and the failure count, keyed as the login handler reads them.
+const loginLockKeys = (email) => {
+	const hashed = keyHash(String(email ?? '').trim().toLowerCase());
+	return { lock: `lock:login:${hashed}`, fail: `fail:login:${hashed}` };
+};
+
+async function clearLoginLockout(email) {
+	const { lock, fail } = loginLockKeys(email);
+	await Promise.all([store.del(lock), store.del(fail)]);
+}
+
 const linkFlows = createLinkFlows({
 	gotrue,
 	store,
@@ -535,6 +546,7 @@ const linkFlows = createLinkFlows({
 	passwordAcceptable: (password) => PASSWORD_REGEX.test(password),
 	writeCutoff,
 	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, utcNow()),
+	clearLoginLockout,
 	audit: flowAudit,
 });
 
@@ -570,7 +582,7 @@ const loginApprove = config.loginApproveLink
 			mail: { send: sendMail, render: (name, vars) => renderMessage(emailTemplateDir, name, vars) },
 			siteUrl: siteBaseUrl(),
 			mailCap,
-			lockLogin: (email) => store.set(`lock:login:${keyHash(email)}`, '1', config.loginLockoutSec),
+			lockLogin: (email) => store.set(loginLockKeys(email).lock, '1', config.loginLockoutSec),
 			audit: flowAudit,
 		})
 	: null;
@@ -750,8 +762,7 @@ async function handleLogin(request, response) {
 			json(response, 422, { message: 'Invalid credentials.' });
 			return;
 		}
-		const lockKey = `lock:login:${keyHash(email)}`;
-		const failKey = `fail:login:${keyHash(email)}`;
+		const { lock: lockKey, fail: failKey } = loginLockKeys(email);
 		const lockRemainingMs = await store.pttl(lockKey);
 		if (lockRemainingMs > 0) {
 			await audit('login_locked', request, { email, ip });
@@ -900,6 +911,10 @@ async function handleNewsletterSubscribe(request, response) {
 		const email = String(payload.email ?? '').trim().toLowerCase();
 		if (!EMAIL_REGEX.test(email)) {
 			json(response, 422, { message: 'Use a valid email address.' });
+			return;
+		}
+		if (payload.newsletter_consent !== true && payload.newsletterConsent !== true) {
+			json(response, 422, { message: 'Newsletter consent is required.' });
 			return;
 		}
 		// Same 200 and body as a sent confirmation, so the answer is no oracle for the list (SGN-3).

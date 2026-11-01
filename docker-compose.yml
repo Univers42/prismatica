@@ -12,3 +12,22 @@ services:
     environment:
       - TRACK_BINOCLE_IN_DOCKER=1
     command: pnpm dev
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    container_name: prismatica-worker
+    volumes:
+      - .:/workspace:z
+      - ${HOME}/.config/opencode:/home/node/.config/opencode:ro
+    environment:
+      - TRACK_BINOCLE_IN_DOCKER=1
+      - COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+      - ASTRO_TELEMETRY_DISABLED=1
+      - GIT_AUTHOR_NAME=DJSurgeon
+      - GIT_AUTHOR_EMAIL=djsurgeon83@gmail.com
+      - GIT_COMMITTER_NAME=DJSurgeon
+      - GIT_COMMITTER_EMAIL=djsurgeon83@gmail.com
+      - OPENROUTER_API_KEY
+    command: sleep infinity

@@ -120,7 +120,8 @@ describe('POST /api/auth/register with newsletter consent', () => {
 
 describe('POST /api/newsletter/subscribe with signup open and an empty allowlist', () => {
 	it('answers like a success and mails no one, where a listed address is mailed', async () => {
-		const subscribe = (gateway: typeof open, email: string) => call(gateway, '/api/newsletter/subscribe', { body: { email, turnstileToken: 'localhost-turnstile-token' } });
+		const subscribe = (gateway: typeof open, email: string) =>
+			call(gateway, '/api/newsletter/subscribe', { body: { email, turnstileToken: 'localhost-turnstile-token', newsletter_consent: true } });
 		expect((await subscribe(closed, 'ines@arlet.test')).status).toBe(200);
 		await settle();
 		expect(mailsTo('ines@arlet.test')).toBeGreaterThan(0);
@@ -135,8 +136,10 @@ describe('POST /api/newsletter/subscribe with signup open and an empty allowlist
 describe('AUTH_TURNSTILE_OPTIONAL', () => {
 	const login = (gateway: typeof open, turnstileToken?: string) => call(gateway, '/api/auth/login', { body: { email: 'ok@arlet.test', password: 'Right-Pass-1!', ...(turnstileToken === undefined ? {} : { turnstileToken }) } });
 
-	it('passes with no secret configured', async () => {
-		expect((await login(optional)).status).not.toBe(403);
+	it('rejects a missing token even with no secret; a non-empty token still passes', async () => {
+		// Empty tokens fail closed regardless of AUTH_TURNSTILE_OPTIONAL (anti-abuse).
+		expect((await login(optional)).status).toBe(403);
+		// Optional + no secret still accepts any non-empty token (bridge/proxy path).
 		expect((await login(optional, 'fixed-token')).status).not.toBe(403);
 	});
 

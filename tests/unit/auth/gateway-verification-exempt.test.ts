@@ -131,7 +131,7 @@ describe('POST /api/auth/register with an exempt address', () => {
 
 describe('POST /api/newsletter/subscribe', () => {
 	const subscribe = async (email: string) => {
-		const result = await call(listed, '/api/newsletter/subscribe', { body: { email, ...turnstile } });
+		const result = await call(listed, '/api/newsletter/subscribe', { body: { email, newsletter_consent: true, ...turnstile } });
 		await settle();
 		return result;
 	};

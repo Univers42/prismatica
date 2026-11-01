@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('WCAG 2.2 Modal & Motion Accessibility', () => {
 	beforeEach(() => {
@@ -123,5 +123,88 @@ describe('WCAG 2.2 Modal & Motion Accessibility', () => {
 			expect(content.hasAttribute('hidden')).toBe(false);
 			expect(content.getAttribute('aria-hidden')).toBe('false');
 		});
+	});
+});
+
+describe('WCAG 2.5.3 Label in Name & Link Text Underlines', () => {
+	let originalBodyInnerHTML: string;
+
+	beforeEach(() => {
+		originalBodyInnerHTML = document.body.innerHTML;
+	});
+
+	afterEach(() => {
+		document.body.innerHTML = originalBodyInnerHTML;
+	});
+
+	it('LanguageSwitcher accessible name includes current language code (EN)', () => {
+		document.body.innerHTML = `
+    <a href="?lang=es" class="lang-switcher" aria-label="EN - Language: English. Switch to Español" data-current-lang="en" data-next-lang="es">
+      <span class="header-icon__lang-badge">EN</span>
+      <span class="visually-hidden">Language: English</span>
+    </a>
+  `;
+
+		const switcher = document.querySelector('.lang-switcher') as HTMLElement;
+		const ariaLabel = switcher.getAttribute('aria-label');
+
+		expect(ariaLabel).toContain('EN');
+	});
+
+	it('LanguageSwitcher accessible name includes current language code (ES)', () => {
+		document.body.innerHTML = `
+    <a href="?lang=ar" class="lang-switcher" aria-label="ES - Language: Español. Switch to العربية" data-current-lang="es" data-next-lang="ar">
+      <span class="header-icon__lang-badge">ES</span>
+      <span class="visually-hidden">Language: Español</span>
+    </a>
+  `;
+
+		const switcher = document.querySelector('.lang-switcher') as HTMLElement;
+		const ariaLabel = switcher.getAttribute('aria-label');
+
+		expect(ariaLabel).toContain('ES');
+	});
+
+	it('LanguageSwitcher accessible name includes current language code (AR)', () => {
+		document.body.innerHTML = `
+    <a href="?lang=en" class="lang-switcher" aria-label="AR - Language: العربية. Switch to English" data-current-lang="ar" data-next-lang="en">
+      <span class="header-icon__lang-badge">AR</span>
+      <span class="visually-hidden">Language: العربية</span>
+    </a>
+  `;
+
+		const switcher = document.querySelector('.lang-switcher') as HTMLElement;
+		const ariaLabel = switcher.getAttribute('aria-label');
+
+		expect(ariaLabel).toContain('AR');
+	});
+
+	it('paragraph links within .legal-page have text-decoration underline', () => {
+		document.body.innerHTML = `
+    <div class="legal-page">
+      <p>Some text with a <a href="/terms" style="text-decoration: underline;">terms link</a> in it.</p>
+    </div>
+  `;
+
+		const links = document.querySelectorAll('.legal-page p a');
+		expect(links.length).toBeGreaterThan(0);
+
+		links.forEach((link) => {
+			expect(window.getComputedStyle(link).textDecoration).toBe('underline');
+		});
+	});
+
+	it('submit button in .gdpr-card or data-rights has accessible name containing visible text', () => {
+		document.body.innerHTML = `
+    <div class="gdpr-card">
+      <button class="button button--primary" type="submit" aria-label="Submit request">Submit request</button>
+    </div>
+  `;
+
+		const button = document.querySelector('.gdpr-card .button--primary') as HTMLButtonElement;
+		const ariaLabel = button.getAttribute('aria-label');
+		const visibleText = button.textContent.trim();
+
+		expect(ariaLabel).toContain(visibleText);
 	});
 });

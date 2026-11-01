@@ -46,7 +46,7 @@ const codeLines = codeSample.split('\n');
 			<Card variant="doc">
 				<div class="docs-teaser__codewrap">
 				<pre class="docs-teaser__code"><code>{codeLines.map((line, index) => (<>{index > 0 && '\n'}<span class="docs-teaser__line">{line}</span></>))}</code></pre>
-				<button type="button" class="docs-teaser__copy" data-copy-code aria-label="Copy code sample">
+				<button type="button" class="docs-teaser__copy" data-copy-code>
 					<svg class="docs-teaser__copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
 						<rect x="9" y="9" width="11" height="11" rx="2.5" />
 						<path d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A2.5 2.5 0 0 0 4 5.5v6A2.5 2.5 0 0 0 6.5 14" />

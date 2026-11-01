@@ -74,7 +74,7 @@ export function readTurnstileToken(portal: HTMLElement): string {
 	if (token instanceof HTMLInputElement && token.value) {
 		return token.value;
 	}
-	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key' || !import.meta.env.PUBLIC_TURNSTILE_SITE_KEY) {
+	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key') {
 		return LOCAL_TURNSTILE_TOKEN;
 	}
 	return '';
@@ -84,7 +84,10 @@ export function mountTurnstile(portal: HTMLElement): void {
 	const container = portal.querySelector('[data-turnstile-slot]');
 	if (!(container instanceof HTMLElement)) return;
 	const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
-	if (!sitekey || sitekey === 'local-dev-turnstile-key') {
+	if (!sitekey) {
+		return;
+	}
+	if (sitekey === 'local-dev-turnstile-key') {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
 			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
@@ -143,7 +146,7 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 		await fetch('/api/newsletter/subscribe', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email }),
+			body: JSON.stringify({ email, newsletter_consent: true }),
 		}).catch(() => undefined);
 	}
 	const newsletterIntent = readStorage(NEWSLETTER_INTENT_KEY);
@@ -151,7 +154,7 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 		await fetch('/api/newsletter/subscribe', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email }),
+			body: JSON.stringify({ email, newsletter_consent: true }),
 		}).catch(() => undefined);
 	}
 }

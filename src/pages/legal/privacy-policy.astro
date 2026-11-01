@@ -5,18 +5,35 @@ import { CONSENT_MAX_AGE_MONTHS, DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VE
 
 <Layout title="Privacy Policy — Prismatica" description="Prismatica privacy policy and GDPR information.">
 	<main id="main-content" class="legal-page section-shell">
-		<a href="/" class="legal-page__back">← Back to Prismatica</a>
+		<a href="/" class="legal-page__back" aria-label="Back to Prismatica">← Back to Prismatica</a>
 		<h1>Privacy Policy</h1>
 		<p><strong>Policy version:</strong> {POLICY_VERSION} · <strong>Last updated:</strong> {POLICY_LAST_UPDATED}</p>
 
+		<nav class="legal-toc" aria-label="Table of contents">
+			<h2 class="legal-toc__title">Table of contents</h2>
+			<ul class="legal-toc__list">
+				<li><a href="#data-controller">Data controller</a></li>
+				<li><a href="#data-collected">Data we collect and why</a></li>
+				<li><a href="#retention">Retention</a></li>
+				<li><a href="#storage-recipients">Where your data is stored and who receives it</a></li>
+				<li><a href="#international-transfers">International transfers</a></li>
+				<li><a href="#user-rights">Your rights</a></li>
+				<li><a href="#cookies-tracking">Cookies and tracking</a></li>
+				<li><a href="#security">Data security</a></li>
+				<li><a href="#children">Children's privacy</a></li>
+				<li><a href="#policy-changes">Changes to this policy</a></li>
+				<li><a href="#contact">Contact</a></li>
+			</ul>
+		</nav>
+
 		<section>
-			<h2>Data controller</h2>
+			<h2 id="data-controller">Data controller</h2>
 			<p>{DATA_CONTROLLER.name} is the data controller for Prismatica.</p>
 			<p>Privacy contact: <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>.</p>
 		</section>
 
 		<section>
-			<h2>Data we collect and why</h2>
+			<h2 id="data-collected">Data we collect and why</h2>
 			<ul>
 				<li><strong>Account data:</strong> email address, username, password (stored only as a hash) and account timestamps. Used to create your account and sign you in. Legal basis: contract and legitimate interest in account security.</li>
 				<li><strong>Preferences:</strong> theme and notification settings, and newsletter consent if you give it. Used to apply your settings. Legal basis: contract for service preferences and consent for optional communications.</li>
@@ -30,13 +47,13 @@ import { CONSENT_MAX_AGE_MONTHS, DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VE
 		</section>
 
 		<section>
-			<h2>Retention</h2>
+			<h2 id="retention">Retention</h2>
 			<p>Data is kept while your account exists. There is no scheduled job that deletes or anonymises accounts, content, sessions, tokens or logs automatically, so data stays until it is deleted from the database. Some items you delete, such as whiteboards and chat messages, are marked as deleted rather than erased.</p>
 			<p>When you request deletion of your account, it is deactivated straight away and erased or anonymised within one month, unless the law requires us to keep something. Your consent choices in this browser are asked again every {CONSENT_MAX_AGE_MONTHS} months and whenever this policy changes.</p>
 		</section>
 
 		<section>
-			<h2>Where your data is stored and who receives it</h2>
+			<h2 id="storage-recipients">Where your data is stored and who receives it</h2>
 			<p>Prismatica is self-hosted. All data is stored on the machine that runs the service, in its PostgreSQL, MongoDB and MinIO (file storage) databases. Emails the service sends are delivered to Mailpit, a mail catcher running on the same machine, and do not leave it. We do not sell personal data.</p>
 			<p>Personal data leaves that machine only in these cases:</p>
 			<ul>
@@ -46,36 +63,53 @@ import { CONSENT_MAX_AGE_MONTHS, DATA_CONTROLLER, POLICY_LAST_UPDATED, POLICY_VE
 		</section>
 
 		<section>
-			<h2>International transfers</h2>
+			<h2 id="international-transfers">International transfers</h2>
 			<p>The service is hosted on a single machine. Personal data reaches other countries only through the third parties listed above.</p>
 		</section>
 
 		<section>
-			<h2>Your rights</h2>
+			<h2 id="user-rights">Your rights</h2>
 			<p>You can exercise your rights of access, rectification, erasure, restriction, portability and objection under GDPR Articles 15 to 21. You can also withdraw consent at any time where processing is based on consent.</p>
 			<p>When signed in, you can download a machine-readable copy of your data, withdraw newsletter consent and request deletion of your account yourself on the <a href="/legal/data-rights/">Data Rights page</a>. For any other request, use the form on that page or contact <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a>. We answer within one month; for complex requests this can be extended by two more months, and we will tell you why.</p>
 			<p>You also have the right to lodge a complaint with the CNIL: <a href="https://www.cnil.fr/fr/plaintes" rel="noreferrer">https://www.cnil.fr/fr/plaintes</a>, or with the data protection authority of the EU country where you live or work.</p>
 		</section>
 
 		<section>
-			<h2>Is providing data required?</h2>
+			<h2 id="is-providing-data-required">Is providing data required?</h2>
 			<p>An email address and a password are required to create an account, because the service cannot sign you in without them. Everything else, including newsletter consent and profile details, is optional, and refusing it does not limit your access to the service.</p>
 		</section>
 
 		<section>
-			<h2>Automated decisions</h2>
+			<h2 id="automated-decisions">Automated decisions</h2>
 			<p>Prismatica does not make decisions about you based solely on automated processing, including profiling, that produce legal or similarly significant effects. Anti-abuse checks such as rate limits and Cloudflare Turnstile only slow down or block suspicious sign-in attempts and can be retried.</p>
 		</section>
 
-		<section>
-			<h2>Children</h2>
+<section>
+			<h2 id="children">Children</h2>
 			<p>The service is not intended for children under 15, the age of digital consent in France. We do not knowingly collect their data; if you believe a child has created an account, contact us and we will delete it.</p>
 		</section>
 
 		<section>
-			<h2>Cookies and local storage</h2>
+			<h2 id="policy-changes">Changes to this policy</h2>
+			<p>We may update this policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
+		</section>
+
+		<section>
+			<h2 id="security">Data security</h2>
+			<p>Prismatica employs technical and organizational measures to protect personal data against accidental or unlawful destruction, loss, alteration, unauthorised disclosure or access. All data is stored in self-hosted databases with access controls and encryption at rest.</p>
+		</section>
+
+		<section>
+			<h2 id="cookies-tracking">Cookies and tracking</h2>
 			<p>The service uses a sign-in cookie and stores your preferences, consent choices and a workspace cache in your browser's local storage. It has no analytics or marketing scripts: the consent banner records your choice, and nothing else loads. See the <a href="/legal/cookies/">Cookie Policy</a> for the full list.</p>
 			<button class="button button--ghost" type="button" data-manage-cookies aria-label="Manage cookie preferences">Manage cookie preferences</button>
 		</section>
+
+		<section>
+			<h2 id="contact">Contact</h2>
+			<p>For privacy questions, contact <a href={`mailto:${DATA_CONTROLLER.email}`}>${DATA_CONTROLLER.email}</a>.</p>
+		</section>
+
+		<div class="legal-page__top-wrap"><a href="#main-content" class="legal-page__top-link">↑ Back to top</a></div>
 	</main>
 </Layout>

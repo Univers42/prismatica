@@ -27,7 +27,7 @@ const nextLocale = SUPPORTED_LOCALES[nextIndex] ?? DEFAULT_LOCALE;
 
 const currentLabel = LOCALE_LABELS[activeLocale];
 const nextLabel = LOCALE_LABELS[nextLocale];
-const ariaLabel = `Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`;
+const ariaLabel = `${currentLabel.code} - Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`;
 const title = `Switch to ${nextLabel.nativeName} language`;
 ---
 
