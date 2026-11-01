@@ -2,14 +2,14 @@
 
 | lang | files | loc | untested |
 |---|---:|---:|---:|
-| javascript | 105 | 10878 | 77 |
+| javascript | 109 | 11577 | 77 |
 | shell | 12 | 1175 | 12 |
-| typescript | 93 | 10910 | 49 |
+| typescript | 99 | 11643 | 50 |
 
 Heaviest files:
-- `scripts/auth-gateway.mjs` — 1105 loc (javascript)
-- `src/lib/i18n.ts` — 1045 loc (typescript)
-- `src/scripts/portal.ts` — 945 loc (typescript)
+- `scripts/auth-gateway.mjs` — 1324 loc (javascript)
+- `src/lib/i18n.ts` — 1049 loc (typescript)
+- `src/scripts/portal.ts` — 926 loc (typescript)
 - `vendor/grobase-js/lib/types.d.ts` — 867 loc (typescript)
 - `src/scripts/mascot.ts` — 521 loc (typescript)
 
