@@ -120,7 +120,8 @@ describe('POST /api/auth/register with newsletter consent', () => {
 
 describe('POST /api/newsletter/subscribe with signup open and an empty allowlist', () => {
 	it('answers like a success and mails no one, where a listed address is mailed', async () => {
-		const subscribe = (gateway: typeof open, email: string) => call(gateway, '/api/newsletter/subscribe', { body: { email, turnstileToken: 'localhost-turnstile-token' } });
+		const subscribe = (gateway: typeof open, email: string) =>
+			call(gateway, '/api/newsletter/subscribe', { body: { email, turnstileToken: 'localhost-turnstile-token', newsletter_consent: true } });
 		expect((await subscribe(closed, 'ines@arlet.test')).status).toBe(200);
 		await settle();
 		expect(mailsTo('ines@arlet.test')).toBeGreaterThan(0);

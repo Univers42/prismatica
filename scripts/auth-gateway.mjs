@@ -913,6 +913,10 @@ async function handleNewsletterSubscribe(request, response) {
 			json(response, 422, { message: 'Use a valid email address.' });
 			return;
 		}
+		if (payload.newsletter_consent !== true && payload.newsletterConsent !== true) {
+			json(response, 422, { message: 'Newsletter consent is required.' });
+			return;
+		}
 		// Same 200 and body as a sent confirmation, so the answer is no oracle for the list (SGN-3).
 		if (!newsletterAllowed(email)) {
 			await audit('signup_refused_allowlist', request, { email, source: 'newsletter' });

@@ -143,7 +143,7 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 		await fetch('/api/newsletter/subscribe', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email }),
+			body: JSON.stringify({ email, newsletter_consent: true }),
 		}).catch(() => undefined);
 	}
 	const newsletterIntent = readStorage(NEWSLETTER_INTENT_KEY);
@@ -151,7 +151,7 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 		await fetch('/api/newsletter/subscribe', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email }),
+			body: JSON.stringify({ email, newsletter_consent: true }),
 		}).catch(() => undefined);
 	}
 }

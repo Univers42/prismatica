@@ -45,7 +45,7 @@ async function requestNewsletterSubscription(email: string, turnstileToken: stri
 	const response = await fetch('/api/newsletter/subscribe', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email, turnstileToken }),
+		body: JSON.stringify({ email, turnstileToken, newsletter_consent: true }),
 	});
 	const data = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
 	if (!response.ok) {

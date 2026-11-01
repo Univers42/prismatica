@@ -154,7 +154,8 @@ describe('POST /api/auth/register with AUTH_SIGNUP_ALLOWLIST', () => {
 });
 
 describe('POST /api/newsletter/subscribe', () => {
-	const subscribe = (base: string, email: string, turnstileToken?: string) => post(base, '/api/newsletter/subscribe', { email, ...(turnstileToken === undefined ? {} : { turnstileToken }) });
+	const subscribe = (base: string, email: string, turnstileToken?: string) =>
+		post(base, '/api/newsletter/subscribe', { email, newsletter_consent: true, ...(turnstileToken === undefined ? {} : { turnstileToken }) });
 
 	it('answers a refused address exactly like an allowed one and mails only the allowed one', async () => {
 		const before = mails.length;
@@ -178,6 +179,17 @@ describe('POST /api/newsletter/subscribe', () => {
 		expect((await subscribe(strict, 'stranger@evil.test')).status).toBe(403);
 		await settle();
 		expect(mails.length).toBe(before);
+	});
+
+	it('answers 422 when newsletter consent is missing', async () => {
+		const result = await post(listed, '/api/newsletter/subscribe', { email: ALLOWED, turnstileToken: 'localhost-turnstile-token' });
+		expect(result.status).toBe(422);
+		expect(result.body).toEqual({ message: 'Newsletter consent is required.' });
+	});
+
+	it('accepts legacy camelCase newsletter consent payloads', async () => {
+		const result = await post(listed, '/api/newsletter/subscribe', { email: ALLOWED, turnstileToken: 'localhost-turnstile-token', newsletterConsent: true });
+		expect(result.status).toBe(200);
 	});
 });
 
