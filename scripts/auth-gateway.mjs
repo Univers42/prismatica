@@ -218,8 +218,8 @@ async function hasDeliverableEmailDomain(email) {
 // e-mail proof are the only anti-abuse controls left.
 async function verifyTurnstile(token, ip) {
 	if (config.turnstileBypassLocal && (!token || token === 'localhost-turnstile-token')) return true;
-	if (!config.turnstileSecret) return config.turnstileOptional;
 	if (!token) return false;
+	if (!config.turnstileSecret) return config.turnstileOptional;
 	const form = new URLSearchParams({ secret: config.turnstileSecret, response: token, remoteip: ip });
 	const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
 	const payload = await response.json().catch(() => ({}));
