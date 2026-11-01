@@ -89,10 +89,32 @@ describe('POST /api/auth/register with signup open', () => {
 		const attempt = (ip: string, n: number) => call(open, '/api/auth/register', { ip, body: registration(`u${n}@arlet.test`, `user_${n}`, 'localhost-turnstile-token') });
 		const v4 = [];
 		for (let n = 0; n < 4; n += 1) v4.push((await attempt('198.51.100.9', n)).status);
-		expect(v4.filter((status) => status === 202)).toHaveLength(3);
-		expect(v4).toContain(429);
-		expect((await attempt('2001:db8:85a3::1', 10)).status).toBe(202);
-		expect((await attempt('2001:db8:85a3::2', 11)).status).toBe(429);
+		expect(v4).toEqual([202, 202, 202, 429]);
+		const v6 = [];
+		for (let n = 0; n < 4; n += 1) v6.push((await attempt(`2001:db8:5:6::${n + 1}`, n + 10)).status);
+		v6.push((await attempt('2001:db8:5:6:aaaa:bbbb:cccc:dddd', 20)).status);
+		expect(v6).toEqual([202, 202, 202, 429, 429]);
+		expect((await attempt('2001:db8:5:7::1', 21)).status).toBe(202);
+	});
+});
+
+describe('POST /api/auth/register with newsletter consent', () => {
+	const withConsent = (gateway: typeof open, email: string, username: string) =>
+		call(gateway, '/api/auth/register', { body: { ...registration(email, username, 'localhost-turnstile-token'), profile: { ...registration(email, username).profile, newsletterConsent: true } } });
+	const mailSubjects = (address: string) => hits.filter((hit) => hit.path === '/email/v1/send' && hit.body.includes(address)).map((hit) => JSON.parse(hit.body).subject as string);
+	const newsletterMails = (address: string) => mailSubjects(address).filter((subject) => /newsletter/i.test(subject)).length;
+
+	it('opens no newsletter subscription on an open gateway: the verification mail only', async () => {
+		expect((await withConsent(open, 'consent@arlet.test', 'consent_o')).status).toBe(202);
+		await settle();
+		expect(mailSubjects('consent@arlet.test')).toHaveLength(1);
+		expect(newsletterMails('consent@arlet.test')).toBe(0);
+	});
+
+	it('still sends the confirmation to an address the allowlist names', async () => {
+		expect((await withConsent(closed, 'ines@arlet.test', 'ines_consent')).status).toBe(202);
+		await settle();
+		expect(newsletterMails('ines@arlet.test')).toBeGreaterThan(0);
 	});
 });
 
