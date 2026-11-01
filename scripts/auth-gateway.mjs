@@ -527,6 +527,17 @@ const accountMail = createAccountMail({
 const writeCutoff = createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey });
 const utcNow = () => `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`;
 
+// One account's sign-in lockout: the lock and the failure count, keyed as the login handler reads them.
+const loginLockKeys = (email) => {
+	const hashed = keyHash(String(email ?? '').trim().toLowerCase());
+	return { lock: `lock:login:${hashed}`, fail: `fail:login:${hashed}` };
+};
+
+async function clearLoginLockout(email) {
+	const { lock, fail } = loginLockKeys(email);
+	await Promise.all([store.del(lock), store.del(fail)]);
+}
+
 const linkFlows = createLinkFlows({
 	gotrue,
 	store,
@@ -535,6 +546,7 @@ const linkFlows = createLinkFlows({
 	passwordAcceptable: (password) => PASSWORD_REGEX.test(password),
 	writeCutoff,
 	notifyPasswordChanged: (email) => accountMail.schedulePasswordChanged(email, utcNow()),
+	clearLoginLockout,
 	audit: flowAudit,
 });
 
@@ -570,7 +582,7 @@ const loginApprove = config.loginApproveLink
 			mail: { send: sendMail, render: (name, vars) => renderMessage(emailTemplateDir, name, vars) },
 			siteUrl: siteBaseUrl(),
 			mailCap,
-			lockLogin: (email) => store.set(`lock:login:${keyHash(email)}`, '1', config.loginLockoutSec),
+			lockLogin: (email) => store.set(loginLockKeys(email).lock, '1', config.loginLockoutSec),
 			audit: flowAudit,
 		})
 	: null;
@@ -750,8 +762,7 @@ async function handleLogin(request, response) {
 			json(response, 422, { message: 'Invalid credentials.' });
 			return;
 		}
-		const lockKey = `lock:login:${keyHash(email)}`;
-		const failKey = `fail:login:${keyHash(email)}`;
+		const { lock: lockKey, fail: failKey } = loginLockKeys(email);
 		const lockRemainingMs = await store.pttl(lockKey);
 		if (lockRemainingMs > 0) {
 			await audit('login_locked', request, { email, ip });

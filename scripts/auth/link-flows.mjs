@@ -41,7 +41,7 @@ function isInsufficientAal(result) {
 	return (result.status === 401 || result.status === 403) && (result.body?.error_code === 'insufficient_aal' || /aal2/i.test(String(result.body?.msg ?? result.body?.message ?? '')));
 }
 
-export function createLinkFlows({ gotrue, store, linkKey, nowMs, passwordAcceptable, writeCutoff, notifyPasswordChanged, audit }) {
+export function createLinkFlows({ gotrue, store, linkKey, nowMs, passwordAcceptable, writeCutoff, notifyPasswordChanged, clearLoginLockout, audit }) {
 	function checked(type, fields) {
 		const check = checkLink(linkKey, type, fields, Math.floor(nowMs() / 1000));
 		if (check.ok) return check;
@@ -86,6 +86,9 @@ export function createLinkFlows({ gotrue, store, linkKey, nowMs, passwordAccepta
 		const cut = (await writeCutoff(state.userId, at)) || (await writeCutoff(state.userId, at));
 		if (!cut) audit('password_reset_cutoff_failed', { user_id: state.userId });
 		if (ticket) await Promise.all([store.del(ticketKey(ticket)), store.del(attemptsKey(ticket))]);
+		// The lockout answer tells a locked-out person to reset; a lock that outlived the reset made
+		// the new password look wrong for up to the lockout length (dev.pro.photo, 2026-10-31).
+		if (state.email) await clearLoginLockout(state.email);
 		if (state.email) notifyPasswordChanged(state.email);
 		if (loggedOut.ok && cut && state.email) await writeMailboxProof(state, at);
 		audit('password_reset_completed', { user_id: state.userId });
