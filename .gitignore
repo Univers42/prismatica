@@ -40,6 +40,12 @@ docker-compose.override.yml
 # agent artifacts
 .antigravity/
 opencode.json
+.agents/cache/
+
+# obsolete local/editor configuration
+.vscode/
+.sonarcloud.properties
+TASK_SPEC.md
 
 
 # lockfiles from other package managers (we use pnpm)
