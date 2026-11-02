@@ -18,7 +18,7 @@ const year = new Date().getFullYear();
 
 const groups = [
 	{
-		headingKey: 'footer.productGroup',
+		headingKey: 'footer.groupProduct',
 		links: [
 			{ labelKey: 'nav.apps', href: '#apps' },
 			{ labelKey: 'nav.product', href: '#product' },
@@ -27,27 +27,26 @@ const groups = [
 		],
 	},
 	{
-		headingKey: 'footer.resourcesGroup',
+		headingKey: 'footer.groupResources',
 		links: [
-			{ labelKey: 'footer.quickstartLink', href: '/docs/quickstart/' },
-			{ labelKey: 'footer.postgrestLink', href: '/docs/postgrest/' },
-			{ labelKey: 'footer.gdprLink', href: '/docs/gdpr/' },
-			{ labelKey: 'footer.authLink', href: '/docs/auth/' },
+			{ labelKey: 'footer.linkDocs', href: '/docs/' },
+			{ labelKey: 'footer.linkOverview', href: '/#product' },
+			{ labelKey: 'footer.linkFaq', href: '/#faq' },
 		],
 	},
 	{
-		headingKey: 'footer.legalGroup',
+		headingKey: 'footer.groupLegal',
 		links: [
-			{ labelKey: 'footer.privacyLink', href: '/legal/privacy-policy/' },
-			{ labelKey: 'footer.termsLink', href: '/legal/terms/' },
-			{ labelKey: 'footer.cookiesLink', href: '/legal/cookies/' },
-			{ labelKey: 'footer.dataRightsLink', href: '/legal/data-rights/' },
+			{ labelKey: 'footer.linkPrivacy', href: '/legal/privacy-policy/' },
+			{ labelKey: 'footer.linkTerms', href: '/legal/terms/' },
+			{ labelKey: 'footer.linkCookies', href: '/legal/cookies/' },
+			{ labelKey: 'footer.linkDataRights', href: '/legal/data-rights/' },
 		],
 	},
 	{
 		headingKey: 'footer.groupCompany',
 		links: [
-			{ labelKey: 'footer.linkGithub', href: 'https://github.com/Univers42/track-binocle' },
+			{ labelKey: 'footer.linkGithub', href: 'https://github.com/Univers42/prismatica' },
 		],
 	},
 ] as const;
@@ -87,7 +86,7 @@ const groups = [
 						{group.links.map((link) => (
 							<li><a href={link.href} data-i18n={link.labelKey}>{t(activeLocale, link.labelKey as any)}</a></li>
 						))}
-						{group.headingKey === 'footer.legalGroup' && (
+						{group.headingKey === 'footer.groupLegal' && (
 							<li><button class="footer-new__link-button" type="button" data-manage-cookies data-i18n="footer.cookieSettings">{t(activeLocale, 'footer.cookieSettings' as any)}</button></li>
 						)}
 					</ul>
@@ -100,7 +99,7 @@ const groups = [
 		<p data-i18n="footer.copyright">{t(activeLocale, 'footer.copyright', { year: String(year) })}</p>
 		<p class="footer-new__gdpr"><span data-i18n="footer.gdprContact">{t(activeLocale, 'footer.gdprContact')}</span> <a href="mailto:dev.pro.photo@gmail.com">dev.pro.photo@gmail.com</a></p>
 		<ul class="footer-new__social" role="list">
-			<li><a href="https://github.com/Univers42/track-binocle" aria-label="GitHub">GitHub</a></li>
+			<li><a href="https://github.com/Univers42/prismatica" aria-label="GitHub">GitHub</a></li>
 		</ul>
 	</div>
 </footer>

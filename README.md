@@ -1,50 +1,42 @@
-# opposite-osiris
+# Prismatica
 
-Astro website for the local track-binocle pipeline. In this workspace it is run by the root Docker Compose stack at `https://localhost:4322` through the local TLS proxy.
+Frontend of Prismatica: landing page, authentication portal and workspace UI.
 
-Do not install website dependencies on the host. The package scripts are guarded so direct host execution points back to Docker.
+Built with [Astro](https://astro.build). Deployed on Vercel:
 
-## Docker-Only Commands (No Local Node)
+- Production: https://prismatica-eta.vercel.app
+- Beta (develop): https://prismatica-beta.vercel.app
 
-Use the helper script from this app folder:
+Part of the ft_transcendence / track-binocle ecosystem. Session bridge to the osionos BaaS.
 
-```sh
-./scripts/docker-workflow.sh --help
-./scripts/docker-workflow.sh npm run lint
-./scripts/docker-workflow.sh npm run check
-./scripts/docker-workflow.sh npm run build
-./scripts/docker-workflow.sh shell
-```
+## Stack
 
-The script finds the repository root, ensures the `opposite-osiris` service is up, then executes commands inside the running container.
+- Astro 7 + TypeScript
+- pnpm (`packageManager: pnpm@11.5.1`)
+- Vitest, ESLint, Stylelint, html-validate
+- i18n: English, Spanish, Arabic
+- CI: Quality Gate + Vercel deploy + ghcr.io images
 
-VS Code tasks are also available in `.vscode/tasks.json`:
+## Local development
 
-- `docker: up opposite-osiris`
-- `docker: logs opposite-osiris`
-- `docker: lint`
-- `docker: check`
-- `docker: build`
-- `docker: shell opposite-osiris`
-
-## Run
-
-From the repository root:
+This project expects to run inside Docker when used from the monorepo. For a standalone clone:
 
 ```sh
-docker compose up -d --build opposite-osiris
+pnpm install
+pnpm dev:astro          # or the container-guarded scripts
+pnpm build
+pnpm test:watch
 ```
 
-For the full website to osionos flow, start the complete stack:
+See `package.json` scripts for the full list (lint, a11y audit, security checks, etc.).
 
-```sh
-docker compose up -d --build
-```
+Environment variables: copy `.env.example` and fill the required values (auth, Turnstile, site URL, etc.).
 
-## Runtime Wiring
+## Branches
 
-- `/api/auth` proxies to the Docker `auth-gateway` service.
-- `/api` proxies to the Docker Kong gateway.
-- Successful login creates an osionos bridge session and redirects to `https://localhost:3001`.
+- `main` → production
+- `develop` → beta
 
-The complete operating guide is [../../docs/howtouse.md](../../docs/howtouse.md).
+## License
+
+MIT

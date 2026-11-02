@@ -61,10 +61,11 @@ export function applyLocale(locale: SupportedLocale): void {
 	}
 
 	const elements = queryElements('[data-i18n]', isHtmlElement);
+	const year = String(new Date().getFullYear());
 	elements.forEach((el) => {
 		const key = el.getAttribute('data-i18n');
 		if (key) {
-			const translation = t(locale, key as any);
+			const translation = t(locale, key as any, { year });
 			if (translation) {
 				el.textContent = translation;
 			}
