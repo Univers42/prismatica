@@ -10,6 +10,13 @@ afterEach(() => {
 	globalThis.localStorage.clear();
 });
 
+describe('supported locales contract', () => {
+	it('defines the expected standard supported locales', () => {
+		expect(SUPPORTED_LOCALES).toEqual(['en', 'es', 'ar']);
+		expect(SUPPORTED_LOCALES).toContain(DEFAULT_LOCALE);
+	});
+});
+
 describe('initialLocale', () => {
 	it('reads ?lang=es from window.location', () => {
 		globalThis.window = {

@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   quality-gate:
-    name: 🧪 Quality Gate
+    name: Quality Gate
     runs-on: ubuntu-latest
     container: node:22-alpine
     env:
@@ -41,7 +41,7 @@ jobs:
   #   main, v* tags → production  https://prismatica-eta.vercel.app
   #   develop       → beta        https://prismatica-beta.vercel.app (unlisted, noindex)
   deploy-vercel:
-    name: 🚀 Deploy to Vercel
+    name: Deploy to Vercel
     needs: [quality-gate]
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
