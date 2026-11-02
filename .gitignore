@@ -41,3 +41,12 @@ docker-compose.override.yml
 .antigravity/
 opencode.json
 
+
+# lockfiles from other package managers (we use pnpm)
+package-lock.json
+yarn.lock
+
+# local scratch / agent dumps
+scratch_links.txt
+test-results/
+screenshots/*.png
