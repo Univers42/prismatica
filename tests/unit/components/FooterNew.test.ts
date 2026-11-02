@@ -19,12 +19,9 @@ describe('FooterNew component contract', () => {
     expect(content).toContain('footer.groupProduct');
     expect(content).toContain('footer.groupResources');
     expect(content).toContain('footer.groupLegal');
-    expect(content).toContain('footer.groupCompany');
     expect(content).toContain('footer.linkDocs');
     expect(content).toContain('footer.linkOverview');
     expect(content).toContain('footer.linkFaq');
-    expect(content).toContain('footer.linkGithub');
-    expect(content).toContain('footer.linkLinkedin');
     expect(content).toContain('footer.linkPrivacy');
     expect(content).toContain('footer.linkTerms');
     expect(content).toContain('footer.linkCookies');
@@ -32,5 +29,10 @@ describe('FooterNew component contract', () => {
     expect(content).toContain('footer.cookieSettings');
     expect(content).toContain('footer.copyright');
     expect(content).toContain('footer.gdprContact');
+    expect(content).not.toContain('footer.groupCompany');
+    expect(content).not.toContain('footer.linkGithub');
+    expect(content).not.toContain('footer.linkLinkedin');
+    expect(content).toContain('aria-label=\"GitHub\"');
+    expect(content).toContain('aria-label=\"LinkedIn\"');
   });
 });

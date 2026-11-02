@@ -174,9 +174,6 @@ export interface UIStrings {
     readonly linkFaq: string;
     readonly groupResources: string;
     readonly linkDocs: string;
-    readonly groupCompany: string;
-    readonly linkGithub: string;
-    readonly linkLinkedin: string;
     readonly groupLegal: string;
     readonly linkPrivacy: string;
     readonly linkTerms: string;
@@ -434,9 +431,6 @@ export const DICTIONARY: TranslationDictionary = {
       linkFaq: 'FAQ',
       groupResources: 'Resources',
       linkDocs: 'Docs',
-      groupCompany: 'Company',
-      linkGithub: 'GitHub',
-      linkLinkedin: 'LinkedIn',
       groupLegal: 'Legal',
       linkPrivacy: 'Privacy policy',
       linkTerms: 'Terms',
@@ -679,9 +673,6 @@ faq: {
       linkFaq: 'FAQ',
       groupResources: 'Recursos',
       linkDocs: 'Documentación',
-      groupCompany: 'Compañía',
-      linkGithub: 'GitHub',
-      linkLinkedin: 'LinkedIn',
       groupLegal: 'Legal',
       linkPrivacy: 'Política de privacidad',
       linkTerms: 'Términos',
@@ -924,9 +915,6 @@ faq: {
       linkFaq: 'الأسئلة الشائعة',
       groupResources: 'المصادر',
       linkDocs: 'التوثيق',
-      groupCompany: 'الشركة',
-      linkGithub: 'GitHub',
-      linkLinkedin: 'LinkedIn',
       groupLegal: 'قانوني',
       linkPrivacy: 'سياسة الخصوصية',
       linkTerms: 'الشروط',
