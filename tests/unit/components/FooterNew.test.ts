@@ -24,6 +24,7 @@ describe('FooterNew component contract', () => {
     expect(content).toContain('footer.linkOverview');
     expect(content).toContain('footer.linkFaq');
     expect(content).toContain('footer.linkGithub');
+    expect(content).toContain('footer.linkLinkedin');
     expect(content).toContain('footer.linkPrivacy');
     expect(content).toContain('footer.linkTerms');
     expect(content).toContain('footer.linkCookies');
