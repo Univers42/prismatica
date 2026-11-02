@@ -18,7 +18,7 @@ const year = new Date().getFullYear();
 
 const groups = [
 	{
-		headingKey: 'footer.productGroup',
+		headingKey: 'footer.groupProduct',
 		links: [
 			{ labelKey: 'nav.apps', href: '#apps' },
 			{ labelKey: 'nav.product', href: '#product' },
@@ -27,27 +27,26 @@ const groups = [
 		],
 	},
 	{
-		headingKey: 'footer.resourcesGroup',
+		headingKey: 'footer.groupResources',
 		links: [
-			{ labelKey: 'footer.quickstartLink', href: '/docs/quickstart/' },
-			{ labelKey: 'footer.postgrestLink', href: '/docs/postgrest/' },
-			{ labelKey: 'footer.gdprLink', href: '/docs/gdpr/' },
-			{ labelKey: 'footer.authLink', href: '/docs/auth/' },
+			{ labelKey: 'footer.linkDocs', href: '/docs/' },
+			{ labelKey: 'footer.linkOverview', href: '/#product' },
+			{ labelKey: 'footer.linkFaq', href: '/#faq' },
 		],
 	},
 	{
-		headingKey: 'footer.legalGroup',
+		headingKey: 'footer.groupLegal',
 		links: [
-			{ labelKey: 'footer.privacyLink', href: '/legal/privacy-policy/' },
-			{ labelKey: 'footer.termsLink', href: '/legal/terms/' },
-			{ labelKey: 'footer.cookiesLink', href: '/legal/cookies/' },
-			{ labelKey: 'footer.dataRightsLink', href: '/legal/data-rights/' },
+			{ labelKey: 'footer.linkPrivacy', href: '/legal/privacy-policy/' },
+			{ labelKey: 'footer.linkTerms', href: '/legal/terms/' },
+			{ labelKey: 'footer.linkCookies', href: '/legal/cookies/' },
+			{ labelKey: 'footer.linkDataRights', href: '/legal/data-rights/' },
 		],
 	},
 	{
 		headingKey: 'footer.groupCompany',
 		links: [
-			{ labelKey: 'footer.linkGithub', href: 'https://github.com/Univers42/track-binocle' },
+			{ labelKey: 'footer.linkGithub', href: 'https://github.com/Univers42/prismatica' },
 		],
 	},
 ] as const;
@@ -87,7 +86,7 @@ const groups = [
 						{group.links.map((link) => (
 							<li><a href={link.href} data-i18n={link.labelKey}>{t(activeLocale, link.labelKey as any)}</a></li>
 						))}
-						{group.headingKey === 'footer.legalGroup' && (
+						{group.headingKey === 'footer.groupLegal' && (
 							<li><button class="footer-new__link-button" type="button" data-manage-cookies data-i18n="footer.cookieSettings">{t(activeLocale, 'footer.cookieSettings' as any)}</button></li>
 						)}
 					</ul>
@@ -100,7 +99,7 @@ const groups = [
 		<p data-i18n="footer.copyright">{t(activeLocale, 'footer.copyright', { year: String(year) })}</p>
 		<p class="footer-new__gdpr"><span data-i18n="footer.gdprContact">{t(activeLocale, 'footer.gdprContact')}</span> <a href="mailto:dev.pro.photo@gmail.com">dev.pro.photo@gmail.com</a></p>
 		<ul class="footer-new__social" role="list">
-			<li><a href="https://github.com/Univers42/track-binocle" aria-label="GitHub">GitHub</a></li>
+			<li><a href="https://github.com/Univers42/prismatica" aria-label="GitHub">GitHub</a></li>
 		</ul>
 	</div>
 </footer>
@@ -138,8 +137,8 @@ const groups = [
 		margin-bottom: 0.75rem;
 	}
 	.footer-new__brand:focus-visible {
-		outline: 3px solid var(--system-focus-ring);
-		outline-offset: 3px;
+		oOutline: 3px solid var(--system-focus-ring);
+		oOutline-offset: 3px;
 		border-radius: var(--system-radius-xs);
 	}
 	.footer-new__logo {
@@ -148,45 +147,44 @@ const groups = [
 		height: 1.5rem;
 	}
 	.footer-new__tagline {
-		margin: 0 0 1.5rem;
+		margin: 0 0 1.25rem;
 		font-size: 0.95rem;
 		color: var(--system-text-muted);
-		max-width: 38ch;
+		max-width: 28ch;
+	}
+	.footer-new__newsletter {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
 	}
 	.footer-new__newsletter-label {
-		display: block;
-		font-size: 0.86rem;
+		font-size: 0.9rem;
 		font-weight: 600;
-		color: var(--system-text);
-		margin-bottom: 0.4rem;
 	}
 	.footer-new__newsletter-row {
 		display: flex;
 		gap: 0.5rem;
+		align-items: stretch;
 	}
 	.footer-new__newsletter-row input {
 		flex: 1;
-		min-height: 40px;
-		padding: 0.55rem 0.75rem;
-		border: 1px solid var(--system-input-border);
-		border-radius: var(--system-radius-sm);
-		background: var(--system-input-bg);
-		color: var(--system-input-fg);
+		min-width: 0;
+		padding: 0.55rem 0.85rem;
+		border: 1px solid var(--brand-canvas-line);
+		border-radius: var(--system-radius-md);
+		background: var(--brand-canvas-bg);
+		color: var(--system-text);
 		font: inherit;
 	}
 	.footer-new__newsletter-row input:focus-visible {
-		outline: 0;
-		border-color: var(--system-input-border-focus);
-		box-shadow: var(--system-input-shadow-focus);
+		oOutline: 2px solid var(--system-focus-ring);
+		oOutline-offset: 2px;
 	}
 	.footer-new__consent {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		align-items: start;
-		gap: 0.55rem;
-		margin-top: 0.6rem;
-		font-size: 0.8rem;
-		line-height: 1.35;
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+		font-size: 0.82rem;
 		color: var(--system-text-muted);
 		cursor: pointer;
 	}
@@ -196,8 +194,8 @@ const groups = [
 		accent-color: var(--brand-palette-secondary);
 	}
 	.footer-new__consent input:focus-visible {
-		outline: 2px solid var(--system-focus-ring);
-		outline-offset: 2px;
+		oOutline: 2px solid var(--system-focus-ring);
+		oOutline-offset: 2px;
 	}
 	.footer-new__newsletter-status {
 		display: block;
@@ -254,8 +252,8 @@ const groups = [
 	.footer-new__link-button:hover { color: var(--system-link-hover); text-decoration: underline; }
 	.footer-new__group a:focus-visible,
 	.footer-new__link-button:focus-visible {
-		outline: 3px solid var(--system-focus-ring);
-		outline-offset: 2px;
+		oOutline: 3px solid var(--system-focus-ring);
+		oOutline-offset: 2px;
 		border-radius: var(--system-radius-sm);
 	}
 	.footer-new__base {
