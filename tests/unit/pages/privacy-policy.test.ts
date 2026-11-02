@@ -19,10 +19,12 @@ describe('Privacy Policy page contract', () => {
 		expect(content).toContain('href="#storage-recipients"');
 		expect(content).toContain('href="#international-transfers"');
 		expect(content).toContain('href="#user-rights"');
-		expect(content).toContain('href="#cookies-tracking"');
-		expect(content).toContain('href="#security"');
+		expect(content).toContain('href="#is-providing-data-required"');
+		expect(content).toContain('href="#automated-decisions"');
 		expect(content).toContain('href="#children"');
 		expect(content).toContain('href="#policy-changes"');
+		expect(content).toContain('href="#security"');
+		expect(content).toContain('href="#cookies-tracking"');
 		expect(content).toContain('href="#contact"');
 	});
 
@@ -33,11 +35,18 @@ describe('Privacy Policy page contract', () => {
 		expect(content).toContain('id="storage-recipients"');
 		expect(content).toContain('id="international-transfers"');
 		expect(content).toContain('id="user-rights"');
-		expect(content).toContain('id="cookies-tracking"');
-		expect(content).toContain('id="security"');
+		expect(content).toContain('id="is-providing-data-required"');
+		expect(content).toContain('id="automated-decisions"');
 		expect(content).toContain('id="children"');
 		expect(content).toContain('id="policy-changes"');
+		expect(content).toContain('id="security"');
+		expect(content).toContain('id="cookies-tracking"');
 		expect(content).toContain('id="contact"');
+	});
+
+	it('renders the contact email without a stray dollar sign', () => {
+		expect(content).toContain('>{DATA_CONTROLLER.email}</a>');
+		expect(content).not.toContain('>${DATA_CONTROLLER.email}</a>');
 	});
 
 	it('links directly to self-service data rights and cookies policy', () => {
