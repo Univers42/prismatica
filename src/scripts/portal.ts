@@ -74,20 +74,14 @@ export function readTurnstileToken(portal: HTMLElement): string {
 	if (token instanceof HTMLInputElement && token.value) {
 		return token.value;
 	}
-	if (import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'local-dev-turnstile-key') {
-		return LOCAL_TURNSTILE_TOKEN;
-	}
-	return '';
+	return authConfig.turnstileSiteKey ? '' : LOCAL_TURNSTILE_TOKEN;
 }
 
 export function mountTurnstile(portal: HTMLElement): void {
 	const container = portal.querySelector('[data-turnstile-slot]');
 	if (!(container instanceof HTMLElement)) return;
-	const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+	const sitekey = authConfig.turnstileSiteKey;
 	if (!sitekey) {
-		return;
-	}
-	if (sitekey === 'local-dev-turnstile-key') {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
 			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
