@@ -14,7 +14,7 @@ describe('hero canvas benchmark', () => {
 			lineWidth: 1,
 			lineCap: 'butt',
 
-			createRadialGradient: function (x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): any {
+			createRadialGradient: function (_x0: number, _y0: number, _r0: number, _x1: number, _y1: number, _r1: number): any {
 				gradientId++;
 				const g: any = { id: gradientId, stops: [] };
 				g.addColorStop = function(this: any, offset: number, color: string): void {
@@ -24,7 +24,7 @@ describe('hero canvas benchmark', () => {
 				return g;
 			},
 
-			createLinearGradient: function (x0: number, y0: number, x1: number, y1: number): any {
+			createLinearGradient: function (_x0: number, _y0: number, _x1: number, _y1: number): any {
 				gradientId++;
 				const g: any = { id: gradientId, stops: [] };
 				g.addColorStop = function(this: any, offset: number, color: string): void {
@@ -88,8 +88,8 @@ describe('hero canvas benchmark', () => {
 				;(ctx as any).lastRect = { x, y, w, h };
 			},
 
-			setTransform: function (this: CanvasRenderingContext2D, a: number, b: number, c: number, d: number, e: number, f: number): void {
-				;(ctx as any).transform = { a, b, c, d, e, f };
+			setTransform: function (...args: any[]): void {
+				;(ctx as any).transform = args;
 			},
 
 			resetTransform: function (this: CanvasRenderingContext2D): void {
