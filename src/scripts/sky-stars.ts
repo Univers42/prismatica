@@ -30,6 +30,29 @@ const COLOURS = ['#ffffff', '#ffffff', '#e4ecff', '#cddbff', '#fff3df', '#ffe0c8
 
 const wrap = (value: number, size: number): number => ((value % size) + size) % size;
 
+type OffscreenBuffer = {
+	canvas: HTMLCanvasElement | OffscreenCanvas;
+	ctx: CanvasRenderingContext2D;
+};
+
+function createBuffer(w: number, h: number): OffscreenBuffer | null {
+	const width = Math.max(1, Math.round(w));
+	const height = Math.max(1, Math.round(h));
+	if (typeof OffscreenCanvas !== 'undefined') {
+		const canvas = new OffscreenCanvas(width, height);
+		const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | null;
+		if (ctx) return { canvas, ctx };
+	}
+	if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+		const canvas = document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		const ctx = canvas.getContext('2d');
+		if (ctx) return { canvas, ctx };
+	}
+	return null;
+}
+
 export function createStarField(): StarField {
 	const random = createRandom(9);
 	let stars: Star[] = [];
@@ -38,6 +61,7 @@ export function createStarField(): StarField {
 	let nextMeteorAt = 3500;
 	let width = 0;
 	let height = 0;
+	let nebulaCanvas: CanvasImageSource | null = null;
 
 	function measure(nextWidth: number, nextHeight: number): void {
 		width = nextWidth;
@@ -65,9 +89,25 @@ export function createStarField(): StarField {
 				colour: index % 3 === 0 ? '#8a3a6a' : index % 3 === 1 ? '#34508f' : '#5a4f9a',
 			};
 		});
+		const maxShift = Math.max(600, nextHeight * 0.7);
+		const buffer = createBuffer(width, height + maxShift);
+		if (buffer) {
+			for (const cloud of nebula) {
+				const glow = buffer.ctx!.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
+				glow.addColorStop(0, withAlpha(cloud.colour, 0.08));
+				glow.addColorStop(1, withAlpha(cloud.colour, 0));
+				buffer.ctx!.fillStyle = glow;
+				buffer.ctx!.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
+			}
+			nebulaCanvas = buffer.canvas as CanvasImageSource;
+		}
 	}
 
 	function drawNebula(ctx: CanvasRenderingContext2D, shift: number): void {
+		if (nebulaCanvas) {
+			ctx.drawImage(nebulaCanvas, 0, shift);
+			return;
+		}
 		for (const cloud of nebula) {
 			const y = cloud.y + shift;
 			const glow = ctx.createRadialGradient(cloud.x, y, 0, cloud.x, y, cloud.radius);
