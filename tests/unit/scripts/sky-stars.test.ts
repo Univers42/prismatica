@@ -5,7 +5,7 @@ describe('sky-stars nebula offscreen canvas', () => {
 	function createMockContext() {
 		let gradientId = 0;
 
-		let ctx = {
+		const ctx = {
 			fillStyle: '',
 			strokeStyle: '',
 			globalAlpha: 1,
