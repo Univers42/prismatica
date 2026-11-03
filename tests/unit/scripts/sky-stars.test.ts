@@ -136,7 +136,7 @@ describe('sky-stars nebula offscreen canvas', () => {
 		expect(mockCtx.drawImageArgs).toBeDefined();
 		const drawImageArgs = mockCtx.drawImageArgs!;
 		expect(drawImageArgs.length).toBeGreaterThanOrEqual(3);
-		expect(typeof drawImageArgs[0]).toBe('CanvasImageSource');
+		expect(drawImageArgs[0]).toBeTruthy();
 		expect(drawImageArgs[2]).toBeGreaterThanOrEqual(0);
 	});
 
