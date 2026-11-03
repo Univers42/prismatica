@@ -1271,10 +1271,6 @@ async function handleMfaEmailResend(request, response) {
 	});
 }
 
-function handleMfaHook(response) {
-	json(response, 501, { message: 'MFA hook reserved. Wire this endpoint to TOTP or WebAuthn provider integration before enabling in production.' });
-}
-
 const routes = new Map([
 	['GET /api/auth/health', handleHealth],
 	['POST /api/auth/register', handleRegister],
@@ -1312,10 +1308,6 @@ createServer(async (request, response) => {
 		const route = routes.get(`${request.method} ${url.pathname}`);
 		if (route) {
 			await route(request, response);
-			return;
-		}
-		if (request.method === 'POST' && url.pathname.startsWith('/api/auth/mfa/')) {
-			handleMfaHook(response);
 			return;
 		}
 		json(response, 404, { message: 'Not found.' });

@@ -42,10 +42,10 @@ describe('flag off: AUTH_LOGIN_EMAIL_OTP alone is unchanged (APR-11)', () => {
 		expect(mailTo(email)).toHaveLength(0);
 	});
 
-	it('leaves the approval routes at the 501 reserved answer', async () => {
+	it('answers the approval routes like any unknown path', async () => {
 		for (const route of ['approve', 'approve/summary', 'deny', 'email/status']) {
 			const result = await call(codeOnly, `/api/auth/mfa/${route}`, { body: { token: 'A'.repeat(43), match: '42' } });
-			expect(result.status, route).toBe(501);
+			expect(result.status, route).toBe(404);
 		}
 	});
 
@@ -53,7 +53,7 @@ describe('flag off: AUTH_LOGIN_EMAIL_OTP alone is unchanged (APR-11)', () => {
 		const login = await call(approveOnly, '/api/auth/login', { body: loginBody(freshEmail()) });
 		expect(login.body.access_token).toBe('at-0');
 		expect(login.body.mfa_required).toBeUndefined();
-		expect((await call(approveOnly, '/api/auth/mfa/approve', { body: {} })).status).toBe(501);
+		expect((await call(approveOnly, '/api/auth/mfa/approve', { body: {} })).status).toBe(404);
 	});
 });
 

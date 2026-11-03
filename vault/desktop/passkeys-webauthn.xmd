@@ -61,20 +61,20 @@ The feature is guarded by a `PASSKEYS_ENABLED` flag that defaults **off**.
 
 ## On the website today
 
-The Prismatica auth surface exposes a client `beginWebAuthn()` call that posts to
-an MFA options endpoint — but that endpoint is currently a **reserved hook**:
+The website has no passkey or authenticator-app sign-in. The gateway serves no TOTP or
+WebAuthn route: `/api/auth/mfa/totp/*` and `/api/auth/mfa/webauthn/*` answer `404` like
+any unknown path. The only second factors on the website are the emailed code and the
+emailed approval link, each behind its own flag.
 
-> [!warning] Reserved, not wired
-> The gateway's MFA endpoint answers `501` with a message that it is a reserved
-> hook to be wired to a TOTP or WebAuthn provider before enabling in production.
-> So a *settings-level* passkey toggle is not yet a shipped end-user flow — the
-> server-side ceremonies are the built foundation it will sit on.
+> [!warning] Not shipped on the website
+> A *settings-level* passkey toggle is not an end-user flow yet — the server-side
+> ceremonies above are the built foundation it will sit on.
 
 ## What this means for you
 
 - Passkeys are **architecturally ready** in the control plane, behind a flag.
 - Do not document or promise a user-facing "Add a passkey" settings button as
   shipped — describe it as a capability that is flag-gated and, on the website
-  side, still a reserved hook.
+  side, not built yet.
 
 Related: [Authentication & Sessions](authentication-and-sessions.xmd).

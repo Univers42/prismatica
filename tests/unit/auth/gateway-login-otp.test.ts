@@ -26,11 +26,11 @@ describe('AUTH_LOGIN_EMAIL_OTP off (the default)', () => {
 		expect(hits.filter((hit) => hit.path.startsWith('/v1/auth/otp')).length).toBe(before);
 	});
 
-	it('keeps /api/auth/mfa/email/verify and /resend at the 501 reserved answer', async () => {
+	it('answers /api/auth/mfa/email/verify and /resend like any unknown path', async () => {
 		for (const route of ['verify', 'resend']) {
 			const result = await call(off, `/api/auth/mfa/email/${route}`, { body: { code: RIGHT } });
-			expect(result.status).toBe(501);
-			expect(result.body.message).toMatch(/MFA hook reserved/);
+			expect(result.status).toBe(404);
+			expect(result.body).toEqual({ message: 'Not found.' });
 		}
 	});
 });
@@ -176,8 +176,11 @@ describe('AUTH_LOGIN_EMAIL_OTP on', () => {
 		expect(statuses.filter((status) => status === 429).length).toBeGreaterThanOrEqual(2);
 	});
 
-	it('keeps the other /api/auth/mfa/* routes at 501', async () => {
-		const result = await call(on, '/api/auth/mfa/totp/enroll', { body: {} });
-		expect(result.status).toBe(501);
+	it('answers the unbuilt factors like any unknown path, naming none of them (prismatica#51)', async () => {
+		for (const route of ['totp/enroll', 'totp/verify', 'webauthn/register', 'webauthn/options', 'status']) {
+			const result = await call(on, `/api/auth/mfa/${route}`, { body: {} });
+			expect(result.status, route).toBe(404);
+			expect(result.text, route).not.toMatch(/MFA|TOTP|WebAuthn|production/i);
+		}
 	});
 });

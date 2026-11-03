@@ -295,14 +295,5 @@ export function useAuth(options: AuthClientOptions = {}) {
 				credentials: 'include',
 			}, maxRetries));
 		},
-		async beginMfaTotpEnrollment(): Promise<AuthResult> {
-			return parseAuthResponse(await post('/mfa/totp/enroll', {}));
-		},
-		async verifyMfaTotp(code: string): Promise<AuthResult> {
-			return parseAuthResponse(await post('/mfa/totp/verify', { code }));
-		},
-		async beginWebAuthn(): Promise<AuthResult> {
-			return parseAuthResponse(await post('/mfa/webauthn/options', {}));
-		},
 	};
 }
