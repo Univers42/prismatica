@@ -23,6 +23,7 @@ import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
 import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
 import { approveRoutes } from './auth/approve-routes.mjs';
+import { acceptBridgeProof, BRIDGE_PROOF_HEADER, stableStringify } from './auth/bridge-proof.mjs';
 import { createLoginApprove, createSignInMailCap } from './auth/login-approve.mjs';
 import { clearTicketCookie, createLoginOtp, ticketCookie, ticketFrom } from './auth/login-otp.mjs';
 import { buildLinkUrl, humanDuration, linkSigningKeyProblem, linkTtls } from './auth/link-signing.mjs';
@@ -137,15 +138,6 @@ function clientIp(request) {
 function json(response, status, body, headers = {}) {
 	response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers });
 	response.end(JSON.stringify(body));
-}
-
-function stableStringify(value) {
-	if (value === null || typeof value !== 'object') return JSON.stringify(value);
-	if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-	const entries = Object.keys(value)
-		.sort((left, right) => left.localeCompare(right))
-		.map((key) => JSON.stringify(key) + ':' + stableStringify(value[key]));
-	return '{' + entries.join(',') + '}';
 }
 
 function bridgeSignature(timestamp, payload) {
@@ -602,6 +594,15 @@ function registrationProfile(payload) {
 	};
 }
 
+// A request with a bridge proof is judged by the proof alone: the bridge spent the token on its
+// own siteverify, so a bad proof never falls back to the token check.
+function passesAntiAbuse(request, payload, ip) {
+	const proof = request.headers[BRIDGE_PROOF_HEADER];
+	if (proof === undefined) return verifyTurnstile(String(payload.turnstileToken ?? ''), ip);
+	const path = new URL(request.url ?? '/', 'http://gateway').pathname;
+	return acceptBridgeProof({ header: proof, secret: config.osionosBridgeSecret, path, body: payload, store });
+}
+
 async function protectedAction(request, response, action, handler) {
 	const ip = clientIp(request);
 	const retryAfter = await rateLimit(ip, action);
@@ -610,7 +611,7 @@ async function protectedAction(request, response, action, handler) {
 		return;
 	}
 	const payload = await readJson(request);
-	const validTurnstile = await verifyTurnstile(String(payload.turnstileToken ?? ''), ip);
+	const validTurnstile = await passesAntiAbuse(request, payload, ip);
 	if (!validTurnstile) {
 		await audit(`${action}_turnstile_failed`, request, { email: payload.email });
 		json(response, 403, { message: 'Anti-abuse verification failed.' });
