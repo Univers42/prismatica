@@ -185,7 +185,7 @@ describe('hero canvas benchmark', () => {
 
 		console.info(`[Hero Canvas Benchmark Baseline] Planet: ${avgTime.toFixed(2)} ms/frame, ${avgGradients.toFixed(1)} gradients/frame`);
 
-		expect(avgGradients).toBeGreaterThanOrEqual(4);
+		expect(avgGradients).toBe(0);
 		expect(avgTime).toBeGreaterThan(0);
 	});
 });
