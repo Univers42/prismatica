@@ -22,11 +22,13 @@ type Story = { app: string; start: number; target: Point | null; nodes: SkyNode[
 const STORY_MS = 2800;
 const SIGNAL_EVERY_MS = 420;
 const MAX_SIGNALS = 7;
-// Caveat: a pixel budget, not a measured limit. A tall desktop hero at DPR 2
-// would be ~11M canvas pixels; capping at 6M trades a little sharpness on
-// the stars for memory and fill rate.
-const MAX_CANVAS_PIXELS = 6_000_000;
+export const IDLE_FRAME_MS = 33;
+export const MAX_DPR = 1.5;
+export const MAX_CANVAS_PIXELS = 4_000_000;
 const POINTER_EASE = 0.06;
+// Caveat: a pixel budget, not a measured limit. A tall desktop hero at DPR 2
+// would be ~11M canvas pixels; capping at MAX_CANVAS_PIXELS trades a little sharpness on
+// the stars for memory and fill rate.
 
 function offsetWithin(el: HTMLElement, ancestor: HTMLElement): Point {
 	let x = 0;
@@ -77,7 +79,7 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 	function measure(): void {
 		width = root.clientWidth;
 		height = root.clientHeight;
-		const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)));
+		const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)));
 		canvas!.width = Math.round(width * dpr);
 		canvas!.height = Math.round(height * dpr);
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -213,12 +215,24 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		ctx.globalAlpha = 1;
 	}
 
+	let lastDrawAt = 0;
+	let dirty = true;
 	const loop = (now: number): void => {
+		frame = 0;
 		const moving = motionAllowed();
+		if (moving && !dirty && now - lastDrawAt < IDLE_FRAME_MS) {
+			frame = requestAnimationFrame(loop);
+			return;
+		}
+		dirty = false;
+		lastDrawAt = now;
 		draw(now, moving);
-		frame = onScreen && !document.hidden && moving ? requestAnimationFrame(loop) : 0;
+		if (onScreen && !document.hidden && moving) {
+			frame = requestAnimationFrame(loop);
+		}
 	};
 	const start = (): void => {
+		dirty = true;
 		if (!frame) frame = requestAnimationFrame(loop);
 	};
 
@@ -243,10 +257,12 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		const box = scene.getBoundingClientRect();
 		pointerTarget.x = ((event.clientX - box.left) / box.width - 0.5) * 2;
 		pointerTarget.y = ((event.clientY - box.top) / Math.min(box.height, window.innerHeight) - 0.5) * 2;
+		start();
 	};
 	scene.addEventListener('pointermove', onPointerMove, { passive: true });
 	const onScroll = (): void => {
 		scrollTop = window.scrollY;
+		start();
 	};
 	window.addEventListener('scroll', onScroll, { passive: true });
 
