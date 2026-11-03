@@ -7,7 +7,7 @@ describe('hero canvas benchmark', () => {
 		const gradients: Map<number, any> = new Map();
 		let gradientId = 0;
 
-		const ctx: CanvasRenderingContext2D = {
+		const ctx = {
 			fillStyle: '',
 			strokeStyle: '',
 			globalAlpha: 1,
@@ -92,10 +92,10 @@ describe('hero canvas benchmark', () => {
 				;(ctx as any).transform = args;
 			},
 
-			resetTransform: function (this: CanvasRenderingContext2D): void {
+			resetTransform: function (): void {
 				;(ctx as any).transform = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
 			},
-		};
+		} as unknown as CanvasRenderingContext2D;
 
 		let callCount = 0;
 
