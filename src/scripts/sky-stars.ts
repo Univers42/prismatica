@@ -100,6 +100,13 @@ export function createStarField(): StarField {
 				buffer.ctx!.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
 			}
 			nebulaCanvas = buffer.canvas as CanvasImageSource;
+		} else {
+			// Fallback for environments where canvas.getContext('2d') is unavailable
+			// (e.g., happy-dom test environment). Use a blank image so that drawNebula
+			// can use ctx.drawImage without calling createRadialGradient.
+			const fallbackImg = document.createElement('img');
+			fallbackImg.src = 'about:blank';
+			nebulaCanvas = fallbackImg;
 		}
 	}
 
