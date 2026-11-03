@@ -5,14 +5,28 @@ describe('sky-stars nebula offscreen canvas', () => {
 	function createMockContext() {
 		let gradientId = 0;
 
-		const ctx: CanvasRenderingContext2D = {
+		let ctx = {
 			fillStyle: '',
 			strokeStyle: '',
 			globalAlpha: 1,
 			lineWidth: 1,
 			lineCap: 'butt',
+			imageSmoothingEnabled: false,
+			globalCompositeOperation: 'source-over' as const,
+			shadowColor: '#000000',
+			miterLimit: 10,
+			lineDashOffset: 0,
+			shadowOffsetX: 0,
+			shadowOffsetY: 0,
+			shadowBlur: 0,
+			font: '',
+			textBaseline: 'alphabetic' as const,
+			textAlign: 'start' as const,
+			canvas: {} as any,
+			direction: 'ltr' as const,
+			lang: '',
 
-			createRadialGradient: function (x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): any {
+			createRadialGradient: function (_x0: number, _y0: number, _r0: number, _x1: number, _y1: number, _r1: number): any {
 				gradientId++;
 				const g: any = { id: gradientId, stops: [] };
 				g.addColorStop = function (this: any, offset: number, color: string): void {
@@ -21,7 +35,7 @@ describe('sky-stars nebula offscreen canvas', () => {
 				return g;
 			},
 
-			createLinearGradient: function (x0: number, y0: number, x1: number, y1: number): any {
+			createLinearGradient: function (_x0: number, _y0: number, _x1: number, _y1: number): any {
 				gradientId++;
 				const g: any = { id: gradientId, stops: [] };
 				g.addColorStop = function (this: any, offset: number, color: string): void {
@@ -84,15 +98,14 @@ describe('sky-stars nebula offscreen canvas', () => {
 				;(ctx as any).lastRect = { x, y, w, h };
 			},
 
-			setTransform: function (this: CanvasRenderingContext2D, a: number, b: number, c: number, d: number, e: number, f: number): void {
-				;(ctx as any).transform = { a, b, c, d, e, f };
+			setTransform: function (this: CanvasRenderingContext2D, ...args: any[]): void {
+				;(ctx as any).transform = args;
 			},
 
 			resetTransform: function (this: CanvasRenderingContext2D): void {
 				;(ctx as any).transform = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
 			},
 		};
-
 		let callCount = 0;
 
 		const reset = function (): void {
@@ -127,27 +140,27 @@ describe('sky-stars nebula offscreen canvas', () => {
 	}
 
 	it('should pre-render nebula to offscreen canvas and draw via drawImage', () => {
-		const { ctx: mockCtx, reset, getGradientCount } = createMockContext();
+		const { ctx: mockCtx, getGradientCount } = createMockContext();
 		const starField = createStarField();
 		starField.measure(1440, 900);
-		starField.draw(mockCtx, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
+		starField.draw(mockCtx as unknown as CanvasRenderingContext2D, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
 
 		expect(getGradientCount()).toBe(0);
-		expect(mockCtx.drawImageArgs).toBeDefined();
-		const drawImageArgs = mockCtx.drawImageArgs!;
+		expect((mockCtx as any).drawImageArgs).toBeDefined();
+		const drawImageArgs = (mockCtx as any).drawImageArgs!;
 		expect(drawImageArgs.length).toBeGreaterThanOrEqual(3);
 		expect(drawImageArgs[0]).toBeTruthy();
 		expect(drawImageArgs[2]).toBeGreaterThanOrEqual(0);
 	});
 
 	it('should not call createRadialGradient during draw', () => {
-		const { ctx: mockCtx, reset, getGradientCount } = createMockContext();
+		const { ctx: mockCtx, getGradientCount } = createMockContext();
 		const starField = createStarField();
 		starField.measure(1440, 900);
-		starField.draw(mockCtx, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
+		starField.draw(mockCtx as unknown as CanvasRenderingContext2D, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
 
 		const gradientCountBefore = getGradientCount();
-		starField.draw(mockCtx, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
+		starField.draw(mockCtx as unknown as CanvasRenderingContext2D, 16, true, { scroll: 100, pointer: { x: 0, y: 0 } });
 		const gradientCountAfter = getGradientCount();
 
 		expect(gradientCountAfter - gradientCountBefore).toBe(0);
