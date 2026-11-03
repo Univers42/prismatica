@@ -15,7 +15,7 @@ import { createRandom, curvePoint, driftFor, driftOffset, easeInOut, type Drift,
 import { createPlanet } from './sky-planet';
 import { createStarField } from './sky-stars';
 
-type SkyNode = { id: string; app: string; el: HTMLElement; mark: HTMLElement | null; base: Point; pos: Point; drift: Drift; shown: boolean };
+type SkyNode = { id: string; app: string; el: HTMLElement; mark: HTMLElement | null; base: Point; pos: Point; drift: Drift; shown: boolean; lastTransform?: string };
 type Signal = { from: SkyNode; to: SkyNode; start: number; duration: number };
 type Story = { app: string; start: number; target: Point | null; nodes: SkyNode[] };
 
@@ -29,6 +29,18 @@ const POINTER_EASE = 0.06;
 // Caveat: a pixel budget, not a measured limit. A tall desktop hero at DPR 2
 // would be ~11M canvas pixels; capping at MAX_CANVAS_PIXELS trades a little sharpness on
 // the stars for memory and fill rate.
+
+export const applyNodeTransform = function (
+	node: { el: HTMLElement; lastTransform?: string },
+	x: number,
+	y: number
+): boolean {
+	const transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+	if (node.lastTransform === transform) return false;
+	node.lastTransform = transform;
+	node.el.style.transform = transform;
+	return true;
+}
 
 function offsetWithin(el: HTMLElement, ancestor: HTMLElement): Point {
 	let x = 0;
@@ -103,6 +115,18 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 
 	// Each item leans toward the pointer by its own depth (its drift radius),
 	// so the constellation parallaxes instead of sliding as one sheet.
+	function applyNodeTransform(
+	node: { el: HTMLElement; lastTransform?: string },
+	x: number,
+	y: number
+): boolean {
+	const transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+	if (node.lastTransform === transform) return false;
+	node.lastTransform = transform;
+	node.el.style.transform = transform;
+	return true;
+}
+
 	function placeNodes(now: number, drifting: boolean): void {
 		for (const node of nodes) {
 			const offset = drifting ? driftOffset(node.drift, now) : { x: 0, y: 0 };
@@ -110,7 +134,7 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 			const x = offset.x + pointer.x * 14 * depth;
 			const y = offset.y + pointer.y * 9 * depth;
 			node.pos = { x: node.base.x + x, y: node.base.y + y };
-			node.el.style.transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+			applyNodeTransform(node, x, y);
 		}
 	}
 
