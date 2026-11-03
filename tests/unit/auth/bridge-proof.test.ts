@@ -48,6 +48,13 @@ describe('bridge proof', () => {
 		expect(await accept(signBridgeProof('', path, body, T), { secret: '' })).toBe(false);
 	});
 
+	it('is byte for byte what the bridge signs (vector shared with osionos tests/bridge/bridge-auth-turnstile.test.mjs)', () => {
+		const vectorBody = { email: 'ada@example.com', password: 'correct horse battery', turnstileToken: 'real-token' };
+		expect(signBridgeProof('vector-secret', '/api/auth/login', vectorBody, 1_800_000_000)).toBe(
+			'1800000000.7114dc30fde239163ade551dcefd297785c75d8677c1494cf77344acee6c814e',
+		);
+	});
+
 	it('serialises keys in one order at every depth', () => {
 		expect(stableStringify({ b: 1, a: { d: [2, { f: 1, e: 0 }], c: null } })).toBe('{"a":{"c":null,"d":[2,{"e":0,"f":1}]},"b":1}');
 	});
