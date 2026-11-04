@@ -101,8 +101,8 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		}
 		const marker = scene.querySelector<HTMLElement>('[data-horizon]');
 		const horizon = marker ? marker.getBoundingClientRect().top - root.getBoundingClientRect().top : height * 0.75;
-		stars.measure(width, height);
-		planet.measure(width, horizon, height);
+		stars.measure(width, height, dpr);
+		planet.measure(width, horizon, height, dpr);
 	}
 
 	function railTarget(app: string): Point | null {
@@ -112,20 +112,6 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		const origin = root.getBoundingClientRect();
 		return { x: box.left - origin.left + box.width / 2, y: box.top - origin.top };
 	}
-
-	// Each item leans toward the pointer by its own depth (its drift radius),
-	// so the constellation parallaxes instead of sliding as one sheet.
-	function applyNodeTransform(
-	node: { el: HTMLElement; lastTransform?: string },
-	x: number,
-	y: number
-): boolean {
-	const transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-	if (node.lastTransform === transform) return false;
-	node.lastTransform = transform;
-	node.el.style.transform = transform;
-	return true;
-}
 
 	function placeNodes(now: number, drifting: boolean): void {
 		for (const node of nodes) {
@@ -227,8 +213,13 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 
 	function draw(now: number, moving: boolean): void {
 		const scroll = moving ? scrollTop : 0;
-		pointer.x += (pointerTarget.x - pointer.x) * POINTER_EASE;
-		pointer.y += (pointerTarget.y - pointer.y) * POINTER_EASE;
+		if (moving) {
+			pointer.x += (pointerTarget.x - pointer.x) * POINTER_EASE;
+			pointer.y += (pointerTarget.y - pointer.y) * POINTER_EASE;
+		} else {
+			pointer.x = 0;
+			pointer.y = 0;
+		}
 		ctx.clearRect(0, 0, width, height);
 		placeNodes(now, moving);
 		stars.draw(ctx, now, moving, { scroll, pointer });
@@ -277,16 +268,16 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 
 	// Pointer lean on mouse and trackpad only: a finger has no hover position.
 	const onPointerMove = (event: PointerEvent): void => {
-		if (event.pointerType !== 'mouse') return;
+		if (event.pointerType !== 'mouse' || !motionAllowed()) return;
 		const box = scene.getBoundingClientRect();
 		pointerTarget.x = ((event.clientX - box.left) / box.width - 0.5) * 2;
 		pointerTarget.y = ((event.clientY - box.top) / Math.min(box.height, window.innerHeight) - 0.5) * 2;
-		start();
+		if (onScreen) start();
 	};
 	scene.addEventListener('pointermove', onPointerMove, { passive: true });
 	const onScroll = (): void => {
 		scrollTop = window.scrollY;
-		start();
+		if (onScreen && motionAllowed()) start();
 	};
 	window.addEventListener('scroll', onScroll, { passive: true });
 
