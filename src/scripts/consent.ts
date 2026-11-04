@@ -96,13 +96,13 @@ export function bindConsentBanner(): void {
 		storeConsentPreferences({ analytics, newsletter, marketing });
 		hideBanner();
 		document.dispatchEvent(new CustomEvent('prismatica:consent-changed', { detail: { analytics, newsletter, marketing } }));
-		announce('Consent preferences saved.');
+		announce('Consent preferences saved.', 'site.consent.saved');
 	};
 
 	const storedPreferences = readConsentPreferences();
 	if (needsConsentRenewal(storedPreferences)) {
 		showBanner();
-		announce('Privacy choices: choose your consent preferences.');
+		announce('Privacy choices: choose your consent preferences.', 'site.consent.announcement');
 	}
 	applyPreferencesToForm(storedPreferences);
 

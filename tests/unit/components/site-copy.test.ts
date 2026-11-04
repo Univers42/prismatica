@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { DATA_CONTROLLER } from '../../../src/data/legal';
 import { CHAPTERS } from '../../../src/data/tour';
 import { SHOTS } from '../../../src/data/shots';
 import { DICTIONARY, SUPPORTED_LOCALES, t } from '../../../src/lib/i18n';
@@ -79,6 +80,13 @@ describe.each(SURFACES)('%s', (file) => {
 			const opening = markupOf(source).slice(0, call.index + 1);
 			expect(opening.slice(opening.lastIndexOf('<')), call[1]).toContain(`data-i18n="${call[1]}"`);
 		}
+	});
+});
+
+describe('copy held in two places', () => {
+	// legal.ts stays as main has it, so its name cannot carry a translation.
+	it('names the data controller as legal.ts does', () => {
+		expect(DICTIONARY.en.site.footer.controllerName).toBe(DATA_CONTROLLER.name);
 	});
 });
 

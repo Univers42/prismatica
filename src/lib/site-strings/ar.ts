@@ -138,6 +138,7 @@ export const ar: SiteStrings = {
 		release: 'إصدار سطح المكتب',
 		source: 'الشيفرة المصدرية',
 		controller: 'المتحكم في البيانات:',
+		controllerName: 'فريق Prismatica (Dylan وVadim وSergio وDaniel وMostafa)',
 		privacy: 'سياسة الخصوصية',
 		terms: 'شروط الخدمة',
 		cookies: 'سياسة ملفات تعريف الارتباط',
@@ -175,6 +176,8 @@ export const ar: SiteStrings = {
 		marketingNote: '— رسائل ترويجية. معطّلة افتراضياً.',
 		save: 'حفظ التفضيلات',
 		saveLabel: 'حفظ تفضيلات الموافقة',
+		announcement: 'خيارات الخصوصية: اختر تفضيلات الموافقة.',
+		saved: 'تم حفظ تفضيلات الموافقة.',
 	},
 	shots: {
 		S1: { title: 'الصفحة الرئيسية للعمليات', alt: 'الصفحة الرئيسية لعمليات Arlet في Prismatica: أربعة محاور مثبّتة (تغيير المورّد، وقاعدة إعادة طلب المخزون، والعقد الإطاري مع Hôtel Varenne، والشهادة التنفيذية لإينيس) وكل الصفحات التي ترتبط بها.' },

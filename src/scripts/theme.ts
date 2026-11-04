@@ -20,6 +20,8 @@ let themeWords: ThemeWords = {
 	announcement: (choice) => `${themeLabel(choice)} theme`,
 };
 
+let translateAnnouncement: ((key: string) => string) | null = null;
+
 function reflectToggle(choice: ThemeChoice): void {
 	queryElements('[data-theme-toggle]', isButton).forEach((button) => {
 		button.setAttribute('aria-label', themeWords.toggleLabel(choice, nextTheme(choice)));
@@ -59,8 +61,16 @@ function bindThemeToggle(): void {
 	queryElements('[data-theme-toggle]', isButton).forEach((button) => button.addEventListener('click', cycleTheme));
 }
 
-/** Announces dynamic state changes to assistive technology. */
-function announce(message: string): void {
+/** Called by language.ts once the dictionary has loaded, for the same reason as setThemeWords. */
+function setAnnouncementTranslator(translate: (key: string) => string): void {
+	translateAnnouncement = translate;
+}
+
+/**
+ * Announces dynamic state changes to assistive technology. A key marks the text as translatable: a
+ * first visit in Arabic announces before the dictionary arrives, and applyLocale then swaps it.
+ */
+function announce(message: string, key?: string): void {
 	let announcer = queryElement('#global-announcer', isHtmlElement);
 	if (!announcer) {
 		// The live region ships in Layout.astro, but guard against it being
@@ -73,7 +83,9 @@ function announce(message: string): void {
 		announcer.setAttribute('aria-atomic', 'true');
 		document.body.append(announcer);
 	}
-	announcer.textContent = message;
+	if (key) announcer.dataset.i18n = key;
+	else delete announcer.dataset.i18n;
+	announcer.textContent = key && translateAnnouncement ? translateAnnouncement(key) : message;
 }
 
 /**
@@ -89,4 +101,4 @@ function ensureButtonLabels(): void {
 	});
 }
 
-export { applyTheme, bindThemeToggle, currentTheme, setThemeWords, announce, ensureButtonLabels };
+export { applyTheme, bindThemeToggle, currentTheme, setThemeWords, setAnnouncementTranslator, announce, ensureButtonLabels };

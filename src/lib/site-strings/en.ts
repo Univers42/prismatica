@@ -144,6 +144,7 @@ export const en = {
 		release: 'Desktop release',
 		source: 'Source code',
 		controller: 'Data controller:',
+		controllerName: 'The Prismatica team (Dylan, Vadim, Sergio, Daniel and Mostafa)',
 		privacy: 'Privacy Policy',
 		terms: 'Terms of Service',
 		cookies: 'Cookie Policy',
@@ -181,6 +182,8 @@ export const en = {
 		marketingNote: '— promotional messages. Off by default.',
 		save: 'Save preferences',
 		saveLabel: 'Save consent preferences',
+		announcement: 'Privacy choices: choose your consent preferences.',
+		saved: 'Consent preferences saved.',
 	},
 	shots: {
 		S1: { title: 'Operations home', alt: "The Arlet operations home page in Prismatica: four pinned hubs (the supplier switch, the stock-reorder rule, the Hôtel Varenne framework contract and Inès's executive certificate) and every page that links back to it." },

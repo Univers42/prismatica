@@ -55,7 +55,7 @@ const year = new Date().getFullYear();
 	</div>
 	<div class="container container--wide site-footer__base">
 		<p class="label">© {year} Prismatica</p>
-		<p class="label"><span data-i18n="site.footer.controller">{t(locale, 'site.footer.controller')}</span> {DATA_CONTROLLER.name} · <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a></p>
+		<p class="label"><span data-i18n="site.footer.controller">{t(locale, 'site.footer.controller')}</span> <span data-i18n="site.footer.controllerName">{t(locale, 'site.footer.controllerName')}</span> · <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a></p>
 		<ul class="site-footer__social">
 			<li><a href={ORGANIZATION_URL} rel="noopener noreferrer">GitHub</a></li>
 			<li><a href={LINKEDIN_URL} rel="noopener noreferrer">LinkedIn</a></li>

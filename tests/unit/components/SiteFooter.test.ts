@@ -28,7 +28,7 @@ describe('SiteFooter', () => {
 
 	it('names who answers for the data, with a way to reach them', () => {
 		expect(DATA_CONTROLLER.email).toContain('@');
-		expect(footer).toContain('{DATA_CONTROLLER.name}');
+		expect(footer).toContain(`data-i18n="site.footer.controllerName"`);
 		expect(footer).toContain('href={`mailto:${DATA_CONTROLLER.email}`}');
 	});
 

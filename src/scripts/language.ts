@@ -6,7 +6,7 @@ import { queryElements, isHtmlElement } from '../lib/dom-utils';
 import { formatEuros } from '../lib/money';
 import { POLICY_VERSION } from '../data/legal';
 import { RELEASE } from '../data/links';
-import { setThemeWords } from './theme';
+import { setAnnouncementTranslator, setThemeWords } from './theme';
 
 export const LANG_STORAGE_KEY = 'prismatica-lang';
 
@@ -88,6 +88,7 @@ export function applyLocale(locale: SupportedLocale): void {
 		el.textContent = formatEuros(locale, Number(el.dataset.i18nAmount));
 	});
 	updateThemeWords(locale);
+	setAnnouncementTranslator((key) => t(locale, key));
 	updateLanguageSwitchers(locale);
 }
 

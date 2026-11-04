@@ -138,6 +138,7 @@ export const es: SiteStrings = {
 		release: 'Versión de escritorio',
 		source: 'Código fuente',
 		controller: 'Responsable del tratamiento:',
+		controllerName: 'El equipo de Prismatica (Dylan, Vadim, Sergio, Daniel y Mostafa)',
 		privacy: 'Política de privacidad',
 		terms: 'Condiciones del servicio',
 		cookies: 'Política de cookies',
@@ -175,6 +176,8 @@ export const es: SiteStrings = {
 		marketingNote: '— mensajes promocionales. Desactivado por defecto.',
 		save: 'Guardar preferencias',
 		saveLabel: 'Guardar las preferencias de consentimiento',
+		announcement: 'Opciones de privacidad: elige tus preferencias de consentimiento.',
+		saved: 'Preferencias de consentimiento guardadas.',
 	},
 	shots: {
 		S1: { title: 'Inicio de operaciones', alt: 'La página de inicio de operaciones de Arlet en Prismatica: cuatro centros fijados (el cambio de proveedor, la regla de reposición de existencias, el contrato marco de Hôtel Varenne y el certificado ejecutivo de Inès) y todas las páginas que enlazan con ella.' },

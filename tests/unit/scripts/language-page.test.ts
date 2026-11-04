@@ -3,7 +3,7 @@ import { RELEASE } from '../../../src/data/links';
 import { POLICY_VERSION } from '../../../src/data/legal';
 import { t } from '../../../src/lib/i18n';
 import { applyLocale } from '../../../src/scripts/language';
-import { applyTheme } from '../../../src/scripts/theme';
+import { announce, applyTheme } from '../../../src/scripts/theme';
 
 const text = (selector: string): string | null | undefined => document.querySelector(selector)?.textContent;
 const attribute = (selector: string, name: string): string | null | undefined => document.querySelector(selector)?.getAttribute(name);
@@ -57,6 +57,28 @@ describe('applyLocale on a page', () => {
 		expect(text('#backend')).toContain(RELEASE.backend);
 		expect(text('#version')).toContain(POLICY_VERSION);
 		expect(document.body.textContent).not.toMatch(/{[a-z]+}/);
+	});
+
+	it('translates an announcement made before the dictionary arrived', () => {
+		document.body.insertAdjacentHTML('beforeend', '<div id="global-announcer"></div>');
+		announce('Privacy choices: choose your consent preferences.', 'site.consent.announcement');
+		applyLocale('ar');
+		expect(text('#global-announcer')).toBe(t('ar', 'site.consent.announcement'));
+	});
+
+	it('translates an announcement made after it arrived', () => {
+		document.body.insertAdjacentHTML('beforeend', '<div id="global-announcer"></div>');
+		applyLocale('es');
+		announce('Consent preferences saved.', 'site.consent.saved');
+		expect(text('#global-announcer')).toBe(t('es', 'site.consent.saved'));
+	});
+
+	it('leaves an announcement with no key as written, and does not re-translate it later', () => {
+		document.body.insertAdjacentHTML('beforeend', '<div id="global-announcer"></div>');
+		announce('Consent preferences saved.', 'site.consent.saved');
+		announce('Workspace portal opened');
+		applyLocale('es');
+		expect(text('#global-announcer')).toBe('Workspace portal opened');
 	});
 
 	it('names the switcher in the language on screen', () => {
