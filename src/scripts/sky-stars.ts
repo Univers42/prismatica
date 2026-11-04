@@ -8,13 +8,14 @@
 // strip, but a star near the edge can be seen jumping across.
 
 import { createRandom, withAlpha, type Point } from '../lib/universe-motion';
+import { createBuffer } from '../lib/canvas-buffer';
 
 type Star = Point & { size: number; alpha: number; speed: number; phase: number; color: string; layer: number };
 type Meteor = { start: number; from: Point; angle: number; length: number };
 
 export type StarField = {
-	measure: (width: number, height: number) => void;
-	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean, parallax: { scroll: number; pointer: Point }) => void;
+	measure: (width: number, height: number, dpr?: number) => void;
+	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean, motion: { scroll: number; pointer: Point }) => void;
 };
 
 // Per layer (far, mid, near): share of stars, size range, and how far scroll
@@ -30,29 +31,6 @@ const COLOURS = ['#ffffff', '#ffffff', '#e4ecff', '#cddbff', '#fff3df', '#ffe0c8
 
 const wrap = (value: number, size: number): number => ((value % size) + size) % size;
 
-type OffscreenBuffer = {
-	canvas: HTMLCanvasElement | OffscreenCanvas;
-	ctx: CanvasRenderingContext2D;
-};
-
-function createBuffer(w: number, h: number): OffscreenBuffer | null {
-	const width = Math.max(1, Math.round(w));
-	const height = Math.max(1, Math.round(h));
-	if (typeof OffscreenCanvas !== 'undefined') {
-		const canvas = new OffscreenCanvas(width, height);
-		const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | null;
-		if (ctx) return { canvas, ctx };
-	}
-	if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-		const canvas = document.createElement('canvas');
-		canvas.width = width;
-		canvas.height = height;
-		const ctx = canvas.getContext('2d');
-		if (ctx) return { canvas, ctx };
-	}
-	return null;
-}
-
 export function createStarField(): StarField {
 	const random = createRandom(9);
 	let stars: Star[] = [];
@@ -62,10 +40,12 @@ export function createStarField(): StarField {
 	let width = 0;
 	let height = 0;
 	let nebulaCanvas: CanvasImageSource | null = null;
+	let currentDpr = 1;
 
-	function measure(nextWidth: number, nextHeight: number): void {
+	function measure(nextWidth: number, nextHeight: number, dpr: number = 1): void {
 		width = nextWidth;
 		height = nextHeight;
+		currentDpr = dpr;
 		const seeded = createRandom(1999);
 		const pick = (range: readonly [number, number]): number => range[0] + seeded() * (range[1] - range[0]);
 		stars = Array.from({ length: Math.round((width * height) / 2300) }, () => {
@@ -90,38 +70,33 @@ export function createStarField(): StarField {
 			};
 		});
 		const maxShift = Math.max(600, nextHeight * 0.7);
-		const buffer = createBuffer(width, height + maxShift);
+		const physWidth = Math.round(width * dpr);
+		const physHeight = Math.round((height + maxShift) * dpr);
+		const buffer = createBuffer(physWidth, physHeight);
 		if (buffer) {
+			const bCtx = buffer.ctx;
+			bCtx.save();
+			bCtx.scale(dpr, dpr);
 			for (const cloud of nebula) {
-				const glow = buffer.ctx!.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
+				const glow = bCtx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
 				glow.addColorStop(0, withAlpha(cloud.colour, 0.08));
 				glow.addColorStop(1, withAlpha(cloud.colour, 0));
-				buffer.ctx!.fillStyle = glow;
-				buffer.ctx!.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
+				bCtx.fillStyle = glow;
+				bCtx.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
 			}
+			bCtx.restore();
 			nebulaCanvas = buffer.canvas as CanvasImageSource;
 		} else {
-			// Fallback for environments where canvas.getContext('2d') is unavailable
-			// (e.g., happy-dom test environment). Use a blank image so that drawNebula
-			// can use ctx.drawImage without calling createRadialGradient.
-			const fallbackImg = document.createElement('img');
-			fallbackImg.src = 'about:blank';
-			nebulaCanvas = fallbackImg;
+			nebulaCanvas = null;
 		}
 	}
 
 	function drawNebula(ctx: CanvasRenderingContext2D, shift: number): void {
 		if (nebulaCanvas) {
-			ctx.drawImage(nebulaCanvas, 0, shift);
-			return;
-		}
-		for (const cloud of nebula) {
-			const y = cloud.y + shift;
-			const glow = ctx.createRadialGradient(cloud.x, y, 0, cloud.x, y, cloud.radius);
-			glow.addColorStop(0, withAlpha(cloud.colour, 0.08));
-			glow.addColorStop(1, withAlpha(cloud.colour, 0));
-			ctx.fillStyle = glow;
-			ctx.fillRect(cloud.x - cloud.radius, y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
+			ctx.save();
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.drawImage(nebulaCanvas, 0, Math.round(shift * currentDpr));
+			ctx.restore();
 		}
 	}
 
@@ -191,10 +166,10 @@ export function createStarField(): StarField {
 		ctx.fill();
 	}
 
-	function draw(ctx: CanvasRenderingContext2D, now: number, moving: boolean, parallax: { scroll: number; pointer: Point }): void {
+	function draw(ctx: CanvasRenderingContext2D, now: number, moving: boolean, motion: { scroll: number; pointer: Point }): void {
 		ctx.globalAlpha = 1;
-		drawNebula(ctx, parallax.scroll * LAYERS[0].scroll);
-		drawStars(ctx, now, moving, parallax.scroll, parallax.pointer);
+		drawNebula(ctx, motion.scroll * LAYERS[0].scroll);
+		drawStars(ctx, now, moving, motion.scroll, motion.pointer);
 		if (moving) drawMeteor(ctx, now);
 		ctx.globalAlpha = 1;
 	}
