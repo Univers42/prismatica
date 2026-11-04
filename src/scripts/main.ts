@@ -45,6 +45,8 @@ function bindNewsletterForms(): void {
 
 // English is in the HTML, so a visitor who never leaves it never fetches the dictionary. The
 // pre-paint script has already set <html lang dir> for anyone else, so only the text is left.
+// Caveat: that text stays English until the chunk arrives, one round trip after first paint, so a
+// visitor returning in Spanish or Arabic sees it swap; a static page cannot know the language sooner.
 function bindLanguage(): void {
 	document.addEventListener('click', (event) => {
 		if (!closestFromEvent(event, '.lang-switcher')) return;
