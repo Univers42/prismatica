@@ -9,7 +9,7 @@ dialog.portal {
 	--portal-sky-ink: #05070c;
 	--portal-sky-deep: #0d121e;
 	--portal-sky-text: #f4f5f7;
-	--portal-signal: var(--brand-palette-primary);
+	--portal-signal: var(--signal);
 
 	width: 100%;
 	max-width: none;
@@ -20,8 +20,8 @@ dialog.portal {
 	overflow: hidden;
 	border: 0;
 	background: transparent;
-	color: var(--system-text);
-	font-family: var(--system-font-sans);
+	color: var(--ink);
+	font-family: var(--font-text);
 	overscroll-behavior: contain;
 }
 
@@ -49,7 +49,7 @@ dialog.portal .is-hidden {
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
-	background: var(--system-dialog-bg);
+	background: var(--raised);
 	animation: portal-in 360ms var(--portal-ease) both;
 }
 
@@ -70,8 +70,8 @@ dialog.portal .is-hidden {
 	justify-content: space-between;
 	gap: 1rem;
 	padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 1.25rem 0.7rem;
-	border-bottom: 1px solid var(--system-divider);
-	background: var(--system-dialog-bg);
+	border-bottom: 1px solid var(--rule);
+	background: var(--raised);
 }
 
 .portal-brand {
@@ -80,7 +80,7 @@ dialog.portal .is-hidden {
 	gap: 0.55rem;
 	font-size: 1rem;
 	font-weight: 700;
-	color: var(--system-text-strong);
+	color: var(--ink);
 
 	.prismatica-logo {
 		width: 30px;
@@ -94,10 +94,10 @@ dialog.portal .is-hidden {
 	width: 44px;
 	height: 44px;
 	padding: 0;
-	border: 1px solid var(--system-border);
+	border: 1px solid var(--rule);
 	border-radius: 50%;
-	background: var(--system-surface);
-	color: var(--system-text-strong);
+	background: var(--raised);
+	color: var(--ink);
 	cursor: pointer;
 	transition: background-color 160ms ease, transform 300ms var(--portal-ease);
 
@@ -111,12 +111,12 @@ dialog.portal .is-hidden {
 	}
 
 	&:hover {
-		background: var(--system-surface-sunken);
+		background: var(--tint);
 		transform: rotate(90deg);
 	}
 
 	&:focus-visible {
-		outline: 2px solid var(--system-focus-ring);
+		outline: 2px solid var(--signal);
 		outline-offset: 2px;
 	}
 }
@@ -136,14 +136,14 @@ dialog.portal .is-hidden {
 	font-weight: 650;
 	line-height: 1.1;
 	letter-spacing: -0.025em;
-	color: var(--system-text-strong);
+	color: var(--ink);
 }
 
 .portal-note {
 	margin: -0.35rem 0 0.25rem;
 	font-size: 0.95rem;
 	line-height: 1.5;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 // Mode switch: a sliding thumb on a sunken track.
@@ -154,9 +154,9 @@ dialog.portal .is-hidden {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	padding: 4px;
-	border: 1px solid var(--system-divider);
+	border: 1px solid var(--rule);
 	border-radius: 12px;
-	background: var(--system-surface-sunken);
+	background: var(--tint);
 
 	&::before {
 		content: '';
@@ -164,8 +164,8 @@ dialog.portal .is-hidden {
 		inset: 4px auto 4px 4px;
 		width: calc(50% - 4px);
 		border-radius: 9px;
-		background: var(--system-surface);
-		box-shadow: 0 0 0 1px var(--system-border), 0 2px 6px -2px color-mix(in srgb, var(--system-text-strong) 25%, transparent);
+		background: var(--raised);
+		box-shadow: 0 0 0 1px var(--rule), 0 2px 6px -2px color-mix(in srgb, var(--ink) 25%, transparent);
 		transform: translateX(var(--switch-x));
 		transition: transform 420ms var(--portal-ease);
 	}
@@ -183,17 +183,23 @@ dialog.portal[data-auth-mode='login'] .portal-auth-switch {
 	border: 0;
 	border-radius: 9px;
 	background: transparent;
-	color: var(--system-text-muted);
-	font: 600 0.9rem/1.2 var(--system-font-sans);
+	color: var(--graphite);
+	font: 600 0.9rem/1.2 var(--font-text);
 	cursor: pointer;
 	transition: color 200ms ease;
 
 	&[aria-pressed='true'] {
-		color: var(--system-text-strong);
+		color: var(--ink);
 	}
 
 	&:focus-visible {
-		outline: 2px solid var(--system-focus-ring);
+		outline: 2px solid var(--signal);
 		outline-offset: 2px;
 	}
+}
+
+.prismatica-logo,
+.portal-orbit__logo {
+	--prismatica-logo-left: var(--signal);
+	--prismatica-logo-right: var(--ink);
 }

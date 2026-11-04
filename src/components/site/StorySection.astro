@@ -1,0 +1,74 @@
+---
+// A story beat with its proof: copy on one side, the capture that backs it on the other
+// (PLAN §2.3). Beats alternate sides at 64rem and stack copy-then-capture below it. An optional
+// second, smaller capture sits under the first.
+import CaptureFrame from './CaptureFrame.astro';
+import type { ShotId } from '../../data/shots';
+
+interface Props {
+	id: string;
+	title: string;
+	shot: ShotId;
+	secondShot?: ShotId;
+	reverse?: boolean;
+}
+
+const { id, title, shot, secondShot, reverse = false } = Astro.props;
+const sizes = '(min-width: 64rem) 46rem, 100vw';
+---
+
+<section class="section" id={id} aria-labelledby={`${id}-title`}>
+	<div class:list={['container', 'container--wide', 'story', { 'story--reverse': reverse }]}>
+		<div class="story__copy">
+			<h2 id={`${id}-title`}>{title}</h2>
+			<slot />
+		</div>
+		<div class="story__proof">
+			<CaptureFrame shot={shot} sizes={sizes} />
+			{secondShot && <CaptureFrame shot={secondShot} sizes={sizes} class="story__second" />}
+		</div>
+	</div>
+</section>
+
+<style>
+	.story {
+		display: grid;
+		gap: var(--space-7);
+	}
+
+	.story__copy {
+		display: grid;
+		gap: var(--space-4);
+		align-content: start;
+	}
+
+	.story__copy :global(p) {
+		color: var(--graphite);
+	}
+
+	.story__copy :global(p.lead) {
+		color: var(--ink);
+	}
+
+	.story__proof {
+		display: grid;
+		gap: var(--space-5);
+	}
+
+	.story__proof :global(.story__second) {
+		width: 70%;
+		justify-self: end;
+	}
+
+	@media (min-width: 64rem) {
+		.story {
+			grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+			gap: var(--space-8);
+			align-items: start;
+		}
+
+		.story--reverse .story__copy {
+			order: 2;
+		}
+	}
+</style>

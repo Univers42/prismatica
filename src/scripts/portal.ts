@@ -1,12 +1,14 @@
-import { trustedHTML, insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { trustedHTML, insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
 import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
-import { setMountedMascotMood, notifyWithMascot } from './mascot';
+import { notify } from './notifications';
 import { announce, ensureButtonLabels } from './theme';
 import { readConsentPreferences } from './consent';
 import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
+import { bindPasswordToggles } from './password-toggle';
+import { type AccountMailKind, accountMailDoneMessage, accountMailSubmitLabel, isAccountMailKind, showAccountMailForm, showAuthForm } from './portal-account-mail';
 import { MiniBaasError } from '@grobase/js';
 import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
@@ -15,7 +17,7 @@ import { createPortalMarkup } from './portal-markup';
 import { bindPortalOAuth } from './portal-oauth';
 import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 
-export type PortalMode = 'start' | 'connect';
+export type PortalMode = 'start' | 'connect' | AccountMailKind;
 
 type TurnstileApi = {
 	render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'error-callback': () => void; 'expired-callback': () => void }) => string;
@@ -103,26 +105,10 @@ export function mountTurnstile(portal: HTMLElement): void {
 			const tokenInput = portal.querySelector('[data-turnstile-token]');
 			if (tokenInput instanceof HTMLInputElement) tokenInput.value = token;
 		},
-		'error-callback': () => notifyWithMascot({ kind: 'error', title: 'Captcha failed', message: 'Could not verify browser. Please try again.' }),
-		'expired-callback': () => notifyWithMascot({ kind: 'warning', title: 'Captcha expired', message: 'Verification expired. Please try again.' }),
+		'error-callback': () => notify({ kind: 'error', title: 'Captcha failed', message: 'Could not verify browser. Please try again.' }),
+		'expired-callback': () => notify({ kind: 'warning', title: 'Captcha expired', message: 'Verification expired. Please try again.' }),
 	});
 	container.dataset.turnstileWidgetId = widgetId;
-}
-
-export function bindPasswordToggles(root: ParentNode = document): void {
-	queryElements('[data-password-toggle]', isButton).forEach((button) => {
-		button.addEventListener('click', () => {
-			const input = button.closest('.field')?.querySelector('input');
-			if (!(input instanceof HTMLInputElement)) return;
-			const isPassword = input.type === 'password';
-			input.type = isPassword ? 'text' : 'password';
-			button.setAttribute('aria-pressed', String(isPassword));
-			button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-			button.title = isPassword ? 'Hide password' : 'Show password';
-			const icon = button.querySelector('.header-icon--toggle');
-			if (icon instanceof HTMLElement) icon.textContent = isPassword ? 'Hide' : 'Show';
-		});
-	});
 }
 
 function readAuthToken(): string | null {
@@ -407,7 +393,8 @@ function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
 }
 
 export function bindEmailFieldValidation(scope: ParentNode = document): void {
-	queryElements('input[type="email"]', isInput).forEach((input) => {
+	scope.querySelectorAll('input[type="email"]').forEach((input) => {
+		if (!isInput(input)) return;
 		input.addEventListener('blur', () => updateEmailFieldFeedback(input));
 		input.addEventListener('input', () => {
 			if (input.getAttribute('aria-invalid') === 'true') updateEmailFieldFeedback(input);
@@ -471,7 +458,7 @@ function syncPortalPasswordFeedback(portal: HTMLElement, elements: PortalFormEle
 }
 
 function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFormElements): void {
-	if (portal.dataset.portalMode === 'recovery') {
+	if (isAccountMailKind(portal.dataset.portalMode)) {
 		if (elements.submitButton) elements.submitButton.disabled = elements.email.value.trim().length === 0;
 		return;
 	}
@@ -498,12 +485,10 @@ async function submitPortalResendVerification(portal: HTMLElement, elements: Por
 	elements.error.textContent = succeeded ? 'A new confirmation link is on its way. Check your inbox.' : humanAuthMessage(result.message);
 	elements.error.removeAttribute('hidden');
 	if (succeeded) elements.resendVerification?.setAttribute('hidden', '');
-	notifyWithMascot({ kind: succeeded ? 'success' : 'error', title: succeeded ? 'Link sent' : 'Could not send a new link', message: elements.error.textContent });
+	notify({ kind: succeeded ? 'success' : 'error', title: succeeded ? 'Link sent' : 'Could not send a new link', message: elements.error.textContent });
 }
 
-const RECOVERY_SUBMIT_LABEL = 'Send reset link';
-
-async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
+async function submitAccountMail(portal: HTMLElement, elements: PortalFormElements, kind: AccountMailKind): Promise<void> {
 	const email = elements.email;
 	clearPortalFieldErrors(email);
 	if (!validateEmailField(email, 'Please enter your email address')) {
@@ -512,22 +497,21 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 	}
 	setPortalSubmitBusy(elements.submitButton, true, false);
 	try {
-		const result = await authClient.recover({ email: email.value.trim(), turnstileToken: readTurnstileToken(portal) });
-		elements.error.textContent = result.ok
-			? 'If an account uses this address, a reset link has been sent to it. Check your inbox.'
-			: humanAuthMessage(result.message);
+		const request = { email: email.value.trim(), turnstileToken: readTurnstileToken(portal) };
+		const result = kind === 'recovery' ? await authClient.recover(request) : await authClient.resendVerification(request);
+		elements.error.textContent = result.ok ? accountMailDoneMessage(kind, result.message) : humanAuthMessage(result.message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot(result.ok
-			? { kind: 'success', title: 'Reset link sent', message: 'Check your email inbox.' }
-			: { kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
+		notify(result.ok
+			? { kind: 'success', title: kind === 'recovery' ? 'Reset link sent' : 'Link sent', message: 'Check your email inbox.' }
+			: { kind: 'error', title: kind === 'recovery' ? 'Recovery failed' : 'Could not send a new link', message: elements.error.textContent });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Could not request password recovery.';
+		const message = error instanceof Error ? error.message : 'Could not send the email.';
 		elements.error.textContent = humanAuthMessage(message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
+		notify({ kind: 'error', title: kind === 'recovery' ? 'Recovery failed' : 'Could not send a new link', message: elements.error.textContent });
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, false);
-		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
+		if (elements.submitButton) elements.submitButton.textContent = accountMailSubmitLabel(kind);
 	}
 }
 
@@ -575,7 +559,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 			setAccessToken(result.accessToken);
 			await syncStoredConsents(result.accessToken, elements.email.value.trim());
 		}
-		notifyWithMascot({
+		notify({
 			kind: 'success',
 			title: 'Welcome to Prismatica!',
 			message: authConfig.requireEmailVerification
@@ -583,13 +567,12 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 				: 'Your local workspace account is ready.',
 			duration: 6000,
 		});
-		setMountedMascotMood('excited', 2000);
 		announce(authConfig.requireEmailVerification ? 'Account created. Check your email before signing in.' : 'Development account created. You can sign in now.');
 		globalThis.setTimeout(() => closePortal(), 1500);
 		return;
 	}
 	if (result.status === 429) {
-		notifyWithMascot({
+		notify({
 			kind: 'warning',
 			title: 'Too many attempts',
 			message: 'You have been temporarily blocked. Please wait a few minutes.',
@@ -598,7 +581,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		return;
 	}
 	if (result.status === 422 && messageMentions(message, 'user already registered', 'already registered', 'already exists')) {
-		notifyWithMascot({
+		notify({
 			kind: 'info',
 			title: 'Account already exists',
 			message: 'An account with this email already exists. Try signing in instead.',
@@ -607,7 +590,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		return;
 	}
 	if (result.status === 409 || messageMentions(message, 'already registered', 'already taken', 'unique')) {
-		notifyWithMascot({
+		notify({
 			kind: 'warning',
 			title: 'Choose another identity',
 			message,
@@ -615,7 +598,7 @@ async function processPortalRegistration(elements: PortalFormElements, turnstile
 		});
 		return;
 	}
-	notifyWithMascot({
+	notify({
 		kind: 'error',
 		title: 'Registration failed',
 		message,
@@ -630,7 +613,7 @@ async function processPortalLogin(portal: HTMLElement, elements: PortalFormEleme
 	if (!authenticated.ok) {
 		if (authenticated.status === 429) {
 			console.warn(`[portal] sign-in refused: HTTP 429 — ${message}`);
-			notifyWithMascot({
+			notify({
 				kind: 'warning',
 				title: 'Too many attempts',
 				message: 'You have been temporarily blocked. Please wait a few minutes.',
@@ -642,7 +625,7 @@ async function processPortalLogin(portal: HTMLElement, elements: PortalFormEleme
 			elements.error.textContent = message;
 			elements.error.removeAttribute('hidden');
 			elements.resendVerification?.removeAttribute('hidden');
-			notifyWithMascot({
+			notify({
 				kind: 'warning',
 				title: 'Email not confirmed',
 				message: 'Please check your inbox and click the confirmation link first.',
@@ -654,18 +637,17 @@ async function processPortalLogin(portal: HTMLElement, elements: PortalFormEleme
 			console.warn(authenticated.status === 401
 				? `[portal] sign-in refused: the auth service checked the password for ${elements.email.value.trim()} and rejected it (HTTP 401)`
 				: `[portal] sign-in refused before the password was checked: HTTP ${authenticated.status} — ${message}`);
-			notifyWithMascot({
+			notify({
 				kind: 'error',
 				title: 'Incorrect email or password',
 				message: 'Double-check your credentials and try again.',
 				duration: 8000,
 			});
-			setMountedMascotMood('scared', 1200);
 			announce('Incorrect email or password.');
 			return;
 		}
 		console.error(`[portal] sign-in failed before the password was checked: HTTP ${authenticated.status} — ${message}`);
-		notifyWithMascot({
+		notify({
 			kind: 'error',
 			title: 'Connection failed',
 			message,
@@ -697,7 +679,7 @@ async function completePortalLogin(sessionToken: string | undefined, email: stri
 		const redirectUrl = osionosBridge.redirectUrl;
 		if (!isTrustedOsionosRedirect(redirectUrl)) {
 			console.error('Blocked osionos redirect to untrusted origin:', redirectUrl);
-			notifyWithMascot({
+			notify({
 				kind: 'error',
 				title: 'Workspace redirect blocked',
 				message: 'The osionos workspace link did not match the expected app origin.',
@@ -706,20 +688,19 @@ async function completePortalLogin(sessionToken: string | undefined, email: stri
 			announce('Workspace redirect blocked for safety.');
 			return;
 		}
-		notifyWithMascot({
+		notify({
 			kind: 'success',
 			title: 'Opening osionos',
 			message: 'Your private osionos workspace is ready.',
 			duration: 2500,
 		});
-		setMountedMascotMood('happy', 1800);
 		announce('Opening your osionos workspace.');
 		globalThis.setTimeout(() => {
 			globalThis.location.assign(redirectUrl);
 		}, 700);
 		return;
 	}
-	notifyWithMascot({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
+	notify({ kind: 'success', title: 'Signed in successfully', message: 'Opening your workspace…' });
 	globalThis.setTimeout(() => closePortal(), 1200);
 }
 
@@ -735,7 +716,7 @@ async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElemen
 		const message = error instanceof Error ? error.message : 'Authentication failed.';
 		elements.error.textContent = humanAuthMessage(message);
 		elements.error.removeAttribute('hidden');
-		notifyWithMascot({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
+		notify({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
 	} finally {
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}
@@ -834,16 +815,8 @@ export function openPortal(mode: PortalMode): void {
 		updatePortalSubmitAvailability(portal, elements);
 	};
 
-	const passwordField = elements.password.closest('.field');
-	const setRecovery = (on: boolean): void => {
-		if (on) portal.dataset.portalMode = 'recovery';
-		else delete portal.dataset.portalMode;
-		if (passwordField instanceof HTMLElement) passwordField.hidden = on;
-		elements.password.required = !on;
-	};
-
 	const applyAuthMode = (targetMode: 'login' | 'register'): void => {
-		setRecovery(false);
+		showAuthForm(portal);
 		syncAuthModeVisibility(portal, targetMode);
 		syncAuthModeCopy({
 			title: portal.querySelector('[data-auth-title]'),
@@ -871,15 +844,14 @@ export function openPortal(mode: PortalMode): void {
 		refreshPortalValidation();
 	};
 
-	portal.querySelector('[data-portal-action="forgot-password"]')?.addEventListener('click', () => {
+	const applyAccountMail = (kind: AccountMailKind): void => {
 		applyAuthMode('login');
-		setRecovery(true);
-		const title = portal.querySelector('[data-auth-title]');
-		const note = portal.querySelector('[data-auth-note]');
-		if (title) title.textContent = 'Reset your password';
-		if (note) note.textContent = 'Enter your account email and we will send you a link to choose a new password.';
-		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
+		showAccountMailForm(portal, kind);
 		refreshPortalValidation();
+	};
+
+	portal.querySelector('[data-portal-action="forgot-password"]')?.addEventListener('click', () => {
+		applyAccountMail('recovery');
 		elements.email.focus();
 	});
 
@@ -891,7 +863,8 @@ export function openPortal(mode: PortalMode): void {
 
 	elements.form.addEventListener('submit', (event) => {
 		event.preventDefault();
-		void (portal.dataset.portalMode === 'recovery' ? submitPortalRecovery(portal, elements) : submitPortalLogin(portal, elements));
+		const kind = portal.dataset.portalMode;
+		void (isAccountMailKind(kind) ? submitAccountMail(portal, elements, kind) : submitPortalLogin(portal, elements));
 	});
 
 	bindLoginCodeStep(portal, {
@@ -919,6 +892,7 @@ export function openPortal(mode: PortalMode): void {
 		if (c) c.addEventListener('change', refreshPortalValidation);
 	});
 
-	applyAuthMode(mode === 'connect' ? 'login' : 'register');
+	if (isAccountMailKind(mode)) applyAccountMail(mode);
+	else applyAuthMode(mode === 'connect' ? 'login' : 'register');
 	elements.email.focus();
 }

@@ -169,7 +169,8 @@ export function notify(options: NotificationOptions): void {
 	}
 
 	const duration = options.duration ?? DEFAULT_DURATIONS[options.kind];
-	const card = document.createElement('article');
+	// A div: role="status" and role="alert" are not allowed on <article> (axe aria-allowed-role).
+	const card = document.createElement('div');
 	card.className = `notification-card notification-card--${options.kind}`;
 	card.dataset.notificationId = id;
 	card.setAttribute('role', options.kind === 'error' || options.kind === 'warning' ? 'alert' : 'status');

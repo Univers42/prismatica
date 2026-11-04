@@ -6,7 +6,7 @@ import type { CallbackProblem } from './auth-callback';
 import type { AuthResult } from './auth-result';
 import type { OAuthProvider } from './portal-oauth';
 
-export type CallbackCopy = Required<Omit<AuthResult, 'code' | 'continueUrl'>>;
+export type CallbackCopy = Required<Omit<AuthResult, 'code' | 'continueUrl' | 'portalForm'>>;
 
 const PROVIDER_NAMES: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 

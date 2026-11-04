@@ -1,0 +1,122 @@
+// Three button styles and no more: primary (filled ink), ghost (outlined) and the text link with
+// an arrow. Hover darkens through an overlay's opacity, so the only animated property is opacity
+// (brief: transform and opacity only).
+
+.button {
+	position: relative;
+	isolation: isolate;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	min-height: var(--control-h);
+	padding: 0 var(--space-5);
+	border: 1px solid transparent;
+	border-radius: var(--radius-pill);
+	font-size: var(--step-0);
+	font-weight: 600;
+	line-height: 1;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.button::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: currentcolor;
+	opacity: 0;
+	transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.button:hover::after {
+	opacity: 0.1;
+}
+
+.button:active::after {
+	opacity: 0.16;
+}
+
+.button--primary {
+	background: var(--ink);
+	color: var(--paper);
+}
+
+.button--primary:hover {
+	color: var(--paper);
+}
+
+.button--ghost {
+	background: transparent;
+	color: var(--ink);
+	border-color: var(--graphite);
+}
+
+.button--ghost:hover {
+	color: var(--ink);
+}
+
+.button--icon {
+	min-width: var(--control-h);
+	padding: 0;
+	background: transparent;
+	color: inherit;
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+	cursor: not-allowed;
+	background: var(--tint);
+	color: var(--graphite);
+	border-color: transparent;
+}
+
+.button:disabled::after {
+	display: none;
+}
+
+.text-link {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	min-height: var(--control-h);
+	font-weight: 600;
+	text-decoration-line: underline;
+	text-decoration-color: var(--graphite);
+}
+
+button.text-link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	text-underline-offset: 0.2em;
+}
+
+.text-link::after {
+	content: '→';
+	transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.text-link:hover::after {
+	transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.button::after,
+	.text-link::after {
+		transition: none;
+	}
+
+	.text-link:hover::after {
+		transform: none;
+	}
+}
+
+// Controls that need JavaScript are absent until Layout's pre-paint script sets html[data-js], so
+// a visitor without scripts never meets a dead button.
+html:not([data-js]) [data-js-only] {
+	display: none !important;
+}

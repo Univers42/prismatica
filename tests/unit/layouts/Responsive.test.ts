@@ -12,39 +12,36 @@ describe('Frontend responsiveness (#15)', () => {
 			expect(layout).toMatch(/name=["']viewport["'][^>]*content=["']width=device-width/);
 		});
 
-		it('Header adapts at max-width 800px: desktop nav hides, hamburger + drawer appear', () => {
-			const header = read('src/components/sections/HeaderNew.astro');
-			expect(header).toContain('@media (max-width: 800px)');
-			expect(header).toContain('data-header-toggle');
-			expect(header).toContain('id="header-new-menu"');
-			expect(header).toContain('header-new__list--mobile');
-			expect(header).toContain("aria-controls=\"header-new-menu\"");
-			expect(header).toContain('aria-expanded');
+		it('Header folds the nav into a <details> menu below 48rem, which opens with no script', () => {
+			const header = read('src/components/site/SiteHeader.astro');
+			expect(header).toContain('@media (min-width: 48rem)');
+			expect(header).toContain('<details class="site-menu">');
+			expect(header).toContain('<summary class="button button--icon"');
 		});
 
-		it('Header drawer closes after a mobile nav choice and on Escape', () => {
-			const header = read('src/components/sections/HeaderNew.astro');
-			expect(header).toContain("drawer.querySelectorAll('a[href]')");
-			expect(header).toContain("event.key === 'Escape'");
-			expect(header).toContain('setOpen(false)');
+		it('Header menu closes after a mobile nav choice and on Escape', () => {
+			const main = read('src/scripts/main.ts');
+			expect(main).toContain("closestFromEvent(event, 'a[href], button')");
+			expect(main).toContain("event.key !== 'Escape'");
+			expect(main).toContain('menu.open = false');
 		});
 	});
 
 	describe('section grids reflow on narrow viewports', () => {
-		it('Pricing uses auto-fit minmax so tiers stack on small screens', () => {
-			const pricing = read('src/components/sections/Pricing.astro');
-			expect(pricing).toMatch(/grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(/);
+		it('The silo cards use auto-fit minmax so they stack on small screens', () => {
+			const silo = read('src/components/site/Silo.astro');
+			expect(silo).toMatch(/grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(/);
 		});
 
-		it('Feature trio uses auto-fit minmax for desktop/mobile columns', () => {
-			const features = read('src/components/sections/FeatureTrio.astro');
-			expect(features).toMatch(/grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(/);
+		it('The saved view uses auto-fit minmax for desktop/mobile columns', () => {
+			const savedView = read('src/components/site/SavedView.astro');
+			expect(savedView).toMatch(/grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(/);
 		});
 
-		it('Footer collapses to a single column under 820px', () => {
-			const footer = read('src/components/sections/FooterNew.astro');
-			expect(footer).toContain('@media (max-width: 820px)');
-			expect(footer).toMatch(/\.footer-new__inner\s*\{\s*grid-template-columns:\s*1fr/);
+		it('Footer is a single column until 48rem', () => {
+			const footer = read('src/components/site/SiteFooter.astro');
+			expect(footer).toContain('@media (min-width: 48rem)');
+			expect(footer).toMatch(/\.site-footer__grid\s*\{\s*display:\s*grid;\s*gap:/);
 		});
 	});
 });

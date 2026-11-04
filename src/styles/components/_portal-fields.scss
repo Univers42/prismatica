@@ -29,13 +29,13 @@ dialog.portal {
 	}
 
 	.field-validation-message[data-validation-state='idle'] {
-		color: var(--system-text-muted);
+		color: var(--graphite);
 	}
 }
 
 .field__required {
 	font-weight: 400;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 .field__head {
@@ -70,7 +70,7 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 	border: 0;
 	border-radius: 8px;
 	background: transparent;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 	cursor: pointer;
 
 	svg {
@@ -85,12 +85,12 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 
 	&:hover,
 	&[aria-pressed='true'] {
-		background: var(--system-surface-sunken);
-		color: var(--system-text-strong);
+		background: var(--tint);
+		color: var(--ink);
 	}
 
 	&:focus-visible {
-		outline: 2px solid var(--system-focus-ring);
+		outline: 2px solid var(--signal);
 		outline-offset: 1px;
 	}
 }
@@ -115,24 +115,24 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 }
 
 .password-meter {
-	--meter-color: var(--system-text-muted);
+	--meter-color: var(--graphite);
 
 	height: 4px;
 	overflow: hidden;
 	border-radius: 99px;
-	background: var(--system-surface-sunken);
+	background: var(--tint);
 
 	&[data-score='1'] {
-		--meter-color: var(--system-danger-text);
+		--meter-color: var(--danger);
 	}
 
 	&[data-score='2'] {
-		--meter-color: var(--system-warning-text);
+		--meter-color: var(--warning);
 	}
 
 	&[data-score='3'],
 	&[data-score='4'] {
-		--meter-color: var(--system-success-text);
+		--meter-color: var(--success);
 	}
 }
 
@@ -145,7 +145,7 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 
 .password-meter__label {
 	font-size: 0.78rem;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 // Consents: a real (visually hidden) checkbox drives a drawn box whose tick
@@ -164,7 +164,7 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 	gap: 0.7rem;
 	font-size: 0.875rem;
 	line-height: 1.45;
-	color: var(--system-text);
+	color: var(--ink);
 	cursor: pointer;
 
 	> input {
@@ -179,7 +179,7 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 	}
 
 	a {
-		color: var(--system-link);
+		color: var(--signal);
 		text-underline-offset: 3px;
 	}
 }
@@ -190,16 +190,16 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 	width: 20px;
 	height: 20px;
 	margin-top: 1px;
-	border: 1.5px solid var(--system-input-border);
+	border: 1.5px solid var(--graphite);
 	border-radius: 6px;
-	background: var(--system-input-bg);
+	background: var(--raised);
 	transition: background-color 160ms ease, border-color 160ms ease;
 
 	svg {
 		width: 14px;
 		height: 14px;
 		fill: none;
-		stroke: var(--system-action-fg);
+		stroke: var(--paper);
 		stroke-width: 2.2;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -210,8 +210,8 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 }
 
 .checkbox-label > input:checked + .portal-check {
-	border-color: var(--system-action-bg);
-	background: var(--system-action-bg);
+	border-color: var(--ink);
+	background: var(--ink);
 
 	svg {
 		stroke-dashoffset: 0;
@@ -219,17 +219,17 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 }
 
 .checkbox-label > input:focus-visible + .portal-check {
-	outline: 2px solid var(--system-focus-ring);
+	outline: 2px solid var(--signal);
 	outline-offset: 2px;
 }
 
 .portal-form-error {
 	display: block;
 	padding: 0.7rem 0.85rem;
-	border: 1px solid color-mix(in srgb, var(--system-danger-text) 30%, transparent);
+	border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
 	border-radius: 10px;
-	background: color-mix(in srgb, var(--system-danger-text) 7%, transparent);
-	color: var(--system-danger-text);
+	background: color-mix(in srgb, var(--danger) 7%, transparent);
+	color: var(--danger);
 	font-size: 0.875rem;
 	line-height: 1.4;
 }
@@ -239,15 +239,15 @@ dialog.portal[data-auth-mode='register'] .portal-forgot {
 	padding: 0;
 	border: 0;
 	background: none;
-	color: var(--system-link);
-	font: 600 0.85rem/1.3 var(--system-font-sans);
+	color: var(--signal);
+	font: 600 0.85rem/1.3 var(--font-text);
 	text-decoration: underline;
 	text-underline-offset: 3px;
 	cursor: pointer;
 
 	&:focus-visible {
 		border-radius: 4px;
-		outline: 2px solid var(--system-focus-ring);
+		outline: 2px solid var(--signal);
 		outline-offset: 2px;
 	}
 }
@@ -265,16 +265,16 @@ dialog.portal .button--primary {
 	margin-top: 0.25rem;
 	border: 0;
 	border-radius: 12px;
-	background: var(--system-action-bg);
-	color: var(--system-action-fg);
-	font: 600 1rem/1.2 var(--system-font-sans);
+	background: var(--ink);
+	color: var(--paper);
+	font: 600 1rem/1.2 var(--font-text);
 	box-shadow: none;
 	cursor: pointer;
 	transition: transform 300ms var(--portal-ease), box-shadow 200ms ease, background-color 160ms ease;
 
 	&:hover:not(:disabled) {
-		background: var(--system-action-bg-hover);
-		box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--system-text-strong) 70%, transparent);
+		background: var(--graphite);
+		box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--ink) 70%, transparent);
 		transform: translateY(-1px);
 	}
 

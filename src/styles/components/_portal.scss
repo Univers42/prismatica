@@ -36,18 +36,18 @@
 	height: 38px;
 	padding: 0;
 	border: 1px solid transparent;
-	border-radius: var(--system-radius-sm);
+	border-radius: var(--radius-s);
 	background: transparent;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 	cursor: pointer;
-	transition: background 140ms var(--system-ease-standard), color 140ms var(--system-ease-standard), border-color 140ms var(--system-ease-standard);
+	transition: background 140ms var(--ease-out), color 140ms var(--ease-out), border-color 140ms var(--ease-out);
 }
 
 .password-control__toggle:hover,
 .password-control__toggle[aria-pressed='true'] {
-	background: var(--system-action-secondary-bg-hover);
-	border-color: var(--system-border);
-	color: var(--system-text-strong);
+	background: var(--tint);
+	border-color: var(--rule);
+	color: var(--ink);
 }
 
 .password-control__toggle svg {
@@ -69,7 +69,7 @@
 }
 
 .password-control__toggle:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
 }
 
@@ -113,29 +113,29 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 }
 
 .field label {
-	font-family: var(--system-font-sans);
+	font-family: var(--font-text);
 	font-size: 0.86rem;
 	font-weight: 700;
-	color: var(--system-text-strong);
+	color: var(--ink);
 }
 
 .field input,
 .field select,
 .field textarea {
 	width: 100%;
-	border: 1px solid var(--system-input-border); // WCAG 1.4.11 Non-text Contrast — ≥3:1 across themes
-	border-radius: var(--system-input-radius);
-	background: var(--system-input-bg);
-	color: var(--system-input-fg);
-	font-family: var(--system-font-sans);
+	border: 1px solid var(--graphite); // WCAG 1.4.11 Non-text Contrast — ≥3:1 across themes
+	border-radius: var(--radius-s);
+	background: var(--raised);
+	color: var(--ink);
+	font-family: var(--font-text);
 	font-size: 1rem;
-	box-shadow: 0 1px 0 color-mix(in srgb, var(--brand-canvas-bg) 12%, transparent);
-	transition: border-color 160ms var(--system-ease-standard), box-shadow 160ms var(--system-ease-standard);
+	box-shadow: 0 1px 0 color-mix(in srgb, var(--paper) 12%, transparent);
+	transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
 
 .field input,
 .field select {
-	min-height: var(--system-input-min-h); // WCAG 2.5.8 Target Size
+	min-height: var(--control-h); // WCAG 2.5.8 Target Size
 	padding: 0.75rem 0.85rem;
 }
 
@@ -151,25 +151,25 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 
 .field input::placeholder,
 .field textarea::placeholder {
-	color: var(--system-input-placeholder);
+	color: var(--graphite);
 }
 
 .field input[aria-invalid='true'] {
-	border-color: var(--system-input-border-invalid);
-	box-shadow: var(--system-input-shadow-invalid);
+	border-color: var(--danger);
+	box-shadow: 0 0 0 1px var(--danger);
 }
 
 .field input:hover:not([aria-invalid='true']):not(:focus-visible),
 .field select:hover:not(:focus-visible),
 .field textarea:hover:not(:focus-visible) {
-	border-color: var(--system-input-border-hover);
+	border-color: var(--ink);
 }
 
 .field input:focus-visible,
 .field select:focus-visible,
 .field textarea:focus-visible {
-	border-color: var(--system-input-border-focus);
-	box-shadow: var(--system-input-shadow-focus);
+	border-color: var(--ink);
+	box-shadow: 0 0 0 1px var(--ink);
 	outline: 0;
 }
 
@@ -179,13 +179,13 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 .field-validation-message,
 .password-match,
 .portal-error {
-	font-family: var(--system-font-sans);
+	font-family: var(--font-text);
 }
 
 .optional {
 	font-size: 0.78rem;
 	font-weight: 400;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 .portal-password-hint,
@@ -193,7 +193,7 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	margin: 0;
 	font-size: 0.83rem;
 	line-height: 1.45;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 .field-validation-message {
@@ -201,19 +201,19 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	margin: 0;
 	font-size: 0.78rem;
 	line-height: 1.35;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 .field-validation-message[data-validation-state='error'] {
-	color: var(--system-danger-text);
+	color: var(--danger);
 }
 
 .field-validation-message[data-validation-state='warning'] {
-	color: var(--system-warning-text);
+	color: var(--warning);
 }
 
 .field-validation-message[data-validation-state='success'] {
-	color: var(--system-success-text);
+	color: var(--success);
 }
 
 .field-validation-message:empty {
@@ -221,22 +221,22 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 }
 
 .password-strength {
-	--strength-color: var(--system-text-muted);
+	--strength-color: var(--graphite);
 	display: grid;
 	gap: 0.48rem;
 	padding: 0.75rem;
-	border: 1px solid var(--system-chip-border);
-	border-radius: var(--system-radius-lg);
-	background: var(--system-chip-bg);
-	font-family: var(--system-font-sans);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-l);
+	background: var(--tint);
+	font-family: var(--font-text);
 	font-size: 0.82rem;
-	color: var(--system-text);
+	color: var(--ink);
 }
 
-.password-strength[data-strength-level='weak']   { --strength-color: var(--system-danger-text); }
-.password-strength[data-strength-level='fair']   { --strength-color: var(--system-warning-text); }
-.password-strength[data-strength-level='good']   { --strength-color: var(--system-warning-text); }
-.password-strength[data-strength-level='strong'] { --strength-color: var(--system-success-text); }
+.password-strength[data-strength-level='weak']   { --strength-color: var(--danger); }
+.password-strength[data-strength-level='fair']   { --strength-color: var(--warning); }
+.password-strength[data-strength-level='good']   { --strength-color: var(--warning); }
+.password-strength[data-strength-level='strong'] { --strength-color: var(--success); }
 
 .password-strength__meter {
 	display: grid;
@@ -246,8 +246,8 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 
 .password-strength__segment {
 	height: 0.42rem;
-	border-radius: var(--system-radius-pill);
-	background: var(--system-divider); // decoration only — never used as text/border color
+	border-radius: var(--radius-pill);
+	background: var(--rule); // decoration only — never used as text/border color
 }
 
 .password-strength__segment.is-filled {
@@ -256,7 +256,7 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 
 .password-strength__label {
 	font-weight: 700;
-	color: var(--system-text-strong);
+	color: var(--ink);
 }
 
 .password-strength__rules {
@@ -283,14 +283,14 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	inline-size: 0.35rem;
 	block-size: 0.65rem;
 	margin-inline: 0.32rem;
-	border: solid var(--system-success-text);
+	border: solid var(--success);
 	border-width: 0 2px 2px 0;
 	transform: translateY(-0.1rem) rotate(45deg);
 }
 
 .password-strength__rule.is-unmet::before,
 .password-match.is-mismatch::before {
-	--cross: transparent calc(50% - 1px), var(--system-danger-text) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px);
+	--cross: transparent calc(50% - 1px), var(--danger) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px);
 
 	content: '';
 	flex: none;
@@ -303,14 +303,14 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 .password-match {
 	margin: 0;
 	font-size: 0.82rem;
-	color: var(--system-text-muted);
+	color: var(--graphite);
 }
 
 .portal-verification-note {
 	padding: 0.75rem;
-	border: 1px solid var(--system-chip-border);
-	border-radius: var(--system-radius-lg);
-	background: var(--system-chip-bg);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-l);
+	background: var(--tint);
 }
 
 .consent-toggle {
@@ -318,41 +318,41 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 	grid-template-columns: auto 1fr;
 	align-items: start;
 	gap: 0.65rem;
-	font-family: var(--system-font-sans);
+	font-family: var(--font-text);
 	font-size: 0.86rem;
 	line-height: 1.45;
-	color: var(--system-text);
+	color: var(--ink);
 }
 
 .consent-toggle input {
 	margin-top: 0.18rem;
-	accent-color: var(--system-action-bg);
+	accent-color: var(--ink);
 }
 
 .consent-toggle input:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
 }
 
 .consent-toggle a {
-	color: var(--system-link);
+	color: var(--signal);
 }
 
 .consent-toggle a:hover {
-	color: var(--system-link-hover);
+	color: var(--ink);
 }
 
 .consent-toggle a:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
 }
 
 .portal-cta,
 .portal-secondary {
-	min-height: var(--system-input-min-h); // WCAG 2.5.8
-	border-radius: var(--system-input-radius);
+	min-height: var(--control-h); // WCAG 2.5.8
+	border-radius: var(--radius-s);
 	padding: 0.78rem 1rem;
-	font-family: var(--system-font-sans);
+	font-family: var(--font-text);
 	font-size: 0.98rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -361,26 +361,26 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 .portal-cta {
 	width: 100%;
 	border: 0;
-	background: var(--system-action-bg);
-	color: var(--system-action-fg);
-	box-shadow: var(--system-shadow-2);
-	transition: transform 160ms var(--system-ease-standard), box-shadow 160ms var(--system-ease-standard), background 160ms var(--system-ease-standard);
+	background: var(--ink);
+	color: var(--paper);
+	box-shadow: var(--shadow-1);
+	transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background 160ms var(--ease-out);
 }
 
 .portal-cta:hover {
-	background: var(--system-action-bg-hover);
-	box-shadow: var(--system-shadow-3);
+	background: var(--graphite);
+	box-shadow: var(--shadow-2);
 	transform: translateY(-1px);
 }
 
 .portal-cta:active {
-	background: var(--system-action-bg-active);
+	background: var(--graphite);
 	transform: translateY(1px);
 }
 
 .portal-cta:focus-visible,
 .portal-secondary:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
 }
 
@@ -389,8 +389,8 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 .newsletter-signup button:disabled,
 .auth-form button:disabled {
 	cursor: not-allowed;
-	background: var(--system-action-bg-disabled);
-	color: var(--system-action-fg-disabled);
+	background: var(--tint);
+	color: var(--graphite);
 	box-shadow: none;
 	filter: none;
 	opacity: 1;
@@ -398,20 +398,20 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 }
 
 .portal-secondary {
-	border: 1px solid var(--system-action-secondary-border);
-	background: var(--system-action-secondary-bg);
-	color: var(--system-action-secondary-fg);
+	border: 1px solid var(--graphite);
+	background: transparent;
+	color: var(--ink);
 }
 
 .portal-secondary:hover {
-	background: var(--system-action-secondary-bg-hover);
+	background: var(--tint);
 }
 
 .portal-link,
 .portal-discover {
 	display: inline-block;
-	color: var(--system-link);
-	font-family: var(--system-font-sans);
+	color: var(--signal);
+	font-family: var(--font-text);
 	font-size: 0.9rem;
 	font-weight: 650;
 	text-decoration: underline;
@@ -420,14 +420,14 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 
 .portal-link:hover,
 .portal-discover:hover {
-	color: var(--system-link-hover);
+	color: var(--ink);
 }
 
 .portal-link:focus-visible,
 .portal-discover:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
-	border-radius: var(--system-radius-sm);
+	border-radius: var(--radius-s);
 }
 
 .portal-link--button {
@@ -450,7 +450,7 @@ dialog.portal[data-auth-mode='login'] .portal-register-identity .field:not(.port
 
 .portal-error {
 	min-height: 1.1rem;
-	color: var(--system-danger-text);
+	color: var(--danger);
 	font-size: 0.84rem;
 	line-height: 1.35;
 }

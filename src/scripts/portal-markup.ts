@@ -46,13 +46,14 @@ function orbitMarkup(): string {
 }
 
 export function createPortalMarkup(mode: PortalMode): string {
-	const quick = mode === 'connect';
+	const quick = mode !== 'start';
 	const requiresEmailVerification = authConfig.requireEmailVerification;
 	const registerNote = requiresEmailVerification
 		? 'Create an account with email verification before opening your workspace.'
 		: 'Create a local development account and open your workspace.';
 	return `
-		<dialog id="portal" class="portal portal--${quick ? 'quick' : 'start'}" aria-labelledby="portal-title">
+		<dialog id="portal" class="portal portal--${quick ? 'quick' : 'start'}" aria-labelledby="portal-name portal-title">
+			<span id="portal-name" class="visually-hidden">Prismatica workspace portal</span>
 			<div class="portal__frame">
 				<section class="portal__main" aria-label="Your account">
 					<header class="portal__bar">

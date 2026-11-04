@@ -12,27 +12,29 @@ import AuthResult from '../../components/ui/AuthResult.astro';
 		import { gatewayMessage, postToGateway, takeLinkFragment } from '../../lib/link-fragment';
 		import { showAuthResult, type AuthResult } from '../../scripts/auth-result';
 
-		const RESEND_STEP = 'Open the sign-in window and sign in with your email and password, then choose “Send a new link”.';
-		const CONFIRMED: AuthResult = {
+		const RESEND_STEP = 'Choose “Send a new link” and enter the email you signed up with.';
+		const confirmed = (message: string): AuthResult => ({
 			tone: 'success',
 			title: 'Your email is confirmed',
-			message: 'Your Prismatica account is ready. Sign in to open your workspace.',
+			message,
 			steps: [],
 			action: 'Sign in',
-		};
+		});
 		const INCOMPLETE: AuthResult = {
 			tone: 'notice',
 			title: 'This confirmation link is incomplete',
 			message: 'Part of the link is missing. Some mail apps cut long links, and reloading this page also clears it.',
 			steps: ['Open the confirmation email and select its button again.', `Still not working? ${RESEND_STEP}`],
-			action: 'Sign in',
+			action: 'Send a new link',
+			portalForm: 'resend',
 		};
 		const refused = (message: string): AuthResult => ({
 			tone: 'notice',
 			title: 'This confirmation link no longer works',
 			message,
 			steps: ['Already confirmed your email? Then sign in as usual.', `Otherwise: ${RESEND_STEP}`, 'Open the new email within the time it states.'],
-			action: 'Sign in',
+			action: 'Send a new link',
+			portalForm: 'resend',
 		});
 		const UNREACHABLE: AuthResult = {
 			tone: 'danger',
@@ -48,7 +50,7 @@ import AuthResult from '../../components/ui/AuthResult.astro';
 		async function confirmEmail(): Promise<AuthResult> {
 			if (!link) return INCOMPLETE;
 			const answer = await postToGateway(fetch, authConfig.gatewayUrl, '/verify', link);
-			if (answer.status === 200) return CONFIRMED;
+			if (answer.status === 200) return confirmed(gatewayMessage(answer, 'Your Prismatica account is ready. Sign in to open your workspace.'));
 			return refused(gatewayMessage(answer, 'It has expired or was already used.'));
 		}
 

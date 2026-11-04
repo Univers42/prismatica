@@ -33,15 +33,16 @@ describe('Layout.astro', () => {
 	});
 
 	// Firefox warned "instrument-serif.woff2 preloaded with link preload was not used within a few
-	// seconds": the default theme (swiss) sets its display text in Space Grotesk, so the serif is
-	// used only once a theme that names it (aurora) applies, and @font-face fetches it then.
+	// seconds" on the old default theme, which set its display text in Space Grotesk. The redesign
+	// paints every heading in the serif, so its Latin subset is the one font worth preloading, and
+	// the full face must stay off the preload list.
 	describe('display serif loading', () => {
-		it('does not preload instrument-serif.woff2, which the default theme never paints', () => {
-			expect(layoutMarkup).not.toMatch(/rel="preload"[^>]*instrument-serif/);
+		it('does not preload the full instrument-serif.woff2', () => {
+			expect(layoutMarkup).not.toMatch(/rel="preload"[^>]*instrument-serif\.woff2/);
 		});
 
-		it('still preloads the interface face the default theme paints first', () => {
-			expect(layoutMarkup).toMatch(/rel="preload" href="\/fonts\/space-grotesk\.woff2"/);
+		it('preloads the Latin display face every heading paints first', () => {
+			expect(layoutMarkup).toMatch(/rel="preload" href="\/fonts\/instrument-serif-latin\.woff2"/);
 		});
 	});
 

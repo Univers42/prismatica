@@ -27,10 +27,10 @@ body:has(.consent-banner:not([hidden])) {
 .data-rights-form,
 .legal-page,
 .auth-card {
-	border: var(--stroke-ui) solid var(--ink);
-	border-radius: var(--radius-card);
-	background: var(--surface-strong);
-	box-shadow: var(--shadow-paper);
+	border: 1px solid var(--ink);
+	border-radius: var(--radius-l);
+	background: var(--raised);
+	box-shadow: var(--shadow-2);
 }
 
 .consent-banner__paper {
@@ -58,7 +58,7 @@ body:has(.consent-banner:not([hidden])) {
 .form-note,
 .form-status {
 	font-size: 0.9rem;
-	color: var(--ink-mid);
+	color: var(--graphite);
 }
 
 .consent-toggle {
@@ -71,7 +71,7 @@ body:has(.consent-banner:not([hidden])) {
 	width: 1.2rem;
 	height: 1.2rem;
 	margin-top: 0.2rem;
-	accent-color: var(--brand-palette-secondary);
+	accent-color: var(--signal);
 }
 
 .newsletter-signup {
@@ -87,9 +87,9 @@ body:has(.consent-banner:not([hidden])) {
 
 .link-button {
 	padding: 0.48rem 0.72rem 0.38rem;
-	border: 1.5px solid var(--surface-line);
+	border: 1.5px solid var(--rule);
 	border-radius: 999px;
-	background: var(--surface);
+	background: var(--paper);
 	color: inherit;
 	font: inherit;
 	cursor: pointer;
@@ -127,7 +127,7 @@ body:has(.consent-banner:not([hidden])) {
 }
 
 .auth-card__hint {
-	color: var(--ink-mid);
+	color: var(--graphite);
 }
 
 .auth-form {
@@ -138,17 +138,17 @@ body:has(.consent-banner:not([hidden])) {
 .auth-form .field input {
 	width: 100%;
 	padding: 0.88rem 1rem;
-	border: 1.5px solid var(--surface-line);
+	border: 1.5px solid var(--rule);
 	border-radius: 18px;
-	background: var(--surface);
+	background: var(--paper);
 	color: var(--ink);
 	font: inherit;
 }
 
 .auth-card .password-strength {
-	border-color: var(--surface-line-soft);
-	background: var(--surface-muted);
-	color: var(--ink-mid);
+	border-color: var(--rule);
+	background: var(--tint);
+	color: var(--graphite);
 }
 
 .auth-card .password-strength__label {
@@ -156,20 +156,20 @@ body:has(.consent-banner:not([hidden])) {
 }
 
 .auth-card .password-match {
-	color: var(--ink-mid);
+	color: var(--graphite);
 }
 
 .auth-card [role='status'].is-error,
 .auth-form output.is-error {
-	color: var(--system-danger-text);
+	color: var(--danger);
 }
 
 .field-error-message {
 	margin: 0;
-	font-family: var(--font-mono-sketch);
+	font-family: var(--font-mono);
 	font-size: 0.76rem;
 	line-height: 1.35;
-	color: var(--system-danger-text);
+	color: var(--danger);
 }
 
 .field-error-message:empty {
@@ -177,7 +177,7 @@ body:has(.consent-banner:not([hidden])) {
 }
 
 .field input[aria-invalid='true'] {
-	border-color: var(--system-input-border-invalid);
+	border-color: var(--danger);
 }
 
 .legal-page section {
@@ -204,7 +204,7 @@ body:has(.consent-banner:not([hidden])) {
 .legal-table th,
 .legal-table td {
 	padding: 0.75rem;
-	border: 1px solid var(--surface-line);
+	border: 1px solid var(--rule);
 	text-align: left;
 	vertical-align: top;
 }
@@ -265,9 +265,9 @@ body:has(.consent-banner:not([hidden])) {
 .legal-toc {
 	margin: 1.5rem 0 2rem;
 	padding: 1.25rem 1.5rem;
-	border: 1px solid var(--surface-line);
-	border-radius: var(--radius-sm, 12px);
-	background: var(--surface-muted);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-s);
+	background: var(--tint);
 }
 
 .legal-toc__title {
@@ -276,7 +276,7 @@ body:has(.consent-banner:not([hidden])) {
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--ink-mid);
+	color: var(--graphite);
 }
 
 .legal-toc__list {
@@ -294,27 +294,27 @@ body:has(.consent-banner:not([hidden])) {
 }
 
 .legal-toc__list a:hover {
-	color: var(--system-link-hover);
+	color: var(--ink);
 }
 
 .legal-toc__list a:focus-visible,
 .legal-page__top-link:focus-visible,
 .legal-page__back:focus-visible {
-	outline: 3px solid var(--system-focus-ring);
+	outline: 3px solid var(--signal);
 	outline-offset: 2px;
-	border-radius: var(--system-radius-xs, 4px);
+	border-radius: var(--radius-s);
 }
 
 .legal-page__top-wrap {
 	margin-top: 2.5rem;
 	padding-top: 1.5rem;
-	border-top: 1px solid var(--surface-line);
+	border-top: 1px solid var(--rule);
 	text-align: end;
 }
 
 .legal-page__top-link {
 	font-size: 0.9rem;
-	color: var(--ink-mid);
+	color: var(--graphite);
 	text-decoration: none;
 }
 

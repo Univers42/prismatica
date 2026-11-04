@@ -136,6 +136,9 @@ function randomJitter(maxExclusive: number): number {
 	return (values[0] / 0x100000000) * maxExclusive;
 }
 
+/** What parseAuthResponse reports for a 2xx that carried no message of its own. */
+export const NO_GATEWAY_MESSAGE = 'Request completed.';
+
 async function parseAuthResponse(response: Response): Promise<AuthResult> {
 	const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
 	let message = 'Request failed.';
@@ -148,7 +151,7 @@ async function parseAuthResponse(response: Response): Promise<AuthResult> {
 	} else if (typeof payload.error === 'string') {
 		message = payload.error;
 	} else if (response.ok) {
-		message = 'Request completed.';
+		message = NO_GATEWAY_MESSAGE;
 	}
 	return {
 		ok: response.ok,

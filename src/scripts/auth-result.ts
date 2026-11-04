@@ -10,6 +10,8 @@ export type AuthResult = {
 	steps: string[];
 	// Label of the button that opens the sign-in window; without one only "Back to homepage" shows.
 	action?: string;
+	// The form the action opens instead of sign-in: a refused link is one click from a new link.
+	portalForm?: 'recovery' | 'resend';
 	// With it the action is a link there, not the sign-in button; a same-site page checks it first.
 	continueUrl?: string;
 	// Plain support reference, shown only when set.
@@ -41,7 +43,12 @@ export function showAuthResult(card: HTMLElement, result: AuthResult): void {
 	);
 	setShown(part(card, 'next'), result.steps.length > 0);
 	const action = part(card, 'action');
-	if (action) action.textContent = result.continueUrl ? '' : (result.action ?? '');
+	if (action) {
+		action.textContent = result.continueUrl ? '' : (result.action ?? '');
+		action.toggleAttribute('data-open-connect', !result.portalForm);
+		if (result.portalForm) action.setAttribute('data-open-portal', result.portalForm);
+		else action.removeAttribute('data-open-portal');
+	}
 	setShown(action, Boolean(result.action) && !result.continueUrl);
 	const continueLink = part(card, 'continue');
 	if (continueLink instanceof HTMLAnchorElement) {
