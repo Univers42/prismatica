@@ -22,6 +22,12 @@
 	margin: 0;
 }
 
+// Component display rules (grid, flex) outrank the browser's [hidden] { display: none }, which left
+// hidden fields and panels showing; the attribute must always win.
+[hidden] {
+	display: none !important;
+}
+
 html {
 	-webkit-text-size-adjust: 100%;
 	text-size-adjust: 100%;
@@ -37,6 +43,11 @@ body {
 	line-height: 1.55;
 	-webkit-font-smoothing: antialiased;
 	overflow-wrap: break-word;
+}
+
+// showModal leaves the page behind the dialog free to scroll.
+body.portal-open {
+	overflow: hidden;
 }
 
 img,
