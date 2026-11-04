@@ -120,22 +120,3 @@ export function cycleLocale(): void {
 	const nextLocale = SUPPORTED_LOCALES[nextIndex] ?? DEFAULT_LOCALE;
 	applyLocale(nextLocale);
 }
-
-/**
- * Binds click listeners to .lang-switcher buttons and popstate navigation.
- */
-export function bindLanguageControls(): void {
-	const switchers = queryElements('.lang-switcher', isHtmlElement);
-	switchers.forEach((switcher) => {
-		switcher.addEventListener('click', (e) => {
-			e.preventDefault();
-			cycleLocale();
-		});
-	});
-
-	if (typeof window !== 'undefined') {
-		window.addEventListener('popstate', () => {
-			applyLocale(initialLocale());
-		});
-	}
-}

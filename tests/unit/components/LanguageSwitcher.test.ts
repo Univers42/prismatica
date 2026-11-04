@@ -32,6 +32,11 @@ describe('LanguageSwitcher', () => {
 		expect(componentMarkup).toContain(nextLabel);
 	});
 
+	// A static page cannot honour ?lang= without the script, so the link would only reload English.
+	it('is hidden until JavaScript runs', () => {
+		expect(componentMarkup).toMatch(/<a\b[^>]*\bdata-js-only\b/);
+	});
+
 	it('next locale cycle order', () => {
 		expect(componentMarkup).toContain('nextIndex = (currentIndex + 1) % SUPPORTED_LOCALES.length');
 		expect(componentMarkup).toContain('LOCALE_LABELS: Record');
