@@ -10,45 +10,23 @@
 
 import { isLand, sphereProjector, spherePoint, type Vec3 } from '../lib/sky-sphere';
 import { createRandom, curvePoint, easeInOut, withAlpha, type Point } from '../lib/universe-motion';
+import { createBuffer } from '../lib/canvas-buffer';
 
 type Dot = Vec3 & { point: Vec3; city: boolean; seen: boolean };
 type Arc = { from: Dot; to: Dot; start: number; duration: number };
 
-export type Planet = {
-	measure: (width: number, horizon: number, height: number) => void;
-	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean) => void;
-};
-
-// The pole is tipped away, so the visible cap is mid-latitudes drifting by.
-const TILT = -0.5;
 const SPIN_PER_MS = 0.000006;
 const ARC_EVERY_MS = 700;
 const MAX_ARCS = 5;
 const ARRIVAL_MS = 600;
 const SHADES = 5;
 
-type OffscreenBuffer = {
-	canvas: HTMLCanvasElement | OffscreenCanvas;
-	ctx: CanvasRenderingContext2D;
-};
+const TILT = -0.5;
 
-function createBuffer(w: number, h: number): OffscreenBuffer | null {
-	const width = Math.max(1, Math.round(w));
-	const height = Math.max(1, Math.round(h));
-	if (typeof OffscreenCanvas !== 'undefined') {
-		const canvas = new OffscreenCanvas(width, height);
-		const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | null;
-		if (ctx) return { canvas, ctx };
-	}
-	if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-		const canvas = document.createElement('canvas');
-		canvas.width = width;
-		canvas.height = height;
-		const ctx = canvas.getContext('2d');
-		if (ctx) return { canvas, ctx };
-	}
-	return null;
-}
+export type Planet = {
+	measure: (width: number, horizon: number, height: number, dpr?: number) => void;
+	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean) => void;
+};
 
 export function createPlanet(signal: string): Planet {
 	const random = createRandom(23);
@@ -63,12 +41,14 @@ export function createPlanet(signal: string): Planet {
 	let height = 0;
 	let coronaCanvas: CanvasImageSource | null = null;
 	let globeCanvas: CanvasImageSource | null = null;
+	let currentDpr = 1;
 	const shades: Dot[][] = Array.from({ length: SHADES }, () => []);
 
-	function measure(nextWidth: number, nextHorizon: number, nextHeight: number): void {
+	function measure(nextWidth: number, nextHorizon: number, nextHeight: number, dpr: number = 1): void {
 		width = nextWidth;
 		horizon = nextHorizon;
 		height = nextHeight;
+		currentDpr = dpr;
 		radius = Math.max(width * 1.4, 760);
 		centre = { x: width / 2, y: horizon + radius };
 		const step = (width < 640 ? 11 : 15) / radius;
@@ -86,11 +66,15 @@ export function createPlanet(signal: string): Planet {
 		}
 		arcs = [];
 
-		const coronaBuffer = createBuffer(width, height);
+		const physWidth = Math.round(width * dpr);
+		const physHeight = Math.round(height * dpr);
+
+		const coronaBuffer = createBuffer(physWidth, physHeight);
 		if (coronaBuffer) {
 			const bCtx = coronaBuffer.ctx;
-			const sun = { x: width / 2, y: horizon + 6 };
 			bCtx.save();
+			bCtx.scale(dpr, dpr);
+			const sun = { x: width / 2, y: horizon + 6 };
 			bCtx.translate(sun.x, sun.y);
 			bCtx.scale(2.8, 1);
 			const corona = bCtx.createRadialGradient(0, 0, 0, 0, 0, Math.min(width * 0.26, 320));
@@ -102,14 +86,15 @@ export function createPlanet(signal: string): Planet {
 			bCtx.fillRect(-width, -460, width * 2, 900);
 			bCtx.restore();
 			coronaCanvas = coronaBuffer.canvas as CanvasImageSource;
-		} else if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-			const fallbackImg = document.createElement('img');
-			fallbackImg.src = 'about:blank';
-			coronaCanvas = fallbackImg;
+		} else {
+			coronaCanvas = null;
 		}
-		const globeBuffer = createBuffer(width, height);
+
+		const globeBuffer = createBuffer(physWidth, physHeight);
 		if (globeBuffer) {
 			const bCtx = globeBuffer.ctx;
+			bCtx.save();
+			bCtx.scale(dpr, dpr);
 			const body = bCtx.createRadialGradient(centre.x, centre.y, radius - 260, centre.x, centre.y, radius);
 			body.addColorStop(0, '#04060b');
 			body.addColorStop(1, '#0f1626');
@@ -135,22 +120,23 @@ export function createPlanet(signal: string): Planet {
 			bCtx.beginPath();
 			bCtx.arc(centre.x, centre.y, radius, Math.PI, Math.PI * 2);
 			bCtx.stroke();
+			bCtx.restore();
 
 			globeCanvas = globeBuffer.canvas as CanvasImageSource;
-		} else if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-			const fallbackImg = document.createElement('img');
-			fallbackImg.src = 'about:blank';
-			globeCanvas = fallbackImg;
+		} else {
+			globeCanvas = null;
 		}
 	}
 
 	function drawGlobe(ctx: CanvasRenderingContext2D, breath: number): void {
 	if (coronaCanvas && globeCanvas) {
 		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 0.78 + 0.22 * breath;
 		ctx.drawImage(coronaCanvas, 0, 0);
-		ctx.restore();
+		ctx.globalAlpha = 1;
 		ctx.drawImage(globeCanvas, 0, 0);
+		ctx.restore();
 		return;
 	}
 	const sun = { x: width / 2, y: horizon + 6 };
