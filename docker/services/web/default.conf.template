@@ -116,4 +116,10 @@ server {
     location / {
         try_files $uri $uri/index.html $uri/ =404;
     }
+
+    # The site's own 404, with its language, styles and a way home; nginx's has none of them.
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+    }
 }

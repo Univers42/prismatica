@@ -45,7 +45,7 @@ const codeLines = codeSample.split('\n');
 		<div class="docs-teaser__panel" data-scroll-grow>
 			<Card variant="doc">
 				<div class="docs-teaser__codewrap">
-				<pre class="docs-teaser__code"><code>{codeLines.map((line, index) => (<>{index > 0 && '\n'}<span class="docs-teaser__line">{line}</span></>))}</code></pre>
+				<pre class="docs-teaser__code" tabindex="0" aria-label="Example request"><code>{codeLines.map((line, index) => (<>{index > 0 && '\n'}<span class="docs-teaser__line">{line}</span></>))}</code></pre>
 				<button type="button" class="docs-teaser__copy" data-copy-code>
 					<svg class="docs-teaser__copy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
 						<rect x="9" y="9" width="11" height="11" rx="2.5" />

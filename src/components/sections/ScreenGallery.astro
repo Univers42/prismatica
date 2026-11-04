@@ -34,7 +34,7 @@ const SCREENS = [
 		<h3 class="screen-gallery__title" id="screen-gallery-title" data-i18n="screenGallery.title">{t(activeLocale, 'screenGallery.title')}</h3>
 		<p class="screen-gallery__lede" data-i18n="screenGallery.lede">{t(activeLocale, 'screenGallery.lede')}</p>
 	</div>
-	<div class="screen-gallery__scroller" role="region" aria-labelledby="screen-gallery-title">
+	<div class="screen-gallery__scroller" tabindex="0" role="region" aria-labelledby="screen-gallery-title">
 		<ul class="screen-gallery__list" role="list">
 			{SCREENS.map((screen) => (
 				<li class="screen-gallery__item">

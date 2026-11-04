@@ -189,6 +189,12 @@ body:has(.consent-banner:not([hidden])) {
 	margin-bottom: 1rem;
 }
 
+// A phone is narrower than the table: it scrolls by itself, not the page, and the keyboard reaches it.
+.legal-table-scroll {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
 .legal-table {
 	width: 100%;
 	border-collapse: collapse;
