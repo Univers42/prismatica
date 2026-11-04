@@ -1,4 +1,7 @@
 import { normalizeLocale } from './locale';
+import { ar as siteAr } from './site-strings/ar';
+import { en as siteEn, type SiteStrings } from './site-strings/en';
+import { es as siteEs } from './site-strings/es';
 
 /**
  * Supported locale codes for the application.
@@ -12,6 +15,7 @@ export const DEFAULT_LOCALE: SupportedLocale = 'en';
  * UI string definitions used across the application.
  */
 export interface UIStrings {
+  readonly site: SiteStrings;
   readonly a11y: {
     readonly skipToContent: string;
     readonly languageSwitcher: string;
@@ -258,6 +262,7 @@ export type TranslationDictionary = Record<SupportedLocale, UIStrings>;
 
 export const DICTIONARY: TranslationDictionary = {
   en: {
+    site: siteEn,
     a11y: {
       skipToContent: 'Skip to content',
       languageSwitcher: 'Change language',
@@ -500,6 +505,7 @@ export const DICTIONARY: TranslationDictionary = {
     },
   },
   es: {
+    site: siteEs,
     a11y: {
       skipToContent: 'Saltar al contenido',
       languageSwitcher: 'Cambiar idioma',
@@ -742,6 +748,7 @@ faq: {
     },
   },
   ar: {
+    site: siteAr,
     a11y: {
       skipToContent: 'الانتقال إلى المحتوى',
       languageSwitcher: 'تغيير اللغة',
