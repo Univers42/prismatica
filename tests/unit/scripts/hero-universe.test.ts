@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyNodeTransform, bindHeroUniverse, IDLE_FRAME_MS, MAX_DPR, MAX_CANVAS_PIXELS } from '../../../src/scripts/hero-universe';
+import { createMockContext } from '../helpers/canvas-mock';
 
 describe('hero universe frame throttling and DPR clamp', () => {
 	beforeEach(() => {
@@ -10,6 +11,7 @@ describe('hero universe frame throttling and DPR clamp', () => {
 	afterEach(() => {
 		vi.useRealTimers();
 		document.body.innerHTML = '';
+		document.documentElement.classList.remove('motion-paused');
 	});
 
 	it('has correct IDLE_FRAME_MS', () => {
@@ -47,6 +49,121 @@ describe('hero universe frame throttling and DPR clamp', () => {
 		expect(changed4).toBe(true);
 		expect(el.style.transform).toBe('translate(-50%, -50%) translate(12.0px, 5.4px)');
 		expect(node.lastTransform).toBe('translate(-50%, -50%) translate(12.0px, 5.4px)');
+	});
+
+	it('does not ease pointer when motion is not allowed', () => {
+		document.documentElement.classList.add('motion-paused');
+		const root = document.createElement('div');
+		root.innerHTML = `
+			<div data-universe-scene>
+				<canvas data-universe-canvas></canvas>
+				<div data-universe-node class="uv-node"><div class="uv-node__mark"></div></div>
+			</div>
+		`;
+		document.body.appendChild(root);
+
+		const canvas = root.querySelector('canvas')!;
+		(canvas as any).getContext = vi.fn().mockReturnValue(
+			/** @type {CanvasRenderingContext2D} */ (({
+				fillStyle: '#e4002b',
+				save: () => {},
+				restore: () => {},
+				clearRect: () => {},
+				fillRect: () => {},
+				beginPath: () => {},
+				moveTo: () => {},
+				lineTo: () => {},
+				stroke: () => {},
+				arc: () => {},
+				fill: () => {},
+				createLinearGradient: () => {},
+				addColorStop: () => {},
+				setTransform: () => {},
+				globalAlpha: 1,
+				lineWidth: 1,
+				strokeStyle: '#e4002b',
+				font: '' as string,
+				textAlign: 'center' as const,
+			} as const))
+		);
+
+		const cleanup = bindHeroUniverse(root as HTMLElement);
+		expect(cleanup).toBeInstanceOf(Function);
+
+		// Trigger initial render via visibilitychange
+		document.dispatchEvent(new Event('visibilitychange'));
+		vi.advanceTimersByTime(16);
+
+		const nodeEl = root.querySelector('[data-universe-node]') as HTMLElement;
+		// Initial frame drawn with pointer = (0, 0)
+		expect(nodeEl.style.transform).toBe('translate(-50%, -50%) translate(0.0px, 0.0px)');
+
+		// Pointermove should be ignored when motion is paused
+		const scene = root.querySelector('[data-universe-scene]')!;
+		scene.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 300, pointerType: 'mouse' }));
+		vi.advanceTimersByTime(50);
+
+		// Transform must remain unchanged at (0.0px, 0.0px)
+		expect(nodeEl.style.transform).toBe('translate(-50%, -50%) translate(0.0px, 0.0px)');
+
+		(cleanup as (() => void))();
+		document.documentElement.classList.remove('motion-paused');
+	});
+
+	it('suppresses scroll start when motion is not allowed', () => {
+		document.documentElement.classList.add('motion-paused');
+		const root = document.createElement('div');
+		root.innerHTML = `
+			<div data-universe-scene>
+				<canvas data-universe-canvas></canvas>
+				<div data-universe-node class="uv-node"><div class="uv-node__mark"></div></div>
+			</div>
+		`;
+		document.body.appendChild(root);
+
+		const canvas = root.querySelector('canvas')!;
+		(canvas as any).getContext = vi.fn().mockReturnValue(
+			/** @type {CanvasRenderingContext2D} */ (({
+				fillStyle: '#e4002b',
+				save: () => {},
+				restore: () => {},
+				clearRect: () => {},
+				fillRect: () => {},
+				beginPath: () => {},
+				moveTo: () => {},
+				lineTo: () => {},
+				stroke: () => {},
+				arc: () => {},
+				fill: () => {},
+				createLinearGradient: () => {},
+				addColorStop: () => {},
+				setTransform: () => {},
+				globalAlpha: 1,
+				lineWidth: 1,
+				strokeStyle: '#e4002b',
+				font: '' as string,
+				textAlign: 'center' as const,
+			} as const))
+		);
+
+		const cleanup = bindHeroUniverse(root as HTMLElement);
+
+		// Trigger initial frame
+		document.dispatchEvent(new Event('visibilitychange'));
+		vi.advanceTimersByTime(16);
+
+		const nodeEl = root.querySelector('[data-universe-node]') as HTMLElement;
+		expect(nodeEl.style.transform).toBe('translate(-50%, -50%) translate(0.0px, 0.0px)');
+
+		// Scroll event should be suppressed when motion is paused
+		window.dispatchEvent(new Event('scroll'));
+		vi.advanceTimersByTime(50);
+
+		// Transform must remain unchanged
+		expect(nodeEl.style.transform).toBe('translate(-50%, -50%) translate(0.0px, 0.0px)');
+
+		(cleanup as (() => void))();
+		document.documentElement.classList.remove('motion-paused');
 	});
 
 	it('bindHeroUniverse returns a cleanup function', () => {
