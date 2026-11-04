@@ -9,7 +9,7 @@ export const ROOT = resolve(__dirname, '../../..');
 export const KEY = 'gateway-login-otp-test-key-0123456789abcdef';
 export const RIGHT = '123456';
 
-export type Hit = { method: string; path: string; body: string; apikey?: string };
+export type Hit = { method: string; path: string; body: string; apikey?: string; at: number };
 export type Gateway = { base: string; logs: () => string };
 
 export const hits: Hit[] = [];
@@ -18,6 +18,12 @@ export const upstream = {
 	mailStatus: 200,
 	passwordStatus: 200,
 	auditDelayMs: 0,
+	// generate_link's delay stands in for GoTrue hashing a password, the gap two jobs can overlap in.
+	generateLinkDelayMs: 0,
+	// A POST to /rest/v1/users makes the address known to the GET, as a real insert would.
+	profilesPersist: false,
+	// Each address's first mail is answered 429 with this Retry-After; 0 refuses nothing.
+	mailRefusalRetryAfterSec: 0,
 	existingEmails: [] as string[],
 	// /auth/v1/user: the caller's own lookup, with the fields the collision guard reads.
 	userStatus: 200,
@@ -37,6 +43,7 @@ export const upstream = {
 	factors: [] as unknown[],
 };
 export const servers: { close: () => void }[] = [];
+const refusedMailTo = new Set<string>();
 const gateways: ChildProcess[] = [];
 let kongPort = 0;
 
@@ -61,13 +68,14 @@ function fakeKong() {
 		request.on('data', (chunk) => (body += chunk));
 		request.on('end', () => {
 			const path = request.url ?? '';
-			hits.push({ method: request.method ?? '', path, body, apikey: request.headers.apikey as string | undefined });
-			const reply = (status: number, payload: unknown) => {
-				response.writeHead(status, { 'content-type': 'application/json' });
+			hits.push({ method: request.method ?? '', path, body, apikey: request.headers.apikey as string | undefined, at: Date.now() });
+			const reply = (status: number, payload: unknown, headers: Record<string, string> = {}) => {
+				response.writeHead(status, { 'content-type': 'application/json', ...headers });
 				response.end(JSON.stringify(payload));
 			};
 			// A slow audit write stands in for the database round trip the gateway must not wait on.
-			const send = path.includes('auth_record_audit_event') && upstream.auditDelayMs > 0 ? (status: number, payload: unknown) => setTimeout(() => reply(status, payload), upstream.auditDelayMs) : reply;
+			const delayMs = path.includes('auth_record_audit_event') ? upstream.auditDelayMs : path.startsWith('/auth/v1/admin/generate_link') ? upstream.generateLinkDelayMs : 0;
+			const send = delayMs > 0 ? (status: number, payload: unknown) => setTimeout(() => reply(status, payload), delayMs) : reply;
 			const parsed = body ? JSON.parse(body) : {};
 			if (path.startsWith('/auth/v1/token?grant_type=password')) {
 				if (upstream.passwordStatus !== 200) return send(upstream.passwordStatus, { error: 'invalid_grant' });
@@ -85,7 +93,11 @@ function fakeKong() {
 			if (path.startsWith('/auth/v1/user')) return send(upstream.userStatus, { ...upstream.user, amr: upstream.amr });
 			if (path.startsWith('/auth/v1/logout')) return send(upstream.logoutStatus, {});
 			if (path === '/v1/auth/otp/request') return send(upstream.otpRequestStatus, upstream.otpRequestStatus === 200 ? { sent: true } : { error: 'x' });
-			if (path === '/email/v1/send') return send(upstream.mailStatus, {});
+			if (path === '/email/v1/send') {
+				if (upstream.mailRefusalRetryAfterSec === 0 || refusedMailTo.has(parsed.to)) return send(upstream.mailStatus, {});
+				refusedMailTo.add(parsed.to);
+				return reply(429, {}, { 'retry-after': String(upstream.mailRefusalRetryAfterSec) });
+			}
 			if (path === '/v1/auth/otp/verify') {
 				if (parsed.code === RIGHT) return send(200, { verified: true, proof: proofFor(parsed.email) });
 				if (parsed.code === '999999') return send(410, { error: 'expired' });
@@ -99,6 +111,7 @@ function fakeKong() {
 				const taken = upstream.existingEmails.some((email) => decodeURIComponent(path).includes(`email=eq.${email}`));
 				return send(200, taken ? [{ id: 'p1' }] : []);
 			}
+			if (path.startsWith('/rest/v1/users') && request.method === 'POST' && upstream.profilesPersist) upstream.existingEmails.push([parsed].flat()[0].email);
 			if (path.startsWith('/rest/v1/') || path.startsWith('/auth/v1/')) return send(200, path.startsWith('/rest/v1/') ? [] : {});
 			return send(200, {});
 		});
