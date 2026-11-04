@@ -15,6 +15,7 @@
  * Caveat: the bucket counts requests, not mails: an attacker who knows an address can spend
  * its 3 per hour, and the owner's own request then sends nothing (stated in DECISIONS, C7).
  */
+import { QUEUED_MAIL } from './email-api-mailer.mjs';
 import { EMAIL_REGEX, keyHash, normalizeEmail } from './identity.mjs';
 
 export const ACCOUNT_MAIL_ACCEPTED = Object.freeze({ message: 'If an account can receive mail at that address, a message is on its way. Check your inbox.' });
@@ -48,7 +49,7 @@ export function createAccountMail({ store, queue, gotrue, mailer, render, links,
 	}
 
 	async function sendMessage(email, name, vars, event) {
-		await mailer.send({ to: email, ...render(name, { email, siteUrl, ...vars }) });
+		await mailer.send({ to: email, ...render(name, { email, siteUrl, ...vars }) }, QUEUED_MAIL);
 		audit(event, { email });
 	}
 

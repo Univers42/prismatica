@@ -4,7 +4,7 @@
  * /register and the sign-in alerts. Answering first removes the timing oracle; this queue
  * keeps that work from crashing or flooding the process:
  *   - at most `maxLength` jobs wait; a push past that is dropped and reported to `onDrop`;
- *   - at most `concurrency` jobs run at once (2: two SMTP sessions, two GoTrue calls);
+ *   - at most `concurrency` jobs run at once (the gateway runs 1: account mail depends on it);
  *   - every rejection or synchronous throw is caught and reported to `onError`, so a GoTrue
  *     or SMTP failure after the 202 can never become an unhandled rejection (Node >= 15 exits).
  *
