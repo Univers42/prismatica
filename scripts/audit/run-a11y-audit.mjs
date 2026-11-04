@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chromium } from 'playwright';
+import { launchChromium } from './launch-chromium.mjs';
 import fs from 'fs';
 import path from 'path';
 import http from 'http';
@@ -60,11 +60,7 @@ async function runAudit() {
 	const results = [];
 	let hasError = false;
 
-	const browser = await chromium.launch({
-		executablePath: process.env.CHROME_BIN || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
-		args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-		env: { ...process.env, HOME: '/tmp' },
-	});
+	const browser = await launchChromium();
 	const context = await browser.newContext({ bypassCSP: true });
 	const page = await context.newPage();
 
