@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyNodeTransform, bindHeroUniverse, IDLE_FRAME_MS, MAX_DPR, MAX_CANVAS_PIXELS } from '../../../src/scripts/hero-universe';
-import { createMockContext } from '../helpers/canvas-mock';
-
 describe('hero universe frame throttling and DPR clamp', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
