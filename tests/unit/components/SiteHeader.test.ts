@@ -10,9 +10,19 @@ describe('SiteHeader', () => {
 		expect(header).toContain('const { locale = DEFAULT_LOCALE } = Astro.props;');
 	});
 
-	it('mounts the language switcher once, for desktop and phone alike', () => {
-		expect(header.match(/<LanguageSwitcher\b/g)).toHaveLength(1);
-		expect(header).toContain('currentLocale={locale}');
+	it('mounts the language switcher in the bar and in the phone menu', () => {
+		expect(header).toContain('<LanguageSwitcher class="button button--icon site-header__language" currentLocale={locale} />');
+		expect(header).toContain('<LanguageSwitcher class="site-menu__language" currentLocale={locale} isDrawer />');
+	});
+
+	it('hands the bar over to the menu below the same width the nav folds at', () => {
+		expect(header).toMatch(/\.site-header__actions :global\(\.site-header__language\) \{\s*display: none;/);
+		expect(header).toMatch(/@media \(min-width: 48rem\)[\s\S]*\.site-header__language\) \{\s*display: inline-grid;/);
+	});
+
+	// "Iniciar sesión" and the Arabic label are wider than the English this bar was drawn for.
+	it('keeps sign-in on one line', () => {
+		expect(header).toMatch(/\.site-header__signin \{[^}]*white-space: nowrap;/);
 	});
 
 	it('binds both navs and the actions to dictionary keys', () => {

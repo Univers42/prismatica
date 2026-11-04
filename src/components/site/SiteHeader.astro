@@ -1,8 +1,9 @@
 ---
 // The one header. Its filled-looking control is a ghost button, so the hero's tour button stays the
 // only primary action in the first viewport (PLAN §2.4). Below 48rem the nav folds into a
-// <details> menu, which opens and closes with no script. Controls that need JavaScript (theme,
-// sign-in) carry data-js-only and are absent until the pre-paint script marks <html data-js>.
+// <details> menu, which opens and closes with no script, and the language switcher moves into it:
+// four controls and the name do not fit a 390px bar. Controls that need JavaScript (theme, sign-in)
+// carry data-js-only and are absent until the pre-paint script marks <html data-js>.
 import favicon from '../../assets/brand/favicon.svg';
 import { NAV } from '../../data/links';
 import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
@@ -37,7 +38,7 @@ const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.them
 					<path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor" />
 				</svg>
 			</button>
-			<LanguageSwitcher class="button button--icon" currentLocale={locale} />
+			<LanguageSwitcher class="button button--icon site-header__language" currentLocale={locale} />
 			<button class="site-header__signin" type="button" data-open-connect data-js-only data-i18n="auth.signIn">{t(locale, 'auth.signIn')}</button>
 			<button class="button button--ghost site-header__create" type="button" data-open-portal data-js-only data-i18n="site.nav.createWorkspace">{t(locale, 'site.nav.createWorkspace')}</button>
 			<details class="site-menu">
@@ -49,6 +50,7 @@ const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.them
 				<nav class="site-menu__panel" aria-label={t(locale, 'site.nav.main')} data-i18n-aria-label="site.nav.main">
 					<ul>
 						{NAV.map((item) => <li><a href={item.href} data-i18n={item.key}>{t(locale, item.key)}</a></li>)}
+						<li data-js-only><LanguageSwitcher class="site-menu__language" currentLocale={locale} isDrawer /></li>
 						<li data-js-only><button class="text-link" type="button" data-open-portal data-i18n="site.nav.createWorkspace">{t(locale, 'site.nav.createWorkspace')}</button></li>
 					</ul>
 				</nav>
@@ -69,7 +71,7 @@ const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.them
 	.site-header__bar {
 		display: flex;
 		align-items: center;
-		gap: var(--space-6);
+		gap: var(--space-3);
 		min-height: 4rem;
 	}
 
@@ -116,6 +118,16 @@ const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.them
 		border: 0;
 		padding: var(--space-2);
 		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.site-header__actions :global(.site-header__language) {
+		display: none;
+	}
+
+	.site-menu__panel :global(.site-menu__language) {
+		justify-content: flex-start;
+		color: var(--graphite);
 	}
 
 	.site-header__create {
@@ -152,8 +164,16 @@ const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.them
 	}
 
 	@media (min-width: 48rem) {
+		.site-header__bar {
+			gap: var(--space-6);
+		}
+
 		.site-header__nav {
 			display: block;
+		}
+
+		.site-header__actions :global(.site-header__language) {
+			display: inline-grid;
 		}
 
 		.site-header__create {
