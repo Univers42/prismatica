@@ -1,6 +1,6 @@
-import { trustedHTML, insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
-import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
+import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
 import { notify } from './notifications';
 import { announce, ensureButtonLabels } from './theme';
@@ -9,8 +9,6 @@ import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
 import { bindPasswordToggles } from './password-toggle';
 import { type AccountMailKind, accountMailDoneMessage, accountMailSubmitLabel, isAccountMailKind, showAccountMailForm, showAuthForm } from './portal-account-mail';
-import { MiniBaasError } from '@grobase/js';
-import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
 import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 import { createPortalMarkup } from './portal-markup';
@@ -22,14 +20,6 @@ export type PortalMode = 'start' | 'connect' | AccountMailKind;
 type TurnstileApi = {
 	render: (container: HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'error-callback': () => void; 'expired-callback': () => void }) => string;
 	reset?: (widgetId?: string) => void;
-};
-
-type TrustedHtmlPolicy = {
-	createHTML: (markup: string) => unknown;
-};
-
-type TrustedTypesFactory = {
-	createPolicy: (name: string, rules: { createHTML: (markup: string) => string }) => TrustedHtmlPolicy;
 };
 
 type AuthModeControls = {
@@ -110,15 +100,6 @@ export function mountTurnstile(portal: HTMLElement): void {
 	});
 	container.dataset.turnstileWidgetId = widgetId;
 }
-
-function readAuthToken(): string | null {
-	return getAccessToken();
-}
-
-type RpcStatus = {
-	ok: boolean;
-	status: number;
-};
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const preferences = readConsentPreferences();
@@ -371,21 +352,6 @@ function usernameValidationState(field: HTMLInputElement): { valid: boolean; mes
 	if (val.length < 3 || val.length > 32) return { valid: false, message: 'Username must be 3–32 characters.' };
 	if (!/^[a-zA-Z0-9_.-]+$/.test(val)) return { valid: false, message: 'Only letters, numbers, dots, hyphens, and underscores.' };
 	return { valid: true, message: 'Username looks good.' };
-}
-
-function setPortalAvailabilityState(portal: HTMLElement, field: 'email' | 'username', state: 'unknown' | 'checking' | 'available' | 'taken'): void {
-	portal.dataset[`${field}Availability`] = state;
-}
-
-function showAvailabilityResult(field: HTMLInputElement, available: boolean, takenMessage: string, availableMessage: string): void {
-	const messageId = `${field.id || 'field'}-inline-error`;
-	if (available) {
-		clearInlineFieldError(field, messageId, availableMessage);
-		const message = document.getElementById(messageId);
-		if (message) message.dataset.validationState = 'valid';
-	} else {
-		showInlineFieldError(field, messageId, takenMessage);
-	}
 }
 
 function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
