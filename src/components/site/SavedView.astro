@@ -35,7 +35,7 @@ const view = deals.filter(matches).sort((a, b) => b.amount - a.amount);
 		))}
 	</ul>
 	<div class="v4__view">
-		<div class="v4__chips" aria-label={t(locale, 'site.savedView.filters')} data-i18n-aria-label="site.savedView.filters">
+		<div class="v4__chips" role="group" aria-label={t(locale, 'site.savedView.filters')} data-i18n-aria-label="site.savedView.filters">
 			<span class="v4__chip" data-i18n="site.savedView.stageOpen">{t(locale, 'site.savedView.stageOpen')}</span>
 			<span class="v4__chip" data-i18n="site.savedView.amountOver">{t(locale, 'site.savedView.amountOver')}</span>
 			<span class="v4__chip" data-i18n="site.savedView.largestFirst">{t(locale, 'site.savedView.largestFirst')}</span>
