@@ -39,6 +39,13 @@ describe('SiteFooter', () => {
 });
 
 describe('NewsletterSignup', () => {
+	// Without these two, a submit with JavaScript off is a GET that puts the address in the URL, and
+	// so in server logs and browser history.
+	it('posts to the gateway', () => {
+		expect(newsletter).toContain('action="/api/newsletter/subscribe"');
+		expect(newsletter).toContain('method="post"');
+	});
+
 	it('validates in its own script', () => {
 		expect(newsletter).toMatch(/<form\b[^>]*\bnovalidate\b/);
 	});

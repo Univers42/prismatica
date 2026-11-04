@@ -9,7 +9,7 @@ interface Props {
 const { id = 'newsletter-signup', locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
-<form class="newsletter-signup" data-newsletter-signup novalidate aria-labelledby={`${id}-title`}>
+<form class="newsletter-signup" action="/api/newsletter/subscribe" method="post" data-newsletter-signup novalidate aria-labelledby={`${id}-title`}>
 	<h2 class="label" id={`${id}-title`} data-i18n="site.newsletter.title">{t(locale, 'site.newsletter.title')}</h2>
 	<p data-i18n="site.newsletter.lead">{t(locale, 'site.newsletter.lead')}</p>
 	<div class="field">
