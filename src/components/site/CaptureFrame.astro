@@ -3,16 +3,20 @@
 // fixed by the shot's intrinsic size before any byte arrives, so captures never shift layout.
 // Until the shot is captured it renders a labelled placeholder at the same aspect ratio.
 import { SHOTS, type ShotId } from '../../data/shots';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
 
 interface Props {
 	shot: ShotId;
 	eager?: boolean;
 	sizes?: string;
 	class?: string;
+	locale?: string;
 }
 
-const { shot, eager = false, sizes = '(min-width: 80rem) 80rem, 100vw', class: className } = Astro.props;
+const { shot, eager = false, sizes = '(min-width: 80rem) 80rem, 100vw', class: className, locale = DEFAULT_LOCALE } = Astro.props;
 const meta = SHOTS[shot];
+const titleKey = `site.shots.${meta.id}.title`;
+const altKey = `site.shots.${meta.id}.alt`;
 const base = `/media/${meta.id.toLowerCase()}`;
 const widths = [720, 1440, 2880];
 const srcset = (ext: string): string => widths.map((w) => `${base}-${w}.${ext} ${w}w`).join(', ');
@@ -25,7 +29,8 @@ const srcset = (ext: string): string => widths.map((w) => `${base}-${w}.${ext} $
 			<source type="image/webp" srcset={srcset('webp')} sizes={sizes} />
 			<img
 				src={`${base}-1440.jpg`}
-				alt={meta.alt}
+				alt={t(locale, altKey)}
+				data-i18n-alt={altKey}
 				width={meta.width}
 				height={meta.height}
 				loading={eager ? 'eager' : 'lazy'}
@@ -34,8 +39,8 @@ const srcset = (ext: string): string => widths.map((w) => `${base}-${w}.${ext} $
 			/>
 		</picture>
 	) : (
-		<div class="frame__placeholder" role="img" aria-label={meta.alt}>
-			<span class="label">{meta.id} · {meta.title}</span>
+		<div class="frame__placeholder" role="img" aria-label={t(locale, altKey)} data-i18n-aria-label={altKey}>
+			<span class="label">{meta.id} · <span data-i18n={titleKey}>{t(locale, titleKey)}</span></span>
 		</div>
 	)}
 </figure>

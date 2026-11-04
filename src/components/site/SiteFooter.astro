@@ -5,6 +5,21 @@
 import NewsletterSignup from '../gdpr/NewsletterSignup.astro';
 import { DATA_CONTROLLER, LEGAL_LINKS } from '../../data/legal';
 import { LINKEDIN_URL, NAV, ORGANIZATION_URL, RELEASE, SOURCE_URL } from '../../data/links';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+
+// Typed by the hrefs in legal.ts, so a new legal page cannot reach the footer without a label.
+const LEGAL_LABEL_KEYS: Record<(typeof LEGAL_LINKS)[number]['href'], string> = {
+	'/legal/privacy-policy/': 'site.footer.privacy',
+	'/legal/terms/': 'site.footer.terms',
+	'/legal/cookies/': 'site.footer.cookies',
+	'/legal/data-rights/': 'site.footer.dataRights',
+};
 
 const year = new Date().getFullYear();
 ---
@@ -13,34 +28,34 @@ const year = new Date().getFullYear();
 	<div class="container container--wide site-footer__grid">
 		<div class="site-footer__about">
 			<p class="site-footer__name">Prismatica</p>
-			<p>One workspace for every department: pages, databases and the links between them.</p>
+			<p data-i18n="site.footer.about">{t(locale, 'site.footer.about')}</p>
 		</div>
 
 		<nav aria-labelledby="footer-product">
-			<h2 id="footer-product" class="label">Product</h2>
+			<h2 id="footer-product" class="label" data-i18n="footer.groupProduct">{t(locale, 'footer.groupProduct')}</h2>
 			<ul>
-				{NAV.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
-				<li><a href="/tour/">The 75-second tour</a></li>
-				<li><a href={RELEASE.url} rel="noopener">Desktop release</a></li>
-				<li><a href={SOURCE_URL} rel="noopener">Source code</a></li>
+				{NAV.map((item) => <li><a href={item.href} data-i18n={item.key}>{t(locale, item.key)}</a></li>)}
+				<li><a href="/tour/" data-i18n="site.footer.tour">{t(locale, 'site.footer.tour')}</a></li>
+				<li><a href={RELEASE.url} rel="noopener" data-i18n="site.footer.release">{t(locale, 'site.footer.release')}</a></li>
+				<li><a href={SOURCE_URL} rel="noopener" data-i18n="site.footer.source">{t(locale, 'site.footer.source')}</a></li>
 			</ul>
 		</nav>
 
 		<nav aria-labelledby="footer-legal">
-			<h2 id="footer-legal" class="label">Legal</h2>
+			<h2 id="footer-legal" class="label" data-i18n="footer.groupLegal">{t(locale, 'footer.groupLegal')}</h2>
 			<ul>
-				{LEGAL_LINKS.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
-				<li data-js-only><button class="text-link site-footer__cookies" type="button" data-manage-cookies>Cookie settings</button></li>
+				{LEGAL_LINKS.map((link) => <li><a href={link.href} data-i18n={LEGAL_LABEL_KEYS[link.href]}>{t(locale, LEGAL_LABEL_KEYS[link.href])}</a></li>)}
+				<li data-js-only><button class="text-link site-footer__cookies" type="button" data-manage-cookies data-i18n="footer.cookieSettings">{t(locale, 'footer.cookieSettings')}</button></li>
 			</ul>
 		</nav>
 
 		<div class="site-footer__newsletter">
-			<NewsletterSignup id="footer-newsletter" />
+			<NewsletterSignup id="footer-newsletter" locale={locale} />
 		</div>
 	</div>
 	<div class="container container--wide site-footer__base">
 		<p class="label">© {year} Prismatica</p>
-		<p class="label">Data controller: {DATA_CONTROLLER.name} · <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a></p>
+		<p class="label"><span data-i18n="site.footer.controller">{t(locale, 'site.footer.controller')}</span> {DATA_CONTROLLER.name} · <a href={`mailto:${DATA_CONTROLLER.email}`}>{DATA_CONTROLLER.email}</a></p>
 		<ul class="site-footer__social">
 			<li><a href={ORGANIZATION_URL} rel="noopener noreferrer">GitHub</a></li>
 			<li><a href={LINKEDIN_URL} rel="noopener noreferrer">LinkedIn</a></li>

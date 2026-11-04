@@ -36,7 +36,10 @@ describe('Index Page Locale', () => {
 
 	it('passes locale to Layout', () => {
 		const sources = renderedSources();
-		expect(sources).toContain('locale={requestedLocale}');
+		expect(sources).toContain('<Layout jsonLd={[softwareApplication]} locale={requestedLocale}>');
 	});
 
+	it.each(['Hero', 'Silo', 'OneRecord', 'Views', 'Learning', 'RunIt', 'Plainly', 'FinalCta', 'TourDialog'])('forwards locale to %s', (section) => {
+		expect(renderedSources()).toContain(`<${section} locale={requestedLocale} />`);
+	});
 });

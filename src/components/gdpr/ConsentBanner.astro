@@ -1,36 +1,43 @@
 ---
 import { POLICY_VERSION } from '../../data/legal';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <section class="consent-banner" data-consent-banner tabindex="-1" aria-labelledby="consent-title" aria-describedby="consent-description" hidden>
 	<div class="consent-banner__paper">
 		<div>
-			<p class="eyebrow">Privacy choices</p>
-			<h2 id="consent-title">Choose your consent preferences</h2>
-			<p id="consent-description">We only use essential local preferences by default. Optional analytics, newsletter and marketing choices stay off unless you enable them.</p>
-			<p class="consent-banner__version">Policy version {POLICY_VERSION}</p>
+			<p class="eyebrow" data-i18n="site.consent.eyebrow">{t(locale, 'site.consent.eyebrow')}</p>
+			<h2 id="consent-title" data-i18n="site.consent.title">{t(locale, 'site.consent.title')}</h2>
+			<p id="consent-description" data-i18n="site.consent.description">{t(locale, 'site.consent.description')}</p>
+			<p class="consent-banner__version" data-i18n="site.consent.version">{t(locale, 'site.consent.version', { version: POLICY_VERSION })}</p>
 		</div>
-		<div class="consent-banner__actions" role="group" aria-label="Quick consent choices">
-			<button class="button button--primary" type="button" data-consent-accept-all aria-label="Accept all optional cookies and preferences">Accept all</button>
-			<button class="button button--primary" type="button" data-consent-reject-all aria-label="Reject all optional cookies and preferences">Reject all</button>
-			<button class="button button--ghost" type="button" data-consent-manage aria-expanded="false" aria-controls="consent-preferences" aria-label="Manage preferences for cookies and consent">Manage preferences</button>
+		<div class="consent-banner__actions" role="group" aria-label={t(locale, 'site.consent.quick')} data-i18n-aria-label="site.consent.quick">
+			<button class="button button--primary" type="button" data-consent-accept-all aria-label={t(locale, 'site.consent.acceptAllLabel')} data-i18n-aria-label="site.consent.acceptAllLabel" data-i18n="site.consent.acceptAll">{t(locale, 'site.consent.acceptAll')}</button>
+			<button class="button button--primary" type="button" data-consent-reject-all aria-label={t(locale, 'site.consent.rejectAllLabel')} data-i18n-aria-label="site.consent.rejectAllLabel" data-i18n="site.consent.rejectAll">{t(locale, 'site.consent.rejectAll')}</button>
+			<button class="button button--ghost" type="button" data-consent-manage aria-expanded="false" aria-controls="consent-preferences" aria-label={t(locale, 'site.consent.manageLabel')} data-i18n-aria-label="site.consent.manageLabel" data-i18n="site.consent.manage">{t(locale, 'site.consent.manage')}</button>
 		</div>
 		<form id="consent-preferences" class="consent-banner__preferences" data-consent-form hidden>
 			<label class="consent-toggle" for="consent-pref-analytics">
 				<input id="consent-pref-analytics" type="checkbox" name="analytics" />
-				<span><strong>Analytics</strong> — optional audience measurement. Off by default.</span>
+				<span><strong data-i18n="site.consent.analytics">{t(locale, 'site.consent.analytics')}</strong> <span data-i18n="site.consent.analyticsNote">{t(locale, 'site.consent.analyticsNote')}</span></span>
 			</label>
 			<label class="consent-toggle" for="consent-pref-newsletter">
 				<input id="consent-pref-newsletter" type="checkbox" name="newsletter" />
-				<span><strong>Newsletter</strong> — occasional product updates. Off by default.</span>
+				<span><strong data-i18n="site.consent.newsletter">{t(locale, 'site.consent.newsletter')}</strong> <span data-i18n="site.consent.newsletterNote">{t(locale, 'site.consent.newsletterNote')}</span></span>
 			</label>
 			<label class="consent-toggle" for="consent-pref-marketing">
 				<input id="consent-pref-marketing" type="checkbox" name="marketing" />
-				<span><strong>Marketing</strong> — promotional messages. Off by default.</span>
+				<span><strong data-i18n="site.consent.marketing">{t(locale, 'site.consent.marketing')}</strong> <span data-i18n="site.consent.marketingNote">{t(locale, 'site.consent.marketingNote')}</span></span>
 			</label>
 			<div class="consent-banner__actions">
-				<button class="button button--primary" type="submit" aria-label="Save consent preferences">Save preferences</button>
-				<a href="/legal/privacy-policy/">Privacy Policy</a>
+				<button class="button button--primary" type="submit" aria-label={t(locale, 'site.consent.saveLabel')} data-i18n-aria-label="site.consent.saveLabel" data-i18n="site.consent.save">{t(locale, 'site.consent.save')}</button>
+				<a href="/legal/privacy-policy/" data-i18n="site.footer.privacy">{t(locale, 'site.footer.privacy')}</a>
 			</div>
 		</form>
 		<noscript>

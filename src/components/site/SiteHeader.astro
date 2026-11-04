@@ -6,6 +6,15 @@
 import favicon from '../../assets/brand/favicon.svg';
 import { NAV } from '../../data/links';
 import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
+
+const themeLabel = t(locale, 'site.theme.label', { current: t(locale, 'site.theme.system'), next: t(locale, 'site.theme.light') });
 ---
 
 <header class="site-header">
@@ -15,32 +24,32 @@ import LanguageSwitcher from '../ui/LanguageSwitcher.astro';
 			<span>Prismatica</span>
 		</a>
 
-		<nav class="site-header__nav" aria-label="Main">
+		<nav class="site-header__nav" aria-label={t(locale, 'site.nav.main')} data-i18n-aria-label="site.nav.main">
 			<ul>
-				{NAV.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+				{NAV.map((item) => <li><a href={item.href} data-i18n={item.key}>{t(locale, item.key)}</a></li>)}
 			</ul>
 		</nav>
 
 		<div class="site-header__actions">
-			<button class="button button--icon" type="button" data-theme-toggle data-js-only aria-label="Theme: Match system">
+			<button class="button button--icon" type="button" data-theme-toggle data-js-only aria-label={themeLabel}>
 				<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
 					<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6" />
 					<path d="M10 3a7 7 0 0 1 0 14z" fill="currentColor" />
 				</svg>
 			</button>
-			<LanguageSwitcher class="button button--icon" />
-			<button class="site-header__signin" type="button" data-open-connect data-js-only>Sign in</button>
-			<button class="button button--ghost site-header__create" type="button" data-open-portal data-js-only>Create workspace</button>
+			<LanguageSwitcher class="button button--icon" currentLocale={locale} />
+			<button class="site-header__signin" type="button" data-open-connect data-js-only data-i18n="auth.signIn">{t(locale, 'auth.signIn')}</button>
+			<button class="button button--ghost site-header__create" type="button" data-open-portal data-js-only data-i18n="site.nav.createWorkspace">{t(locale, 'site.nav.createWorkspace')}</button>
 			<details class="site-menu">
-				<summary class="button button--icon" aria-label="Menu">
+				<summary class="button button--icon" aria-label={t(locale, 'site.nav.menu')} data-i18n-aria-label="site.nav.menu">
 					<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
 						<path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
 					</svg>
 				</summary>
-				<nav class="site-menu__panel" aria-label="Main">
+				<nav class="site-menu__panel" aria-label={t(locale, 'site.nav.main')} data-i18n-aria-label="site.nav.main">
 					<ul>
-						{NAV.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
-						<li data-js-only><button class="text-link" type="button" data-open-portal>Create workspace</button></li>
+						{NAV.map((item) => <li><a href={item.href} data-i18n={item.key}>{t(locale, item.key)}</a></li>)}
+						<li data-js-only><button class="text-link" type="button" data-open-portal data-i18n="site.nav.createWorkspace">{t(locale, 'site.nav.createWorkspace')}</button></li>
 					</ul>
 				</nav>
 			</details>

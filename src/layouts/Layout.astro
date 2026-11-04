@@ -14,6 +14,7 @@ import prepaint from '../scripts/prepaint.js?raw';
 
 type Props = {
 	title?: string;
+	titleKey?: string;
 	description?: string;
 	image?: string;
 	canonical?: string;
@@ -25,7 +26,8 @@ type Props = {
 };
 
 const {
-	title = 'Prismatica: one workspace for every department',
+	title,
+	titleKey = title ? undefined : 'site.meta.landingTitle',
 	description = 'Prismatica keeps pages, databases and the links between them in one workspace, so a customer, their deals, invoices and the notes behind each decision are one record every department reads.',
 	image,
 	canonical,
@@ -42,6 +44,7 @@ const activeLocale = normalizeLocale(locale, {
 }) as SupportedLocale;
 
 const direction = getLocaleDirection(activeLocale);
+const pageTitle = titleKey ? t(activeLocale, titleKey) : title;
 
 const site = Astro.site;
 const canonicalUrl = canonical ?? (site ? new URL(Astro.url.pathname, site).href : undefined);
@@ -92,19 +95,19 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)" />
-		<title>{title}</title>
+		<title data-i18n={titleKey}>{pageTitle}</title>
 		<meta name="description" content={description} />
 		{canonicalUrl && !noindex && <link rel="canonical" href={canonicalUrl} />}
 		{noindex && <meta name="robots" content="noindex, nofollow" />}
 
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Prismatica" />
-		<meta property="og:title" content={title} />
+		<meta property="og:title" content={pageTitle} />
 		<meta property="og:description" content={description} />
 		{canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
 		<meta property="og:image" content={socialImageUrl} />
 		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:title" content={title} />
+		<meta name="twitter:title" content={pageTitle} />
 		<meta name="twitter:description" content={description} />
 		<meta name="twitter:image" content={socialImageUrl} />
 		<script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData).replace(/</g, '\\u003c')} />
@@ -121,12 +124,12 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 	<body>
 		<a href="#main-content" class="skip-link" data-i18n="a11y.skipToContent">{t(activeLocale, 'a11y.skipToContent')}</a>
 		<div id="global-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
-		{!bare && <SiteHeader />}
+		{!bare && <SiteHeader locale={activeLocale} />}
 		<slot />
-		{!bare && <SiteFooter />}
+		{!bare && <SiteFooter locale={activeLocale} />}
 		<!-- Consent lives in the layout so the choice can be reviewed or withdrawn from every
 		     page (GDPR Art. 7(3)), including the "Manage cookie preferences" controls. -->
-		<ConsentBanner />
+		<ConsentBanner locale={activeLocale} />
 		{isBeta && <p class="beta-badge">Beta · {buildSha.slice(0, 7)}</p>}
 		<script src="../scripts/main.ts"></script>
 	</body>

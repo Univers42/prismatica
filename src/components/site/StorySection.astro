@@ -3,29 +3,31 @@
 // (PLAN §2.3). Beats alternate sides at 64rem and stack copy-then-capture below it. An optional
 // second, smaller capture sits under the first.
 import CaptureFrame from './CaptureFrame.astro';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
 import type { ShotId } from '../../data/shots';
 
 interface Props {
 	id: string;
-	title: string;
+	titleKey: string;
 	shot: ShotId;
 	secondShot?: ShotId;
 	reverse?: boolean;
+	locale?: string;
 }
 
-const { id, title, shot, secondShot, reverse = false } = Astro.props;
+const { id, titleKey, shot, secondShot, reverse = false, locale = DEFAULT_LOCALE } = Astro.props;
 const sizes = '(min-width: 64rem) 46rem, 100vw';
 ---
 
 <section class="section" id={id} aria-labelledby={`${id}-title`}>
 	<div class:list={['container', 'container--wide', 'story', { 'story--reverse': reverse }]}>
 		<div class="story__copy">
-			<h2 id={`${id}-title`}>{title}</h2>
+			<h2 id={`${id}-title`} data-i18n={titleKey}>{t(locale, titleKey)}</h2>
 			<slot />
 		</div>
 		<div class="story__proof">
-			<CaptureFrame shot={shot} sizes={sizes} />
-			{secondShot && <CaptureFrame shot={secondShot} sizes={sizes} class="story__second" />}
+			<CaptureFrame shot={shot} sizes={sizes} locale={locale} />
+			{secondShot && <CaptureFrame shot={secondShot} sizes={sizes} class="story__second" locale={locale} />}
 		</div>
 	</div>
 </section>

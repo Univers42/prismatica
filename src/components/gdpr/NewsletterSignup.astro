@@ -1,24 +1,27 @@
 ---
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
 interface Props {
 	id?: string;
+	locale?: string;
 }
 
-const { id = 'newsletter-signup' } = Astro.props;
+const { id = 'newsletter-signup', locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <form class="newsletter-signup" data-newsletter-signup novalidate aria-labelledby={`${id}-title`}>
-	<h2 class="label" id={`${id}-title`}>Newsletter</h2>
-	<p>A short note when something ships, and one link to leave.</p>
+	<h2 class="label" id={`${id}-title`} data-i18n="site.newsletter.title">{t(locale, 'site.newsletter.title')}</h2>
+	<p data-i18n="site.newsletter.lead">{t(locale, 'site.newsletter.lead')}</p>
 	<div class="field">
-		<label for={`${id}-email`}>Email address</label>
+		<label for={`${id}-email`} data-i18n="site.newsletter.email">{t(locale, 'site.newsletter.email')}</label>
 		<input id={`${id}-email`} name="email" type="email" autocomplete="email" required />
 	</div>
 	<label class="consent-toggle" for={`${id}-consent`}>
 		<input id={`${id}-consent`} name="newsletter_consent" type="checkbox" required />
-		<span>I agree to receive the Prismatica newsletter and can unsubscribe at any time (<a href="/legal/privacy-policy/">Privacy Policy</a>).</span>
+		<span><span data-i18n="site.newsletter.consent">{t(locale, 'site.newsletter.consent')}</span><a href="/legal/privacy-policy/" data-i18n="site.footer.privacy">{t(locale, 'site.footer.privacy')}</a>).</span>
 	</label>
 	<div class="newsletter-signup__turnstile" data-turnstile-slot></div>
 	<input type="hidden" name="turnstileToken" data-turnstile-token />
-	<button class="button button--ghost" type="submit">Subscribe</button>
+	<button class="button button--ghost" type="submit" data-i18n="footer.newsletterButton">{t(locale, 'footer.newsletterButton')}</button>
 	<output class="form-status" aria-live="polite" data-newsletter-status></output>
 </form>

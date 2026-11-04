@@ -1,5 +1,5 @@
 ---
-import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale } from '../../lib/i18n';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale, t } from '../../lib/i18n';
 import { normalizeLocale } from '../../lib/locale';
 
 export type Props = {
@@ -27,8 +27,9 @@ const nextLocale = SUPPORTED_LOCALES[nextIndex] ?? DEFAULT_LOCALE;
 
 const currentLabel = LOCALE_LABELS[activeLocale];
 const nextLabel = LOCALE_LABELS[nextLocale];
-const ariaLabel = `${currentLabel.code} - Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`;
-const title = `Switch to ${nextLabel.nativeName} language`;
+const ariaLabel = t(activeLocale, 'site.language.label', { code: currentLabel.code, current: currentLabel.nativeName, next: nextLabel.nativeName });
+const title = t(activeLocale, 'site.language.title', { next: nextLabel.nativeName });
+const languageName = t(activeLocale, 'site.language.current', { current: currentLabel.nativeName });
 ---
 
 <a
@@ -51,10 +52,10 @@ const title = `Switch to ${nextLabel.nativeName} language`;
 		<ellipse cx="12" cy="12" rx="4.5" ry="9" fill="none" stroke="currentColor" stroke-width="1.6" />
 	</svg>
 	{isDrawer ? (
-		<span data-lang-label>{`Language: ${currentLabel.nativeName}`}</span>
+		<span data-lang-label>{languageName}</span>
 	) : (
 		<span class="header-icon__lang-badge" aria-hidden="true">{currentLabel.code}</span>
-		<span class="visually-hidden" data-lang-label>{`Language: ${currentLabel.nativeName}`}</span>
+		<span class="visually-hidden" data-lang-label>{languageName}</span>
 	)}
 </a>
 

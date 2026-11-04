@@ -2,35 +2,42 @@
 // Section 6: where it runs, promising only what ships (PLAN §9 Q1, D-031): the hosted workspace
 // on grobase, and the one desktop release that exists, with the Docker backend it still needs.
 import { RELEASE, SOURCE_URL } from '../../data/links';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <section class="section" id="run" aria-labelledby="run-title">
 	<div class="container">
 		<div class="section__head">
-			<h2 id="run-title">Run it where you work.</h2>
-			<p class="lead">A team shares one workspace on grobase. One person can keep theirs on their own machine.</p>
+			<h2 id="run-title" data-i18n="site.run.title">{t(locale, 'site.run.title')}</h2>
+			<p class="lead" data-i18n="site.run.lead">{t(locale, 'site.run.lead')}</p>
 		</div>
 
 		<div class="run">
 			<article class="run__option" aria-labelledby="run-team">
-				<h3 id="run-team">For a team</h3>
-				<p>Every department signs in to the same workspace. Pages, databases and the PostgreSQL, MySQL or MongoDB databases you link stay on your grobase project, behind its sign-in.</p>
+				<h3 id="run-team" data-i18n="site.run.teamTitle">{t(locale, 'site.run.teamTitle')}</h3>
+				<p data-i18n="site.run.teamBody">{t(locale, 'site.run.teamBody')}</p>
 				<ul class="run__facts">
-					<li>Email sign-in, with verification and password reset</li>
-					<li>Databases linked to the workspace, read in place</li>
+					<li data-i18n="site.run.teamSignIn">{t(locale, 'site.run.teamSignIn')}</li>
+					<li data-i18n="site.run.teamDatabases">{t(locale, 'site.run.teamDatabases')}</li>
 				</ul>
-				<button class="text-link" type="button" data-open-portal data-js-only>Create a workspace</button>
+				<button class="text-link" type="button" data-open-portal data-js-only data-i18n="site.hero.create">{t(locale, 'site.hero.create')}</button>
 			</article>
 
 			<article class="run__option" aria-labelledby="run-local">
-				<h3 id="run-local">On your own machine</h3>
-				<p>The desktop app talks to a small backend on the same machine, so your pages stay in a local {RELEASE.engine} database under a local account.</p>
+				<h3 id="run-local" data-i18n="site.run.localTitle">{t(locale, 'site.run.localTitle')}</h3>
+				<p data-i18n="site.run.localBody">{t(locale, 'site.run.localBody', { engine: RELEASE.engine })}</p>
 				<ul class="run__facts">
-					<li>{RELEASE.platforms}</li>
-					<li>The backend runs in {RELEASE.backend}, started from the <a href={SOURCE_URL} rel="noopener">source</a></li>
-					<li>Release <code>{RELEASE.tag}</code></li>
+					<li data-i18n="site.run.platforms">{t(locale, 'site.run.platforms')}</li>
+					<li><span data-i18n="site.run.backendBefore">{t(locale, 'site.run.backendBefore', { backend: RELEASE.backend })}</span> <a href={SOURCE_URL} rel="noopener" data-i18n="site.run.backendLink">{t(locale, 'site.run.backendLink')}</a></li>
+					<li><span data-i18n="site.run.release">{t(locale, 'site.run.release')}</span> <code>{RELEASE.tag}</code></li>
 				</ul>
-				<a class="text-link" href={RELEASE.url} rel="noopener">Download the desktop app</a>
+				<a class="text-link" href={RELEASE.url} rel="noopener" data-i18n="site.run.download">{t(locale, 'site.run.download')}</a>
 			</article>
 		</div>
 	</div>

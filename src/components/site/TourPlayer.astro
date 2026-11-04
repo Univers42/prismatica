@@ -3,6 +3,13 @@
 // same content with JavaScript off). The video is fetched only when it plays (preload="none").
 import CaptureFrame from './CaptureFrame.astro';
 import { CHAPTERS, TOUR } from '../../data/tour';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <div class="tour">
@@ -12,29 +19,29 @@ import { CHAPTERS, TOUR } from '../../data/tour';
 				<source src={TOUR.webm} type="video/webm" />
 				<source src={TOUR.mp4} type="video/mp4" />
 				<track kind="captions" src={TOUR.captions} srclang="en" label="English" default />
-				<p>Your browser cannot play this video. <a href={TOUR.mp4}>Download the MP4</a> or <a href={TOUR.transcript}>read the transcript</a>.</p>
+				<p><span data-i18n="site.tour.videoFallback">{t(locale, 'site.tour.videoFallback')}</span> <a href={TOUR.mp4} data-i18n="site.tour.downloadMp4">{t(locale, 'site.tour.downloadMp4')}</a> · <a href={TOUR.transcript} data-i18n="site.tour.readTranscript">{t(locale, 'site.tour.readTranscript')}</a></p>
 			</video>
 		) : (
-			<CaptureFrame shot="S12" />
+			<CaptureFrame shot="S12" locale={locale} />
 		)}
 	</div>
 
-	<ol class="tour__chapters" aria-label="Chapters">
+	<ol class="tour__chapters" aria-label={t(locale, 'site.tour.chapters')} data-i18n-aria-label="site.tour.chapters">
 		{CHAPTERS.map((chapter) => (
 			<li>
 				<span class="label">{chapter.start}</span>
-				<span class="tour__chapter-title">{chapter.title}</span>
-				<span class="tour__caption">{chapter.caption}</span>
+				<span class="tour__chapter-title" data-i18n={`site.tour.steps.${chapter.key}.title`}>{t(locale, `site.tour.steps.${chapter.key}.title`)}</span>
+				<span class="tour__caption" data-i18n={`site.tour.steps.${chapter.key}.caption`}>{t(locale, `site.tour.steps.${chapter.key}.caption`)}</span>
 			</li>
 		))}
 	</ol>
 
 	{TOUR.ready ? (
 		<p class="tour__alternatives">
-			<a href={TOUR.mp4}>Download the MP4</a> · <a href={TOUR.transcript}>Read the transcript</a>
+			<a href={TOUR.mp4} data-i18n="site.tour.downloadMp4">{t(locale, 'site.tour.downloadMp4')}</a> · <a href={TOUR.transcript} data-i18n="site.tour.readTranscript">{t(locale, 'site.tour.readTranscript')}</a>
 		</p>
 	) : (
-		<p class="tour__alternatives">The recording is made from the demo account and lands with it. The chapters above are its script.</p>
+		<p class="tour__alternatives" data-i18n="site.tour.recordingNote">{t(locale, 'site.tour.recordingNote')}</p>
 	)}
 </div>
 

@@ -2,9 +2,16 @@
 // Section 5: the second-brain half of the product, told through the operations story. Notes are
 // pages, so they get backlinks and a place in the graph next to the records they informed.
 import StorySection from './StorySection.astro';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
-<StorySection id="learning" title="What you learn, next to the work." shot="S8" secondShot="S9" reverse>
-	<p class="lead">A course note on dual sourcing links to the supplier decision it changed, the book it came from and the lecturer who taught it.</p>
-	<p>Notes, decisions and records sit in one graph. Backlinks show what points at a page, and the graph shows how the whole workspace hangs together, so a decision made in March still carries its reasons in October.</p>
+<StorySection id="learning" titleKey="site.learning.title" shot="S8" secondShot="S9" reverse locale={locale}>
+	<p class="lead" data-i18n="site.learning.lead">{t(locale, 'site.learning.lead')}</p>
+	<p data-i18n="site.learning.body">{t(locale, 'site.learning.body')}</p>
 </StorySection>

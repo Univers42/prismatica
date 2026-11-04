@@ -3,31 +3,38 @@
 // testimonials and logo strip, whose claims nothing backed (AUDIT R8). Each "not yet" is a known
 // gap with evidence in groot docs/redesign/PLAN.md §5.1; remove a line only when its fix ships.
 import { SOURCE_URL } from '../../data/links';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <section class="section" id="plainly" aria-labelledby="plainly-title">
 	<div class="container">
 		<div class="section__head">
-			<h2 id="plainly-title">What it is, plainly.</h2>
+			<h2 id="plainly-title" data-i18n="site.plainly.title">{t(locale, 'site.plainly.title')}</h2>
 		</div>
 
 		<div class="plainly">
 			<div>
-				<h3>What it does</h3>
+				<h3 data-i18n="site.plainly.does">{t(locale, 'site.plainly.does')}</h3>
 				<ul>
-					<li>Pages and databases in one workspace, with relations between records, backlinks between pages and a graph of both.</li>
-					<li>Saved views over the same data: table, board, calendar, gallery and chart.</li>
-					<li>PostgreSQL, MySQL and MongoDB databases on grobase, linked into a workspace and read where they live.</li>
-					<li>Public source on <a href={SOURCE_URL} rel="noopener">GitHub</a>. The grobase backend is licensed AGPL-3.0.</li>
+					<li data-i18n="site.plainly.does1">{t(locale, 'site.plainly.does1')}</li>
+					<li data-i18n="site.plainly.does2">{t(locale, 'site.plainly.does2')}</li>
+					<li data-i18n="site.plainly.does3">{t(locale, 'site.plainly.does3')}</li>
+					<li><span data-i18n="site.plainly.sourceBefore">{t(locale, 'site.plainly.sourceBefore')}</span> <a href={SOURCE_URL} rel="noopener">GitHub</a><span data-i18n="site.plainly.sourceAfter">{t(locale, 'site.plainly.sourceAfter')}</span></li>
 				</ul>
 			</div>
 			<div>
-				<h3>Not done yet</h3>
+				<h3 data-i18n="site.plainly.notDone">{t(locale, 'site.plainly.notDone')}</h3>
 				<ul>
-					<li>The Share dialog does not decide who can open a page yet. Access is set by the page's owner, and the dialog is being repaired.</li>
-					<li>A relation is written on one side only; the reverse side is not filled in for you.</li>
-					<li>Linking an outside database is an administrator task through grobase's API. There is no screen for it.</li>
-					<li>The desktop app still needs its backend running in Docker on the same machine.</li>
+					<li data-i18n="site.plainly.not1">{t(locale, 'site.plainly.not1')}</li>
+					<li data-i18n="site.plainly.not2">{t(locale, 'site.plainly.not2')}</li>
+					<li data-i18n="site.plainly.not3">{t(locale, 'site.plainly.not3')}</li>
+					<li data-i18n="site.plainly.not4">{t(locale, 'site.plainly.not4')}</li>
 				</ul>
 			</div>
 		</div>

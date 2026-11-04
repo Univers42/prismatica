@@ -3,19 +3,20 @@
 import Layout from '../layouts/Layout.astro';
 import TourPlayer from '../components/site/TourPlayer.astro';
 import { TOUR } from '../data/tour';
+import { DEFAULT_LOCALE, t } from '../lib/i18n';
 
 const videoObject = TOUR.ready
-	? [{ '@type': 'VideoObject', name: TOUR.title, contentUrl: TOUR.mp4, thumbnailUrl: TOUR.poster, duration: 'PT1M15S', transcript: TOUR.transcript }]
+	? [{ '@type': 'VideoObject', name: t(DEFAULT_LOCALE, 'site.tour.title'), contentUrl: TOUR.mp4, thumbnailUrl: TOUR.poster, duration: 'PT1M15S', transcript: TOUR.transcript }]
 	: [];
 ---
 
-<Layout title={`${TOUR.title} | Prismatica`} description="Watch one operations director's week in Prismatica: one customer record, four views of the same deals, notes linked to decisions." jsonLd={videoObject}>
+<Layout titleKey="site.meta.tourTitle" description="Watch one operations director's week in Prismatica: one customer record, four views of the same deals, notes linked to decisions." jsonLd={videoObject}>
 	<main id="main-content" class="page-main">
 		<div class="container container--wide tour-page">
-			<h1>{TOUR.title}</h1>
+			<h1 data-i18n="site.tour.title">{t(DEFAULT_LOCALE, 'site.tour.title')}</h1>
 			<TourPlayer />
 			<div>
-				<button class="button button--primary" type="button" data-open-portal data-js-only>Create your workspace</button>
+				<button class="button button--primary" type="button" data-open-portal data-js-only data-i18n="site.final.create">{t(DEFAULT_LOCALE, 'site.final.create')}</button>
 			</div>
 		</div>
 	</main>

@@ -5,44 +5,51 @@
 // do not match are dimmed and the view is filled. With motion welcome and JavaScript on,
 // scripts/saved-view.ts plays the filter once when half of it is on screen (PLAN §6.2); nothing
 // is ever hidden, the before frame only dims the view.
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+import { formatEuros } from '../../lib/money';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 const deals = [
-	{ title: 'Kitchen refit', company: 'Bouchon Gaspard', stage: 'Qualified', amount: 17570, open: true },
-	{ title: 'Terrace bar fit-out', company: 'Le Jardin de Fourvière', stage: 'Won', amount: 48880, open: false },
-	{ title: 'Central kitchen modernisation', company: 'Résidence Les Tilleuls', stage: 'Proposal', amount: 42500, open: true },
-	{ title: 'Banquet kitchen extension', company: 'Hôtel Perrache Rive', stage: 'Won', amount: 4920, open: false },
-	{ title: 'Tray-line refrigeration', company: 'Cantine Gerland Campus', stage: 'Lost', amount: 59200, open: false },
-	{ title: 'Room-service pantry refit', company: 'Hôtel Vaise Gare', stage: 'Proposal', amount: 14040, open: true },
+	{ key: 'kitchen', company: 'Bouchon Gaspard', stage: 'qualified', amount: 17570, open: true },
+	{ key: 'terrace', company: 'Le Jardin de Fourvière', stage: 'won', amount: 48880, open: false },
+	{ key: 'central', company: 'Résidence Les Tilleuls', stage: 'proposal', amount: 42500, open: true },
+	{ key: 'banquet', company: 'Hôtel Perrache Rive', stage: 'won', amount: 4920, open: false },
+	{ key: 'tray', company: 'Cantine Gerland Campus', stage: 'lost', amount: 59200, open: false },
+	{ key: 'pantry', company: 'Hôtel Vaise Gare', stage: 'proposal', amount: 14040, open: true },
 ];
-const euros = (amount: number): string => `€${amount.toLocaleString('en-GB')}`;
 const matches = (deal: (typeof deals)[number]): boolean => deal.open && deal.amount > 5000;
 const view = deals.filter(matches).sort((a, b) => b.amount - a.amount);
 ---
 
 <figure class="v4" data-saved-view>
-	<ul class="v4__deals" aria-label="All deals">
+	<ul class="v4__deals" aria-label={t(locale, 'site.savedView.allDeals')} data-i18n-aria-label="site.savedView.allDeals">
 		{deals.map((deal) => (
 			<li class="v4__card" data-out={matches(deal) ? undefined : ''}>
-				<span class="v4__title">{deal.title}</span>
-				<span class="v4__meta">{deal.company} · {deal.stage} · {euros(deal.amount)}</span>
+				<span class="v4__title" data-i18n={`site.savedView.deals.${deal.key}`}>{t(locale, `site.savedView.deals.${deal.key}`)}</span>
+				<span class="v4__meta">{deal.company} · <span data-i18n={`site.savedView.stages.${deal.stage}`}>{t(locale, `site.savedView.stages.${deal.stage}`)}</span> · <span data-i18n-amount={deal.amount}>{formatEuros(locale, deal.amount)}</span></span>
 			</li>
 		))}
 	</ul>
 	<div class="v4__view">
-		<div class="v4__chips" aria-label="Saved view filters">
-			<span class="v4__chip">Stage is open</span>
-			<span class="v4__chip">Amount &gt; €5,000</span>
-			<span class="v4__chip">Largest first</span>
+		<div class="v4__chips" aria-label={t(locale, 'site.savedView.filters')} data-i18n-aria-label="site.savedView.filters">
+			<span class="v4__chip" data-i18n="site.savedView.stageOpen">{t(locale, 'site.savedView.stageOpen')}</span>
+			<span class="v4__chip" data-i18n="site.savedView.amountOver">{t(locale, 'site.savedView.amountOver')}</span>
+			<span class="v4__chip" data-i18n="site.savedView.largestFirst">{t(locale, 'site.savedView.largestFirst')}</span>
 		</div>
-		<ol class="v4__rows" aria-label="Saved view: open deals over €5,000, largest first">
+		<ol class="v4__rows" aria-label={t(locale, 'site.savedView.rows')} data-i18n-aria-label="site.savedView.rows">
 			{view.map((deal) => (
 				<li class="v4__row">
 					<span class="v4__title">{deal.company}</span>
-					<span class="v4__amount">{euros(deal.amount)}</span>
+					<span class="v4__amount" data-i18n-amount={deal.amount}>{formatEuros(locale, deal.amount)}</span>
 				</li>
 			))}
 		</ol>
 	</div>
-	<figcaption class="visually-hidden">Six deals, of which the three still open and over €5,000 fill a saved view, largest first; the won, lost and small ones stay out.</figcaption>
+	<figcaption class="visually-hidden" data-i18n="site.savedView.caption">{t(locale, 'site.savedView.caption')}</figcaption>
 </figure>
 
 <style>

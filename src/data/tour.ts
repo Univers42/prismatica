@@ -2,11 +2,10 @@
 // false: the dialog and /tour show the chapter list over the poster's placeholder and offer no
 // download link that would 404.
 
-export type Chapter = { start: string; title: string; caption: string };
+export type Chapter = { start: string; key: 'monday' | 'customer' | 'views' | 'learning' | 'sharing' | 'where' };
 
 export const TOUR = {
 	ready: false,
-	title: 'One week at Arlet, in 75 seconds',
 	mp4: '/media/tour-1080.mp4',
 	webm: '/media/tour-1080.webm',
 	poster: '/media/tour-poster.jpg',
@@ -17,10 +16,10 @@ export const TOUR = {
 } as const;
 
 export const CHAPTERS: readonly Chapter[] = [
-	{ start: '0:04', title: 'Monday', caption: 'Sales, stock, invoices and coursework on one page.' },
-	{ start: '0:16', title: 'One customer', caption: 'Sales, finance and operations read the same record.' },
-	{ start: '0:30', title: 'Views', caption: 'The same deals as a table, a board, a calendar and a chart.' },
-	{ start: '0:43', title: 'Learning', caption: 'Course notes link to the decision they changed.' },
-	{ start: '0:55', title: 'Sharing', caption: 'One page shared with finance, and nothing else.' },
-	{ start: '1:05', title: 'Where it runs', caption: 'For a team on grobase, or on your own machine.' },
+	{ start: '0:04', key: 'monday' },
+	{ start: '0:16', key: 'customer' },
+	{ start: '0:30', key: 'views' },
+	{ start: '0:43', key: 'learning' },
+	{ start: '0:55', key: 'sharing' },
+	{ start: '1:05', key: 'where' },
 ];

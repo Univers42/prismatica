@@ -3,21 +3,27 @@
 // JavaScript those links go to /tour, which shows the same TourPlayer. Under the player sits
 // click 2, "Create your workspace".
 import TourPlayer from './TourPlayer.astro';
-import { TOUR } from '../../data/tour';
+import { DEFAULT_LOCALE, t } from '../../lib/i18n';
+
+interface Props {
+	locale?: string;
+}
+
+const { locale = DEFAULT_LOCALE } = Astro.props;
 ---
 
 <dialog class="tour-dialog" aria-labelledby="tour-dialog-title" data-tour-dialog>
 	<div class="tour-dialog__head">
-		<h2 id="tour-dialog-title">{TOUR.title}</h2>
-		<button class="button button--icon" type="button" data-close-tour aria-label="Close the tour">
+		<h2 id="tour-dialog-title" data-i18n="site.tour.title">{t(locale, 'site.tour.title')}</h2>
+		<button class="button button--icon" type="button" data-close-tour aria-label={t(locale, 'site.tour.close')} data-i18n-aria-label="site.tour.close">
 			<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
 				<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
 			</svg>
 		</button>
 	</div>
-	<TourPlayer />
+	<TourPlayer locale={locale} />
 	<div class="tour-dialog__next">
-		<button class="button button--primary" type="button" data-open-portal>Create your workspace</button>
+		<button class="button button--primary" type="button" data-open-portal data-i18n="site.final.create">{t(locale, 'site.final.create')}</button>
 	</div>
 </dialog>
 

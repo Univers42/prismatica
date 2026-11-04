@@ -48,6 +48,8 @@ export default tseslint.config(
 			// A scrolling box with no focusable child needs tabindex, or a keyboard cannot
 			// scroll it (axe scrollable-region-focusable). It must also name itself as a region.
 			'astro/jsx-a11y/no-noninteractive-tabindex': ['error', { tags: [], roles: ['tabpanel', 'region'] }],
+			// A consent label holds its text at label > span > strong > {t()}, one level past the default.
+			'astro/jsx-a11y/label-has-associated-control': ['error', { depth: 3 }],
 		},
 	},
 	{
