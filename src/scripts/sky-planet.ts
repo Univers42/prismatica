@@ -41,14 +41,12 @@ export function createPlanet(signal: string): Planet {
 	let height = 0;
 	let coronaCanvas: CanvasImageSource | null = null;
 	let globeCanvas: CanvasImageSource | null = null;
-	let currentDpr = 1;
 	const shades: Dot[][] = Array.from({ length: SHADES }, () => []);
 
 	function measure(nextWidth: number, nextHorizon: number, nextHeight: number, dpr: number = 1): void {
 		width = nextWidth;
 		horizon = nextHorizon;
 		height = nextHeight;
-		currentDpr = dpr;
 		radius = Math.max(width * 1.4, 760);
 		centre = { x: width / 2, y: horizon + radius };
 		const step = (width < 640 ? 11 : 15) / radius;
