@@ -1,29 +1,37 @@
 /* ==========================================================================
- * build-vault.mjs — render vault/*.xmd → a self-contained shell-UI docs page
+ * build-vault.mjs — render vault/*.xmd → the static docs site under public/docs
  *
  * Uses the project's OWN markengine (parse + renderHtml) — the same parser that
  * powers the osionos editor — bundled with esbuild and evaluated in Node. Walks
- * vault/ at any depth, renders each .xmd, and emits public/docs/index.html.
+ * vault/ at any depth, renders each .xmd, and writes one page per doc
+ * (scripts/vault-page.mjs) plus the files they share: shell.css, shell.js and
+ * vault-index.js (titles and headings, for the search palette). public/docs is
+ * generated whole: it is emptied first, then vault/assets is copied in.
  *
- * Docker-only (no host node): run inside a node container, e.g.
- *   docker run --rm -v <repo>:/repo -w /repo node:22-bookworm \
- *     node apps/opposite-osiris/scripts/build-vault.mjs
+ * Docker-only (no host node): from apps/opposite-osiris,
+ *   ../../scripts/tools.sh node scripts/build-vault.mjs
  * ========================================================================== */
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync, cpSync } from "node:fs";
-import { join, dirname, relative, resolve, extname } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync, cpSync, rmSync } from "node:fs";
+import { join, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import vm from "node:vm";
+import { rewriteDocLinks } from "./vault-links.mjs";
+import { docHref, docPage, focusableCodeBlocks, labelTaskItems, lazyImages } from "./vault-page.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));            // apps/opposite-osiris/scripts
 const SITE = resolve(HERE, "..");                               // apps/opposite-osiris
 const VAULT = join(SITE, "vault");
 const OUT_DIR = join(SITE, "public", "docs");
-const MARKDOWN_DIR = resolve(SITE, "..", "osionos", "app", "src", "shared", "lib", "markengine", "markdown");
+// osionos's markdown engine, a submodule of the app since it left src/shared/lib/markengine.
+const MARKDOWN_DIR = resolve(SITE, "..", "osionos", "app", "packages", "markdown-engine", "markdown");
 
 /* ── 1. Load the markengine (parse + renderHtml) via esbuild + vm ─────────── */
 async function loadMarkengine() {
+  if (!existsSync(join(MARKDOWN_DIR, "parser.ts"))) {
+    throw new Error(`osionos's markdown engine is not checked out at ${MARKDOWN_DIR}; from the groot root run: git -C apps/osionos/app submodule update --init packages/markdown-engine`);
+  }
   const esbuild = require("esbuild");
   const out = await esbuild.build({
     stdin: {
@@ -37,6 +45,16 @@ async function loadMarkengine() {
   const localRequire = (id) => (id === "react" ? { createElement: () => ({}), Fragment: Symbol("f") } : require(id));
   vm.runInNewContext(out.outputFiles[0].text, { module: mod, exports: mod.exports, require: localRequire, console, process, Buffer, TextEncoder, TextDecoder, URL });
   return mod.exports;
+}
+
+// The pixel size of a vault PNG, from its IHDR chunk (bytes 16-23), so a doc image reserves
+// its box. Any other source gets no size and lays out once it loads.
+function assetSize(src) {
+  const name = /^\/docs\/assets\/([^/]+\.png)$/.exec(src ?? "")?.[1];
+  const file = name && join(VAULT, "assets", name);
+  if (!file || !existsSync(file)) return null;
+  const header = readFileSync(file).subarray(16, 24);
+  return { width: header.readUInt32BE(0), height: header.readUInt32BE(4) };
 }
 
 /* ── 2. Walk vault/ recursively for .xmd files (any depth) ────────────────── */
@@ -111,77 +129,6 @@ function buildTree(docs) {
   return sort(root);
 }
 
-/* ── 5. HTML assembly ─────────────────────────────────────────────────────── */
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-function renderTree(nodes) {
-  return '<ul class="tree__list">' + nodes.map(renderNode).join("") + "</ul>";
-}
-function renderNode(n) {
-  if (n.type === "file") {
-    return '<li class="tree__item tree__item--file"><a class="tree__row" data-nav="' + esc(n.path) + '" href="#' + esc(n.path) +
-      '"><span class="tree__caret"></span><span class="tree__glyph">' + esc(n.icon || "◆") + '</span><span class="tree__label">' + esc(n.title) + "</span></a></li>";
-  }
-  return '<li class="tree__item tree__item--dir"><button class="tree__row tree__dir" aria-expanded="true"><span class="tree__caret">▸</span>' +
-    '<span class="tree__glyph">▾</span><span class="tree__label">' + esc(n.name) + '<span class="tree__ext">/</span></span></button>' + renderTree(n.children) + "</li>";
-}
-function heroHtml(home, stats) {
-  return '<div class="hero"><div class="hero__eyebrow">Prismatica · Track Binocle</div>' +
-    '<h1 class="hero__title">' + esc(home.title) + "</h1>" +
-    '<p class="hero__sub">' + esc(home.summary || "") + "</p>" +
-    '<div class="hero__stats">' + stats.map((s) => '<div class="hero__stat"><b>' + esc(s.n) + "</b><span>" + esc(s.label) + "</span></div>").join("") + "</div></div>";
-}
-
-function bodyInner(css, js, treeHtml, articles, vaultData) {
-  return `<style>${css}</style>
-<div class="shell">
-  <header class="shell__bar">
-    <button class="shell__iconbtn shell__menu" data-action="menu" aria-label="Toggle navigation">≡</button>
-    <a class="shell__brand" href="#${vaultData.order[0]}"><b>◆</b> Prismatica <span class="shell__brand-sub">docs</span></a>
-    <div class="shell__prompt"><span class="u">binocle</span>@<span class="p">prismatica</span> ~/vault <span class="shell__caret">❯</span></div>
-    <button class="shell__palette-trigger" data-action="palette"><span class="label">Search docs…</span><kbd>⌘K</kbd></button>
-    <button class="shell__iconbtn" data-action="theme" aria-label="Toggle theme">◑</button>
-  </header>
-  <div class="shell__body">
-    <aside class="shell__sidebar">
-      <div class="tree__root-label">▾ vault/</div>
-      ${treeHtml}
-    </aside>
-    <main class="shell__main">
-      <nav class="crumbs"></nav>
-      <div class="doc-host">
-        ${articles}
-      </div>
-    </main>
-    <aside class="shell__toc"></aside>
-  </div>
-</div>
-<div class="palette" hidden>
-  <div class="palette__backdrop"></div>
-  <div class="palette__panel">
-    <input class="palette__input" placeholder="Jump to a doc or heading…" spellcheck="false" autocomplete="off" />
-    <div class="palette__results"></div>
-  </div>
-</div>
-<script>window.__VAULT=${JSON.stringify(vaultData)};</script>
-<script>${js}</script>`;
-}
-function page(inner) {
-  return `<!doctype html>
-<html lang="en" data-theme="solar">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="theme-color" content="#fdfaf2" />
-<base href="/docs/" />
-<title>Prismatica Docs</title>
-</head>
-<body>
-${inner}
-</body>
-</html>`;
-}
-
 /* ── 6. Main ──────────────────────────────────────────────────────────────── */
 async function main() {
   const { parse, renderHtml } = await loadMarkengine();
@@ -210,48 +157,51 @@ async function main() {
   if (!docs.length) throw new Error("No .xmd files found under " + VAULT);
 
   const home = docs[0];
+  const hrefOf = (path) => docHref(path, home.path);
+  const knownDocs = new Set(docs.map((d) => d.path));
+  const broken = [];
+  for (const d of docs) {
+    const result = rewriteDocLinks(d.html, d.path, knownDocs, hrefOf);
+    // Pages sit at different depths, so an image's relative assets/ path is made absolute.
+    d.html = lazyImages(focusableCodeBlocks(labelTaskItems(result.html.replace(/\bsrc="assets\//g, 'src="/docs/assets/'))), assetSize);
+    broken.push(...result.broken);
+  }
+  if (broken.length) throw new Error("links to docs that do not exist:\n  " + broken.join("\n  "));
+
   const totalHeadings = docs.reduce((n, d) => n + d.toc.length, 0);
-  const stats = [
-    { n: String(docs.length), label: "documents" },
-    { n: "17", label: "block types" },
-    { n: "19", label: "inline styles" },
-    { n: String(totalHeadings), label: "sections" },
-  ];
-
-  const articles = docs.map((d, i) => {
-    const inner = (d === home ? heroHtml(home, stats) : "") + d.html;
-    return '<article class="doc md" data-doc="' + esc(d.path) + '"' + (i === 0 ? "" : " hidden") + ">" + inner + "</article>";
-  }).join("\n");
-
-  const vaultData = {
-    order: docs.map((d) => d.path),
-    docs: Object.fromEntries(docs.map((d) => [d.path, { title: d.title, icon: d.icon, crumbs: d.crumbs, toc: d.toc }])),
+  const site = {
+    home: home.path,
+    nodes: buildTree(docs),
+    stats: [
+      { n: String(docs.length), label: "documents" },
+      { n: "17", label: "block types" },
+      { n: "19", label: "inline styles" },
+      { n: String(totalHeadings), label: "sections" },
+    ],
   };
-  const css = readFileSync(join(HERE, "vault-shell.css"), "utf8");
-  const js = readFileSync(join(HERE, "vault-shell.js"), "utf8");
+  const index = {
+    home: home.path,
+    order: docs.map((d) => d.path),
+    docs: Object.fromEntries(docs.map((d) => [d.path, { title: d.title, icon: d.icon, toc: d.toc }])),
+  };
 
+  rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR, { recursive: true });
   const ASSETS_SRC = join(VAULT, "assets");
-  if (existsSync(ASSETS_SRC)) cpSync(ASSETS_SRC, join(OUT_DIR, "assets"), { recursive: true }); // served at /docs/assets
+  if (existsSync(ASSETS_SRC)) cpSync(ASSETS_SRC, join(OUT_DIR, "assets"), { recursive: true });
+  cpSync(join(HERE, "vault-shell.css"), join(OUT_DIR, "shell.css"));
+  cpSync(join(HERE, "vault-shell.js"), join(OUT_DIR, "shell.js"));
+  writeFileSync(join(OUT_DIR, "vault-index.js"), `window.__VAULT=${JSON.stringify(index)};\n`);
 
-  const inner = bodyInner(css, js, renderTree(buildTree(docs)), articles, vaultData);
-  const outFile = join(OUT_DIR, "index.html");
-  writeFileSync(outFile, page(inner));
-
-  // fragment (Artifact preview): inline embedded <img src="assets/X"> as data-URIs so
-  // images render off a claude.ai host (CSP blocks external paths). Cap each at 1.2 MB.
-  const fragment = inner.replace(/src="assets\/([^"]+)"/g, (m, name) => {
-    try {
-      const b = readFileSync(join(ASSETS_SRC, name));
-      if (b.length > 1_200_000) return m;
-      const ext = extname(name).slice(1).toLowerCase();
-      return `src="data:image/${ext === "jpg" ? "jpeg" : ext};base64,${b.toString("base64")}"`;
-    } catch { return m; }
-  });
-  writeFileSync(join(OUT_DIR, "fragment.html"), fragment);
-  const bytes = statSync(outFile).size;
-  console.log(`✓ vault → ${relative(process.cwd(), outFile)}  (${docs.length} docs, ${(bytes / 1024).toFixed(0)} KB)`);
-  for (const d of docs) console.log(`   · ${d.path}  “${d.title}”  ${d.toc.length} headings`);
+  let largest = { path: "", bytes: 0 };
+  for (const d of docs) {
+    const dir = d === home ? OUT_DIR : join(OUT_DIR, d.path);
+    mkdirSync(dir, { recursive: true });
+    const html = docPage(d, site);
+    writeFileSync(join(dir, "index.html"), html);
+    if (html.length > largest.bytes) largest = { path: d.path, bytes: html.length };
+  }
+  console.log(`✓ vault → ${relative(process.cwd(), OUT_DIR)}  (${docs.length} pages; largest ${largest.path}, ${(largest.bytes / 1024).toFixed(0)} KB)`);
 }
 
 main().catch((e) => { console.error("✗ build-vault failed:\n", e); process.exit(1); });

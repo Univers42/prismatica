@@ -1,0 +1,129 @@
+---
+// Section 2: the problem, drawn (V2). Four departments each keep their own card for the same
+// customer, and the copies disagree; below them sits the one record they become. Built as HTML
+// rather than SVG so the text scales, themes and reads aloud like the rest of the page.
+// The slide-together motion (M2) is scroll-linked where animation-timeline exists and motion is
+// welcome; everywhere else this is the finished drawing. Nothing starts hidden: off-screen content
+// at its "before" frame is still fully visible (the old site's blank-below-the-fold defect).
+import { department } from '../../data/departments';
+
+const copies = [
+	{ ...department('Sales'), label: 'Sales', name: 'Marc Delorme', detail: 'Hôtel Varenne · buyer' },
+	{ ...department('Finance'), label: 'Finance', name: 'M. Delorme', detail: 'Varenne SAS · 7 invoices' },
+	{ ...department('Operations'), label: 'Operations', name: 'Delorme, Marc', detail: 'Hotel Varenne · 3 orders' },
+	{ ...department('Learning'), label: 'Notes', name: 'Marc (Varenne)', detail: '“wants a second supplier”' },
+];
+---
+
+<section class="section" aria-labelledby="silo-title">
+	<div class="container">
+		<div class="section__head">
+			<h2 id="silo-title">One customer, four copies.</h2>
+			<p class="lead">Sales has him in a CRM, finance in its invoices, operations in a spreadsheet, and what he said last month sits in someone's notes. Each copy is right about its own part, and none of them is the customer.</p>
+		</div>
+
+		<figure class="silo">
+			<ul class="silo__copies">
+				{copies.map((copy) => (
+					<li class="silo__card">
+						<svg class="silo__bar" viewBox="0 0 100 3" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect width="100" height="3" fill={copy.hue} /></svg>
+						<span class="label">{copy.label}</span>
+						<span class="silo__name">{copy.name}</span>
+						<span class="silo__detail">{copy.detail}</span>
+					</li>
+				))}
+			</ul>
+			<div class="silo__record">
+				<span class="label">One record</span>
+				<span class="silo__name">Marc Delorme</span>
+				<span class="silo__detail">Buyer at Hôtel Varenne · 3 deals · 7 invoices · 3 orders · 12 notes</span>
+			</div>
+			<figcaption class="visually-hidden">Four differently spelled cards for the same customer, one per department, become one record that links his deals, invoices, orders and notes.</figcaption>
+		</figure>
+	</div>
+</section>
+
+<style>
+	.silo {
+		margin: 0;
+		display: grid;
+		gap: var(--space-6);
+		justify-items: center;
+	}
+
+	.silo__copies {
+		list-style: none;
+		padding: 0;
+		width: 100%;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+		gap: var(--space-4);
+	}
+
+	.silo__card,
+	.silo__record {
+		display: grid;
+		gap: var(--space-1);
+		max-width: none;
+		padding: var(--space-4);
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--radius-m);
+	}
+
+	.silo__card {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.silo__bar {
+		position: absolute;
+		inset: 0 0 auto;
+		width: 100%;
+		height: 3px;
+	}
+
+	.silo__record {
+		width: min(100%, 30rem);
+		border: 1px solid var(--ink);
+		border-top: 3px solid var(--signal);
+		box-shadow: var(--shadow-1);
+	}
+
+	.silo__name {
+		font-weight: 600;
+	}
+
+	.silo__detail {
+		color: var(--graphite);
+		font-size: var(--step--1);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		@supports (animation-timeline: view()) {
+			.silo__card {
+				animation: silo-gather linear both;
+				animation-timeline: view();
+				animation-range: entry 20% cover 55%;
+			}
+
+			.silo__record {
+				animation: silo-arrive linear both;
+				animation-timeline: view();
+				animation-range: entry 20% cover 55%;
+			}
+		}
+	}
+
+	@keyframes silo-gather {
+		to {
+			transform: translateY(var(--space-5)) scale(0.92);
+		}
+	}
+
+	@keyframes silo-arrive {
+		from {
+			transform: translateY(calc(-1 * var(--space-6))) scale(0.94);
+		}
+	}
+</style>

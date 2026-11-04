@@ -1,0 +1,74 @@
+---
+// Section 6: where it runs, promising only what ships (PLAN §9 Q1, D-031): the hosted workspace
+// on grobase, and the one desktop release that exists, with the Docker backend it still needs.
+import { RELEASE, SOURCE_URL } from '../../data/links';
+---
+
+<section class="section" id="run" aria-labelledby="run-title">
+	<div class="container">
+		<div class="section__head">
+			<h2 id="run-title">Run it where you work.</h2>
+			<p class="lead">A team shares one workspace on grobase. One person can keep theirs on their own machine.</p>
+		</div>
+
+		<div class="run">
+			<article class="run__option" aria-labelledby="run-team">
+				<h3 id="run-team">For a team</h3>
+				<p>Every department signs in to the same workspace. Pages, databases and the PostgreSQL, MySQL or MongoDB databases you link stay on your grobase project, behind its sign-in.</p>
+				<ul class="run__facts">
+					<li>Email sign-in, with verification and password reset</li>
+					<li>Databases linked to the workspace, read in place</li>
+				</ul>
+				<button class="text-link" type="button" data-open-portal data-js-only>Create a workspace</button>
+			</article>
+
+			<article class="run__option" aria-labelledby="run-local">
+				<h3 id="run-local">On your own machine</h3>
+				<p>The desktop app talks to a small backend on the same machine, so your pages stay in a local {RELEASE.engine} database under a local account.</p>
+				<ul class="run__facts">
+					<li>{RELEASE.platforms}</li>
+					<li>The backend runs in {RELEASE.backend}, started from the <a href={SOURCE_URL} rel="noopener">source</a></li>
+					<li>Release <code>{RELEASE.tag}</code></li>
+				</ul>
+				<a class="text-link" href={RELEASE.url} rel="noopener">Download the desktop app</a>
+			</article>
+		</div>
+	</div>
+</section>
+
+<style>
+	.run {
+		display: grid;
+		gap: var(--space-5);
+	}
+
+	.run__option {
+		display: grid;
+		gap: var(--space-4);
+		align-content: start;
+		padding: var(--space-6);
+		background: var(--raised);
+		border: 1px solid var(--rule);
+		border-radius: var(--radius-l);
+	}
+
+	.run__option > p {
+		color: var(--graphite);
+	}
+
+	.run__facts {
+		padding-inline-start: var(--space-5);
+		display: grid;
+		gap: var(--space-2);
+	}
+
+	.run__note {
+		font-size: var(--step--1);
+	}
+
+	@media (min-width: 48rem) {
+		.run {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+</style>

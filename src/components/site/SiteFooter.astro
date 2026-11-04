@@ -1,0 +1,108 @@
+---
+// The one footer: where to go next, the legal pages, who answers for the data, and the newsletter.
+// The newsletter's script loads on first focus inside the form (main.ts), so the form costs no
+// JavaScript on a visit that never touches it.
+import NewsletterSignup from '../gdpr/NewsletterSignup.astro';
+import { DATA_CONTROLLER, LEGAL_LINKS } from '../../data/legal';
+import { NAV, RELEASE, SOURCE_URL } from '../../data/links';
+---
+
+<footer class="site-footer">
+	<div class="container container--wide site-footer__grid">
+		<div class="site-footer__about">
+			<p class="site-footer__name">Prismatica</p>
+			<p>One workspace for every department: pages, databases and the links between them.</p>
+		</div>
+
+		<nav aria-labelledby="footer-product">
+			<h2 id="footer-product" class="label">Product</h2>
+			<ul>
+				{NAV.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+				<li><a href="/tour/">The 75-second tour</a></li>
+				<li><a href={RELEASE.url} rel="noopener">Desktop release</a></li>
+				<li><a href={SOURCE_URL} rel="noopener">Source code</a></li>
+			</ul>
+		</nav>
+
+		<nav aria-labelledby="footer-legal">
+			<h2 id="footer-legal" class="label">Legal</h2>
+			<ul>
+				{LEGAL_LINKS.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+			</ul>
+		</nav>
+
+		<div class="site-footer__newsletter">
+			<NewsletterSignup id="footer-newsletter" />
+		</div>
+	</div>
+	<div class="container container--wide site-footer__base">
+		<p class="label">Data controller: {DATA_CONTROLLER.name} · {DATA_CONTROLLER.email}</p>
+	</div>
+</footer>
+
+<style>
+	.site-footer {
+		margin-top: var(--space-9);
+		padding-block: var(--space-8) var(--space-6);
+		border-top: 1px solid var(--rule);
+		background: var(--tint);
+	}
+
+	.site-footer__grid {
+		display: grid;
+		gap: var(--space-7);
+	}
+
+	.site-footer__name {
+		font-family: var(--font-display);
+		font-size: var(--step-2);
+		line-height: 1.1;
+		margin-bottom: var(--space-2);
+	}
+
+	.site-footer__about p:last-child {
+		color: var(--graphite);
+	}
+
+	.site-footer ul {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		gap: var(--space-2);
+		margin-top: var(--space-3);
+	}
+
+	.site-footer nav a {
+		text-decoration: none;
+	}
+
+	.site-footer nav a:hover {
+		text-decoration: underline;
+	}
+
+	.site-footer__base {
+		margin-top: var(--space-7);
+		padding-top: var(--space-4);
+		border-top: 1px solid var(--rule);
+	}
+
+	@media (min-width: 48rem) {
+		.site-footer__grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.site-footer__newsletter {
+			grid-column: 1 / -1;
+		}
+	}
+
+	@media (min-width: 64rem) {
+		.site-footer__grid {
+			grid-template-columns: 1.4fr 1fr 1fr 1.6fr;
+		}
+
+		.site-footer__newsletter {
+			grid-column: auto;
+		}
+	}
+</style>

@@ -1,78 +1,53 @@
-import { type ThemeName, THEMES, normalizeTheme, themeDisplayName } from '../lib/theme-config';
-import { motionAllowed } from '../lib/motion-preference';
+import { type ThemeChoice, THEME_KEY, normalizeTheme, nextTheme, themeLabel } from '../lib/theme-config';
 import { readStorage, writeStorage } from '../lib/storage';
 import { queryElements, queryElement, isButton, isHtmlElement } from '../lib/dom-utils';
 
-const THEME_KEY = 'prismatica-theme';
-const MOTION_KEY = 'prismatica-motion-paused';
+// "system" leaves data-theme off <html>, so the stylesheet's prefers-color-scheme block decides.
+// prepaint.js applies a stored light or dark choice before first paint (no flash); this module
+// keeps the toggle in sync afterwards.
 
-/** Returns the current theme from storage or system preference. */
-function initialTheme(): ThemeName {
-	return normalizeTheme(readStorage(THEME_KEY)) ?? 'swiss';
+function currentTheme(): ThemeChoice {
+	return normalizeTheme(readStorage(THEME_KEY));
 }
 
-/** Updates visible and assistive theme button labels. */
-function updateThemeButton(theme: ThemeName): void {
-	const buttons = queryElements('#theme-toggle, [data-theme-toggle]', isButton);
-	const labels = queryElements('[data-theme-label]', isHtmlElement);
-	const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length] ?? 'aurora';
-	const themeLabel = themeDisplayName(theme);
-	const nextLabel = themeDisplayName(nextTheme);
-	buttons.forEach((button) => {
-		button.setAttribute('aria-label', `Theme: ${themeLabel}. Switch to ${nextLabel} palette`);
-		button.title = `Switch to ${nextLabel} theme`;
-	});
-	labels.forEach((label) => {
-		label.textContent = `Theme: ${themeLabel}`;
+function reflectToggle(choice: ThemeChoice): void {
+	const next = themeLabel(nextTheme(choice));
+	queryElements('[data-theme-toggle]', isButton).forEach((button) => {
+		button.setAttribute('aria-label', `Theme: ${themeLabel(choice)}. Switch to ${next}`);
+		button.dataset.themeChoice = choice;
 	});
 }
 
-/** Applies a theme to the document root. */
-function applyTheme(theme: ThemeName): void {
-	document.documentElement.dataset.theme = theme;
-	document.documentElement.style.colorScheme = theme === 'solar' ? 'light' : 'dark';
-	writeStorage(THEME_KEY, theme);
-	updateThemeButton(theme);
+function applyTheme(choice: ThemeChoice): void {
+	const root = document.documentElement;
+	if (choice === 'system') delete root.dataset.theme;
+	else root.dataset.theme = choice;
+	writeStorage(THEME_KEY, choice);
+	reflectToggle(choice);
 }
 
-/** Advances the current theme. */
 function cycleTheme(): void {
-	const current = normalizeTheme(document.documentElement.dataset.theme ?? null);
-	const index = current ? THEMES.indexOf(current) : -1;
-	const nextTheme = THEMES[(index + 1) % THEMES.length] ?? 'aurora';
-	applyTheme(nextTheme);
-	announce(`${themeDisplayName(nextTheme)} theme enabled`);
-	if (motionAllowed()) {
-		document.querySelectorAll('.header-icon--theme').forEach((icon) => {
-			icon.animate([{ rotate: '0deg' }, { rotate: '180deg' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
-		});
-	}
+	const choice = nextTheme(currentTheme());
+	const swap = (): void => applyTheme(choice);
+	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const viewTransition = (document as Document & { startViewTransition?: (cb: () => void) => unknown }).startViewTransition;
+	if (viewTransition && !reduced) viewTransition.call(document, swap);
+	else swap();
+	announce(`${themeLabel(choice)} theme`);
 }
 
-/** Updates visible and assistive motion button labels. */
-function updateMotionButton(paused: boolean): void {
-	const button = queryElement('#motion-toggle', isButton);
-	const label = queryElement('[data-motion-label]', isHtmlElement);
-	if (button) {
-		button.setAttribute('aria-pressed', String(paused));
-		button.setAttribute('aria-label', paused ? 'Resume animations' : 'Pause animations');
-		button.title = paused ? 'Resume animations' : 'Pause animations';
-		const icon = button.querySelector('.header-icon--motion');
-		if (icon instanceof HTMLElement) {
-			icon.textContent = paused ? '▶' : 'Ⅱ';
-		}
-	}
-	if (label) {
-		label.textContent = paused ? 'Resume animations' : 'Pause animations';
-	}
+function bindThemeToggle(): void {
+	const choice = currentTheme();
+	// A name from the old five-theme site is rewritten once, so the pre-paint script reads it next time.
+	if (readStorage(THEME_KEY) !== null && readStorage(THEME_KEY) !== choice) applyTheme(choice);
+	else reflectToggle(choice);
+	queryElements('[data-theme-toggle]', isButton).forEach((button) => button.addEventListener('click', cycleTheme));
 }
 
-/** Applies the motion preference to the page. */
-function applyMotionPreference(paused: boolean): void {
-	document.documentElement.classList.toggle('motion-paused', paused);
-	writeStorage(MOTION_KEY, paused ? 'true' : 'false');
-	updateMotionButton(paused);
-	announce(paused ? 'Animations paused' : 'Animations resumed');
+/** Announces dynamic state changes to assistive technology. */
+function announce(message: string): void {
+	const announcer = queryElement('#global-announcer', isHtmlElement);
+	if (announcer) announcer.textContent = message;
 }
 
 /**
@@ -82,37 +57,10 @@ function applyMotionPreference(paused: boolean): void {
  */
 function ensureButtonLabels(): void {
 	queryElements('button', (element): element is HTMLButtonElement => element instanceof HTMLButtonElement).forEach((button) => {
-		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby') || (button.textContent ?? '').trim()) {
-			return;
-		}
+		if (button.getAttribute('aria-label') || button.getAttribute('aria-labelledby') || (button.textContent ?? '').trim()) return;
 		const label = button.title.trim();
-		if (label) {
-			button.setAttribute('aria-label', label);
-		}
+		if (label) button.setAttribute('aria-label', label);
 	});
 }
 
-/** Wires theme and motion preference click listeners + system preference listener. */
-function bindThemeControls(): void {
-	queryElement('#theme-toggle', isButton)?.addEventListener('click', cycleTheme);
-	queryElements('[data-theme-toggle]', isButton).forEach((button) => button.addEventListener('click', cycleTheme));
-	queryElement('#motion-toggle', isButton)?.addEventListener('click', () => applyMotionPreference(!document.documentElement.classList.contains('motion-paused')));
-	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
-		if (event.matches) {
-			applyTheme('aurora');
-		} else {
-			applyTheme('swiss');
-		}
-	});
-}
-
-/** Announces dynamic state changes to assistive technology. */
-function announce(message: string): void {
-	const announcer = queryElement('#global-announcer', isHtmlElement);
-	if (announcer) {
-		announcer.textContent = message;
-	}
-}
-
-/* exports */
-export { initialTheme, applyTheme, cycleTheme, applyMotionPreference, bindThemeControls, MOTION_KEY, THEME_KEY, announce, ensureButtonLabels };
+export { applyTheme, bindThemeToggle, currentTheme, announce, ensureButtonLabels };
