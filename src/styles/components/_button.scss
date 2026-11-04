@@ -101,7 +101,17 @@ button.text-link {
 }
 
 .text-link:hover::after {
-	transform: translateX(3px);
+	transform: translateX(calc(3px * var(--reading-direction, 1)));
+}
+
+// The arrow points the way the line reads. The direction is a variable so the reduced-motion rule
+// below still outranks the hover without restating it for [dir='rtl'].
+[dir='rtl'] .text-link {
+	--reading-direction: -1;
+}
+
+[dir='rtl'] .text-link::after {
+	content: '←';
 }
 
 @media (prefers-reduced-motion: reduce) {

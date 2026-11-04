@@ -151,6 +151,18 @@ samp {
 	letter-spacing: 0.02em;
 }
 
+// Arabic letters join, so tracking made for Latin pushes them apart, and the mono stack has no Arabic:
+// its fallback keeps the monospace word gap.
+:lang(ar) h1,
+:lang(ar) h2,
+:lang(ar) .label {
+	letter-spacing: normal;
+}
+
+:lang(ar) .label {
+	font-family: var(--font-text);
+}
+
 .visually-hidden {
 	position: absolute;
 	width: 1px;

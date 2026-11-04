@@ -1,5 +1,7 @@
 // Arabic for en.ts. Product and company names stay in Latin script, and amounts are written with
-// Western digits, as the rest of the page shows them.
+// Western digits, as the rest of the page shows them. A Latin run that starts or ends in punctuation
+// is wrapped in U+2066 and U+2069 (left-to-right isolate), or that punctuation takes the paragraph's
+// direction and lands on the wrong side: ".deb)" rendered as "(deb.".
 import type { SiteStrings } from './en';
 
 export const ar: SiteStrings = {
@@ -89,7 +91,7 @@ export const ar: SiteStrings = {
 		teamDatabases: 'قواعد بيانات مرتبطة بمساحة العمل، تُقرأ في مكانها',
 		localTitle: 'على جهازك الخاص',
 		localBody: 'يتصل تطبيق سطح المكتب بواجهة خلفية صغيرة على الجهاز نفسه، فتبقى صفحاتك في قاعدة بيانات {engine} محلية ضمن حساب محلي.',
-		platforms: 'Linux (AppImage و.deb) وWindows (.exe)',
+		platforms: '\u2066Linux (AppImage, .deb)\u2069 و\u2066Windows (.exe)\u2069',
 		backendBefore: 'تعمل الواجهة الخلفية في {backend} وتُشغَّل من',
 		backendLink: 'الشيفرة المصدرية',
 		release: 'الإصدار',

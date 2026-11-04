@@ -50,6 +50,11 @@ describe('site strings', () => {
 		for (const [key, value] of site('ar')) expect(value, key).toMatch(ARABIC_LETTER);
 	});
 
+	it('isolates a Latin run in Arabic that ends in punctuation, which bidi would otherwise scramble', () => {
+		expect(DICTIONARY.ar.site.run.platforms).toMatch(/\u2066Linux \(AppImage, \.deb\)\u2069/);
+		expect(DICTIONARY.ar.site.run.platforms).toMatch(/\u2066Windows \(\.exe\)\u2069/);
+	});
+
 	it('resolves through t() in every locale', () => {
 		for (const locale of SUPPORTED_LOCALES) {
 			expect(t(locale, 'site.hero.title')).toBe(DICTIONARY[locale].site.hero.title);

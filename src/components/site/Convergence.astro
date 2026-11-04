@@ -1,6 +1,6 @@
 ---
 // V1, the one orchestrated moment (PLAN §2.5, motion M1): six department lines enter from the
-// left, meet at one point and leave as a single beam that ends on the hero capture's frame. It
+// reading side, meet at one point and leave as a single beam that ends on the hero capture's frame. It
 // is the name (a prism run backwards) and the story (separate departments, one record).
 // Only transform is animated, once, on load. The animation exists only under
 // prefers-reduced-motion: no-preference; otherwise this is the finished drawing.
@@ -27,6 +27,10 @@ const meet = { x: 360, y: 48 };
 		width: 100%;
 		height: clamp(3rem, 6vw, 6rem);
 		overflow: visible;
+	}
+
+	:global([dir='rtl']) .convergence {
+		transform: scaleX(-1);
 	}
 
 	.convergence__line,
