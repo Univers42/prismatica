@@ -15,7 +15,9 @@
   },
   "rewrites": [
     { "source": "/api/auth/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/auth/:path*" },
-    { "source": "/api/newsletter/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/newsletter/:path*" }
+    { "source": "/api/newsletter/:path*", "destination": "https://baas.tail10f2ea.ts.net:8443/api/newsletter/:path*" },
+    { "source": "/auth/v1/authorize", "destination": "https://baas.tail10f2ea.ts.net/auth/v1/authorize" },
+    { "source": "/auth/v1/callback", "destination": "https://baas.tail10f2ea.ts.net/auth/v1/callback" }
   ],
   "headers": [
     {
