@@ -104,7 +104,6 @@ const isBeta = process.env.VERCEL_GIT_COMMIT_REF === 'develop';
 		{isDev && <meta http-equiv="Content-Security-Policy" content={developmentCsp} />}
 		<link rel="icon" type="image/svg+xml" href={favicon.src} />
 		<link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
-		<link rel="preload" href="/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
 		{turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
 		<title>{title}</title>
 	</head>
