@@ -1,9 +1,20 @@
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type SupportedLocale, t } from '../lib/i18n';
 import { normalizeLocale, getLocaleDirection } from '../lib/locale';
+import type { ThemeChoice } from '../lib/theme-config';
 import { readStorage, writeStorage } from '../lib/storage';
 import { queryElements, isHtmlElement } from '../lib/dom-utils';
+import { formatEuros } from '../lib/money';
+import { POLICY_VERSION } from '../data/legal';
+import { RELEASE } from '../data/links';
+import { setThemeWords } from './theme';
 
 export const LANG_STORAGE_KEY = 'prismatica-lang';
+
+// Text swaps through textContent, so a string held in an attribute names its own marker.
+const TRANSLATED_ATTRIBUTES = [
+	['data-i18n-aria-label', 'aria-label'],
+	['data-i18n-alt', 'alt'],
+] as const;
 
 export const LOCALE_LABELS: Record<SupportedLocale, { nativeName: string; code: string }> = {
 	en: { nativeName: 'English', code: 'EN' },
@@ -60,19 +71,45 @@ export function applyLocale(locale: SupportedLocale): void {
 		} catch {}
 	}
 
+	const params = pageParams();
 	const elements = queryElements('[data-i18n]', isHtmlElement);
-	const year = String(new Date().getFullYear());
 	elements.forEach((el) => {
 		const key = el.getAttribute('data-i18n');
 		if (key) {
-			const translation = t(locale, key as any, { year });
+			const translation = t(locale, key as any, params);
 			if (translation) {
 				el.textContent = translation;
 			}
 		}
 	});
 
+	translateAttributes(locale, params);
+	queryElements('[data-i18n-amount]', isHtmlElement).forEach((el) => {
+		el.textContent = formatEuros(locale, Number(el.dataset.i18nAmount));
+	});
+	updateThemeWords(locale);
 	updateLanguageSwitchers(locale);
+}
+
+function pageParams(): Record<string, string> {
+	return { year: String(new Date().getFullYear()), engine: RELEASE.engine, backend: RELEASE.backend, version: POLICY_VERSION };
+}
+
+function translateAttributes(locale: SupportedLocale, params: Record<string, string>): void {
+	for (const [marker, attribute] of TRANSLATED_ATTRIBUTES) {
+		queryElements(`[${marker}]`, isHtmlElement).forEach((el) => {
+			const key = el.getAttribute(marker);
+			if (key) el.setAttribute(attribute, t(locale, key, params));
+		});
+	}
+}
+
+function updateThemeWords(locale: SupportedLocale): void {
+	const name = (choice: ThemeChoice): string => t(locale, `site.theme.${choice}`);
+	setThemeWords({
+		toggleLabel: (current, next) => t(locale, 'site.theme.label', { current: name(current), next: name(next) }),
+		announcement: (choice) => t(locale, 'site.theme.announced', { theme: name(choice) }),
+	});
 }
 
 /**
@@ -91,8 +128,8 @@ export function updateLanguageSwitchers(locale: SupportedLocale): void {
 		switcher.setAttribute('href', `?lang=${nextLocale}`);
 		switcher.setAttribute('data-current-lang', locale);
 		switcher.setAttribute('data-next-lang', nextLocale);
-		switcher.setAttribute('aria-label', `${currentLabel.code} - Language: ${currentLabel.nativeName}. Switch to ${nextLabel.nativeName}`);
-		switcher.setAttribute('title', `Switch to ${nextLabel.nativeName} language`);
+		switcher.setAttribute('aria-label', t(locale, 'site.language.label', { code: currentLabel.code, current: currentLabel.nativeName, next: nextLabel.nativeName }));
+		switcher.setAttribute('title', t(locale, 'site.language.title', { next: nextLabel.nativeName }));
 
 		const badge = switcher.querySelector('.header-icon__lang-badge');
 		if (badge) {
@@ -101,7 +138,7 @@ export function updateLanguageSwitchers(locale: SupportedLocale): void {
 
 		const label = switcher.querySelector('[data-lang-label]');
 		if (label) {
-			label.textContent = `Language: ${currentLabel.nativeName}`;
+			label.textContent = t(locale, 'site.language.current', { current: currentLabel.nativeName });
 		}
 	});
 }

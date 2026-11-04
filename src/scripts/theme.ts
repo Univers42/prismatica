@@ -10,12 +10,27 @@ function currentTheme(): ThemeChoice {
 	return normalizeTheme(readStorage(THEME_KEY));
 }
 
+export type ThemeWords = {
+	toggleLabel: (current: ThemeChoice, next: ThemeChoice) => string;
+	announcement: (choice: ThemeChoice) => string;
+};
+
+let themeWords: ThemeWords = {
+	toggleLabel: (current, next) => `Theme: ${themeLabel(current)}. Switch to ${themeLabel(next)}`,
+	announcement: (choice) => `${themeLabel(choice)} theme`,
+};
+
 function reflectToggle(choice: ThemeChoice): void {
-	const next = themeLabel(nextTheme(choice));
 	queryElements('[data-theme-toggle]', isButton).forEach((button) => {
-		button.setAttribute('aria-label', `Theme: ${themeLabel(choice)}. Switch to ${next}`);
+		button.setAttribute('aria-label', themeWords.toggleLabel(choice, nextTheme(choice)));
 		button.dataset.themeChoice = choice;
 	});
+}
+
+/** language.ts hands its words in: this module ships in the initial bundle and the dictionary does not. */
+function setThemeWords(words: ThemeWords): void {
+	themeWords = words;
+	reflectToggle(currentTheme());
 }
 
 function applyTheme(choice: ThemeChoice): void {
@@ -33,7 +48,7 @@ function cycleTheme(): void {
 	const viewTransition = (document as Document & { startViewTransition?: (cb: () => void) => unknown }).startViewTransition;
 	if (viewTransition && !reduced) viewTransition.call(document, swap);
 	else swap();
-	announce(`${themeLabel(choice)} theme`);
+	announce(themeWords.announcement(choice));
 }
 
 function bindThemeToggle(): void {
@@ -74,4 +89,4 @@ function ensureButtonLabels(): void {
 	});
 }
 
-export { applyTheme, bindThemeToggle, currentTheme, announce, ensureButtonLabels };
+export { applyTheme, bindThemeToggle, currentTheme, setThemeWords, announce, ensureButtonLabels };

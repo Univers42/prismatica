@@ -3,6 +3,7 @@
 // until the visitor opens /newsletter/confirm from it.
 import { NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { validateEmailFormat } from '../lib/email-validation';
+import { t } from '../lib/i18n';
 import { writeStorage } from '../lib/storage';
 import { notify } from './notifications';
 import { mountTurnstile, readTurnstileToken } from './portal';
@@ -13,6 +14,8 @@ type NewsletterFields = {
 	status: HTMLOutputElement;
 	button: HTMLButtonElement;
 };
+
+const copy = (key: string): string => t(document.documentElement.lang, `site.newsletter.${key}`);
 
 function newsletterFields(form: HTMLFormElement): NewsletterFields | null {
 	const email = form.elements.namedItem('email');
@@ -32,7 +35,7 @@ async function requestSubscription(email: string, turnstileToken: string): Promi
 	});
 	const data = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
 	if (!response.ok) throw new Error(data.error ?? data.message ?? 'newsletter_failed');
-	return data.message ?? 'Check your inbox to confirm the subscription.';
+	return data.message ?? copy('checkInbox');
 }
 
 /** Mounts the form's Turnstile widget once, on the visitor's first move towards it. */
@@ -55,21 +58,21 @@ export async function submitNewsletter(form: HTMLFormElement): Promise<void> {
 	const check = validateEmailFormat(email, true, fields.email.validity.valid);
 	if (!check.valid) return refuse(fields, fields.email, check.message);
 	fields.email.removeAttribute('aria-invalid');
-	if (!fields.consent.checked) return refuse(fields, fields.consent, 'Tick the consent box to subscribe.');
+	if (!fields.consent.checked) return refuse(fields, fields.consent, copy('tickConsent'));
 	fields.consent.removeAttribute('aria-invalid');
 
 	fields.button.disabled = true;
-	fields.status.textContent = 'Sending…';
+	fields.status.textContent = copy('sending');
 	try {
 		prepareNewsletter(form);
 		const message = await requestSubscription(email, readTurnstileToken(form));
 		writeStorage(NEWSLETTER_INTENT_KEY, JSON.stringify({ email, pendingDoubleOptIn: true, policyVersion: POLICY_VERSION, savedAt: new Date().toISOString() }));
 		fields.status.textContent = message;
-		notify({ kind: 'success', title: 'Almost there', message, duration: 0 });
+		notify({ kind: 'success', title: copy('almostThere'), message, duration: 0 });
 	} catch (error) {
-		const message = error instanceof Error && error.message !== 'newsletter_failed' ? error.message : 'Could not send. Try again in a minute.';
+		const message = error instanceof Error && error.message !== 'newsletter_failed' ? error.message : copy('sendFailed');
 		fields.status.textContent = message;
-		notify({ kind: 'error', title: 'Could not subscribe', message, duration: 8000 });
+		notify({ kind: 'error', title: copy('subscribeFailed'), message, duration: 8000 });
 	} finally {
 		fields.button.disabled = false;
 	}
