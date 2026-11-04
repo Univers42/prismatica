@@ -17,6 +17,10 @@ describe('ConsentBanner', () => {
 		expect(banner).toMatch(/<section\b[^>]*tabindex="-1"/);
 	});
 
+	it('stays reachable when the open preferences are taller than the screen', () => {
+		expect(styles).toMatch(/\.consent-banner__paper \{[^}]*max-block-size: calc\(100dvh - 2rem\);[^}]*overflow-y: auto;/);
+	});
+
 	it('takes its layer from the token scale', () => {
 		expect(styles).toMatch(/\.consent-banner \{[^}]*z-index: var\(--z-dialog\);/);
 	});
