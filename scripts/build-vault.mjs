@@ -14,6 +14,7 @@ import { join, dirname, relative, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import vm from "node:vm";
+import { rewriteVaultLinks } from "./vault-links.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = dirname(fileURLToPath(import.meta.url));            // apps/opposite-osiris/scripts
@@ -208,6 +209,7 @@ async function main() {
   }
   docs.sort((a, b) => a.order - b.order || a.path.localeCompare(b.path));
   if (!docs.length) throw new Error("No .xmd files found under " + VAULT);
+  rewriteVaultLinks(docs, (path) => "#" + esc(path));
 
   const home = docs[0];
   const totalHeadings = docs.reduce((n, d) => n + d.toc.length, 0);
