@@ -10,22 +10,23 @@
 
 import { isLand, sphereProjector, spherePoint, type Vec3 } from '../lib/sky-sphere';
 import { createRandom, curvePoint, easeInOut, withAlpha, type Point } from '../lib/universe-motion';
+import { createBuffer } from '../lib/canvas-buffer';
 
 type Dot = Vec3 & { point: Vec3; city: boolean; seen: boolean };
 type Arc = { from: Dot; to: Dot; start: number; duration: number };
 
-export type Planet = {
-	measure: (width: number, horizon: number, height: number) => void;
-	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean) => void;
-};
-
-// The pole is tipped away, so the visible cap is mid-latitudes drifting by.
-const TILT = -0.5;
 const SPIN_PER_MS = 0.000006;
 const ARC_EVERY_MS = 700;
 const MAX_ARCS = 5;
 const ARRIVAL_MS = 600;
 const SHADES = 5;
+
+const TILT = -0.5;
+
+export type Planet = {
+	measure: (width: number, horizon: number, height: number, dpr?: number) => void;
+	draw: (ctx: CanvasRenderingContext2D, now: number, moving: boolean) => void;
+};
 
 export function createPlanet(signal: string): Planet {
 	const random = createRandom(23);
@@ -38,9 +39,11 @@ export function createPlanet(signal: string): Planet {
 	let horizon = 0;
 	let width = 0;
 	let height = 0;
+	let coronaCanvas: CanvasImageSource | null = null;
+	let globeCanvas: CanvasImageSource | null = null;
 	const shades: Dot[][] = Array.from({ length: SHADES }, () => []);
 
-	function measure(nextWidth: number, nextHorizon: number, nextHeight: number): void {
+	function measure(nextWidth: number, nextHorizon: number, nextHeight: number, dpr: number = 1): void {
 		width = nextWidth;
 		horizon = nextHorizon;
 		height = nextHeight;
@@ -60,51 +63,118 @@ export function createPlanet(signal: string): Planet {
 			}
 		}
 		arcs = [];
+
+		const physWidth = Math.round(width * dpr);
+		const physHeight = Math.round(height * dpr);
+
+		const coronaBuffer = createBuffer(physWidth, physHeight);
+		if (coronaBuffer) {
+			const bCtx = coronaBuffer.ctx;
+			bCtx.save();
+			bCtx.scale(dpr, dpr);
+			const sun = { x: width / 2, y: horizon + 6 };
+			bCtx.translate(sun.x, sun.y);
+			bCtx.scale(2.8, 1);
+			const corona = bCtx.createRadialGradient(0, 0, 0, 0, 0, Math.min(width * 0.26, 320));
+			corona.addColorStop(0, 'rgba(255,246,236,0.95)');
+			corona.addColorStop(0.08, 'rgba(255,214,190,0.55)');
+			corona.addColorStop(0.3, withAlpha(signal, 0.2));
+			corona.addColorStop(1, withAlpha(signal, 0));
+			bCtx.fillStyle = corona;
+			bCtx.fillRect(-width, -460, width * 2, 900);
+			bCtx.restore();
+			coronaCanvas = coronaBuffer.canvas as CanvasImageSource;
+		} else {
+			coronaCanvas = null;
+		}
+
+		const globeBuffer = createBuffer(physWidth, physHeight);
+		if (globeBuffer) {
+			const bCtx = globeBuffer.ctx;
+			bCtx.save();
+			bCtx.scale(dpr, dpr);
+			const body = bCtx.createRadialGradient(centre.x, centre.y, radius - 260, centre.x, centre.y, radius);
+			body.addColorStop(0, '#04060b');
+			body.addColorStop(1, '#0f1626');
+			bCtx.fillStyle = body;
+			bCtx.beginPath();
+			bCtx.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
+			bCtx.fill();
+
+			const air = bCtx.createRadialGradient(centre.x, centre.y, radius - 24, centre.x, centre.y, radius + 90);
+			air.addColorStop(0, 'rgba(120,160,255,0)');
+			air.addColorStop(0.2, 'rgba(176,206,255,0.42)');
+			air.addColorStop(0.34, withAlpha(signal, 0.14));
+			air.addColorStop(1, withAlpha(signal, 0));
+			bCtx.fillStyle = air;
+			bCtx.fillRect(0, horizon - 100, width, Math.min(height - horizon + 100, 420));
+
+			const rim = bCtx.createLinearGradient(0, 0, width, 0);
+			rim.addColorStop(0, 'rgba(190,214,255,0.12)');
+			rim.addColorStop(0.5, 'rgba(255,250,244,0.95)');
+			rim.addColorStop(1, 'rgba(190,214,255,0.12)');
+			bCtx.strokeStyle = rim;
+			bCtx.lineWidth = 1.4;
+			bCtx.beginPath();
+			bCtx.arc(centre.x, centre.y, radius, Math.PI, Math.PI * 2);
+			bCtx.stroke();
+			bCtx.restore();
+
+			globeCanvas = globeBuffer.canvas as CanvasImageSource;
+		} else {
+			globeCanvas = null;
+		}
 	}
 
 	function drawGlobe(ctx: CanvasRenderingContext2D, breath: number): void {
-		const sun = { x: width / 2, y: horizon + 6 };
-		// The sun behind the limb: a wide glow spilling up into the sky.
+	if (coronaCanvas && globeCanvas) {
 		ctx.save();
-		ctx.translate(sun.x, sun.y);
-		ctx.scale(2.8, 1);
-		const corona = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.min(width * 0.26, 320));
-		corona.addColorStop(0, 'rgba(255,246,236,0.95)');
-		corona.addColorStop(0.08, 'rgba(255,214,190,0.55)');
-		corona.addColorStop(0.3, withAlpha(signal, 0.2));
-		corona.addColorStop(1, withAlpha(signal, 0));
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 0.78 + 0.22 * breath;
-		ctx.fillStyle = corona;
-		ctx.fillRect(-width, -460, width * 2, 900);
-		ctx.restore();
-		// Night side: a little lighter near the limb, where the atmosphere scatters.
-		const body = ctx.createRadialGradient(centre.x, centre.y, radius - 260, centre.x, centre.y, radius);
-		body.addColorStop(0, '#04060b');
-		body.addColorStop(1, '#0f1626');
+		ctx.drawImage(coronaCanvas, 0, 0);
 		ctx.globalAlpha = 1;
-		ctx.fillStyle = body;
-		ctx.beginPath();
-		ctx.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
-		ctx.fill();
-		// Atmosphere: a haze just outside the limb, cool near it, red further out.
-		const air = ctx.createRadialGradient(centre.x, centre.y, radius - 24, centre.x, centre.y, radius + 90);
-		air.addColorStop(0, 'rgba(120,160,255,0)');
-		air.addColorStop(0.2, 'rgba(176,206,255,0.42)');
-		air.addColorStop(0.34, withAlpha(signal, 0.14));
-		air.addColorStop(1, withAlpha(signal, 0));
-		ctx.fillStyle = air;
-		ctx.fillRect(0, horizon - 100, width, Math.min(height - horizon + 100, 420));
-		// The lit rim itself: brightest under the sun.
-		const rim = ctx.createLinearGradient(0, 0, width, 0);
-		rim.addColorStop(0, 'rgba(190,214,255,0.12)');
-		rim.addColorStop(0.5, 'rgba(255,250,244,0.95)');
-		rim.addColorStop(1, 'rgba(190,214,255,0.12)');
-		ctx.strokeStyle = rim;
-		ctx.lineWidth = 1.4;
-		ctx.beginPath();
-		ctx.arc(centre.x, centre.y, radius, Math.PI, Math.PI * 2);
-		ctx.stroke();
+		ctx.drawImage(globeCanvas, 0, 0);
+		ctx.restore();
+		return;
 	}
+	const sun = { x: width / 2, y: horizon + 6 };
+	ctx.save();
+	ctx.translate(sun.x, sun.y);
+	ctx.scale(2.8, 1);
+	const corona = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.min(width * 0.26, 320));
+	corona.addColorStop(0, 'rgba(255,246,236,0.95)');
+	corona.addColorStop(0.08, 'rgba(255,214,190,0.55)');
+	corona.addColorStop(0.3, withAlpha(signal, 0.2));
+	corona.addColorStop(1, withAlpha(signal, 0));
+	ctx.globalAlpha = 0.78 + 0.22 * breath;
+	ctx.fillStyle = corona;
+	ctx.fillRect(-width, -460, width * 2, 900);
+	ctx.restore();
+	const body = ctx.createRadialGradient(centre.x, centre.y, radius - 260, centre.x, centre.y, radius);
+	body.addColorStop(0, '#04060b');
+	body.addColorStop(1, '#0f1626');
+	ctx.globalAlpha = 1;
+	ctx.fillStyle = body;
+	ctx.beginPath();
+	ctx.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
+	ctx.fill();
+	const air = ctx.createRadialGradient(centre.x, centre.y, radius - 24, centre.x, centre.y, radius + 90);
+	air.addColorStop(0, 'rgba(120,160,255,0)');
+	air.addColorStop(0.2, 'rgba(176,206,255,0.42)');
+	air.addColorStop(0.34, withAlpha(signal, 0.14));
+	air.addColorStop(1, withAlpha(signal, 0));
+	ctx.fillStyle = air;
+	ctx.fillRect(0, horizon - 100, width, Math.min(height - horizon + 100, 420));
+	const rim = ctx.createLinearGradient(0, 0, width, 0);
+	rim.addColorStop(0, 'rgba(190,214,255,0.12)');
+	rim.addColorStop(0.5, 'rgba(255,250,244,0.95)');
+	rim.addColorStop(1, 'rgba(190,214,255,0.12)');
+	ctx.strokeStyle = rim;
+	ctx.lineWidth = 1.4;
+	ctx.beginPath();
+	ctx.arc(centre.x, centre.y, radius, Math.PI, Math.PI * 2);
+	ctx.stroke();
+}
 
 	function placeDots(spin: number): void {
 		const project = sphereProjector(spin, TILT, radius);
