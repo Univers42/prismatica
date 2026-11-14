@@ -34,7 +34,7 @@ import { deriveClientIp, ipBucket } from './auth/net-ip.mjs';
 import { createSessionCutoffWriter } from './auth/session-cutoff.mjs';
 import { createOauthLink, parseLinkMode } from './auth/oauth-link.mjs';
 import { createSessionFlows, refreshCookie, refreshTokenFrom } from './auth/session-flows.mjs';
-import { createEmailApiMailer, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
+import { createEmailApiMailer, QUEUED_MAIL, resolveMailTimeoutMs } from './auth/email-api-mailer.mjs';
 import { createOtpClient } from './auth/otp-client.mjs';
 import { enabledOauthProviders, isS256Challenge, oauthAuthorizeUrl } from './auth/oauth-providers.mjs';
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
@@ -381,7 +381,7 @@ async function sendLoginSecurityNotification(email, outcome, context, notice, al
 		to: email,
 		subject: outcome === 'success' ? 'Security alert: new Prismatica sign-in' : 'Security alert: failed Prismatica sign-in attempt',
 		html: renderEmailTemplate('login-alert.html', { ...context, ...context.mail }),
-	});
+	}, QUEUED_MAIL);
 	if (!wasSent(sendResult)) return;
 	await store.set(notice.key, '1', notice.ttlSec).catch((error) => {
 		console.warn(`[auth-gateway] sign-in notice key not stored: ${error instanceof Error ? error.message : 'unknown error'}`);
@@ -408,7 +408,7 @@ async function sendAccountCreatedNotification(request, email) {
 		to: email,
 		subject: 'Your Prismatica account is ready',
 		html: renderEmailTemplate('account-created.html', { Email: email, SiteURL: siteBaseUrl() }),
-	});
+	}, QUEUED_MAIL);
 	if (wasSent(sendResult)) await audit('account_created_email_sent', request, { email });
 }
 
@@ -453,9 +453,9 @@ function mailConfigured() {
 	return Boolean(config.serviceKey && config.baasUrl);
 }
 
-function sendThroughEmailService(message) {
+function sendThroughEmailService(message, options) {
 	if (!mailConfigured()) return Promise.reject(Object.assign(new Error('The email service is not configured.'), { status: 503 }));
-	return emailMailer.send(message);
+	return emailMailer.send(message, options);
 }
 
 // Flows report through this; it never rejects, so a fire-and-forget call cannot leak.
@@ -480,9 +480,12 @@ function reportDroppedJob(label) {
 	droppedJobs = 0;
 }
 
+// One worker is what makes registerJob safe: it checks for a profile, then creates one, so two
+// jobs for one address side by side would both pass the check (groot ADR 0048). Never raise this
+// alone: past 5 mails a minute of real demand, serialise by address inside createWorkQueue first.
 const mailQueue = createWorkQueue({
 	maxLength: config.mailQueueMax,
-	concurrency: 2,
+	concurrency: 1,
 	onDrop: reportDroppedJob,
 	onError: (error, label) => {
 		console.error(`[auth-gateway] queued "${label}" failed: ${error instanceof Error ? error.message : 'unknown error'}`);

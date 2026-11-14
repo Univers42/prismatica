@@ -49,8 +49,8 @@ export function isVerificationExempt(addresses, email) {
 
 /** Wraps a mail sender: an exempt recipient gets no mail, one audit event (address only, no body). */
 export function withExemptSuppression(addresses, send, audit) {
-	return (message) => {
-		if (!isVerificationExempt(addresses, message.to)) return send(message);
+	return (message, options) => {
+		if (!isVerificationExempt(addresses, message.to)) return send(message, options);
 		audit('mail_suppressed_exempt', { email: String(message.to).trim().toLowerCase() });
 		return Promise.resolve({ suppressed: true });
 	};
