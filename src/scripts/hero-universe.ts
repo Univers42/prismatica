@@ -15,18 +15,32 @@ import { createRandom, curvePoint, driftFor, driftOffset, easeInOut, type Drift,
 import { createPlanet } from './sky-planet';
 import { createStarField } from './sky-stars';
 
-type SkyNode = { id: string; app: string; el: HTMLElement; mark: HTMLElement | null; base: Point; pos: Point; drift: Drift; shown: boolean };
+type SkyNode = { id: string; app: string; el: HTMLElement; mark: HTMLElement | null; base: Point; pos: Point; drift: Drift; shown: boolean; lastTransform?: string };
 type Signal = { from: SkyNode; to: SkyNode; start: number; duration: number };
 type Story = { app: string; start: number; target: Point | null; nodes: SkyNode[] };
 
 const STORY_MS = 2800;
 const SIGNAL_EVERY_MS = 420;
 const MAX_SIGNALS = 7;
-// Caveat: a pixel budget, not a measured limit. A tall desktop hero at DPR 2
-// would be ~11M canvas pixels; capping at 6M trades a little sharpness on
-// the stars for memory and fill rate.
-const MAX_CANVAS_PIXELS = 6_000_000;
+export const IDLE_FRAME_MS = 33;
+export const MAX_DPR = 1.5;
+export const MAX_CANVAS_PIXELS = 4_000_000;
 const POINTER_EASE = 0.06;
+// Caveat: a pixel budget, not a measured limit. A tall desktop hero at DPR 2
+// would be ~11M canvas pixels; capping at MAX_CANVAS_PIXELS trades a little sharpness on
+// the stars for memory and fill rate.
+
+export const applyNodeTransform = function (
+	node: { el: HTMLElement; lastTransform?: string },
+	x: number,
+	y: number
+): boolean {
+	const transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+	if (node.lastTransform === transform) return false;
+	node.lastTransform = transform;
+	node.el.style.transform = transform;
+	return true;
+}
 
 function offsetWithin(el: HTMLElement, ancestor: HTMLElement): Point {
 	let x = 0;
@@ -77,7 +91,7 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 	function measure(): void {
 		width = root.clientWidth;
 		height = root.clientHeight;
-		const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)));
+		const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR, Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, width * height)));
 		canvas!.width = Math.round(width * dpr);
 		canvas!.height = Math.round(height * dpr);
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -87,8 +101,8 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		}
 		const marker = scene.querySelector<HTMLElement>('[data-horizon]');
 		const horizon = marker ? marker.getBoundingClientRect().top - root.getBoundingClientRect().top : height * 0.75;
-		stars.measure(width, height);
-		planet.measure(width, horizon, height);
+		stars.measure(width, height, dpr);
+		planet.measure(width, horizon, height, dpr);
 	}
 
 	function railTarget(app: string): Point | null {
@@ -99,8 +113,6 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		return { x: box.left - origin.left + box.width / 2, y: box.top - origin.top };
 	}
 
-	// Each item leans toward the pointer by its own depth (its drift radius),
-	// so the constellation parallaxes instead of sliding as one sheet.
 	function placeNodes(now: number, drifting: boolean): void {
 		for (const node of nodes) {
 			const offset = drifting ? driftOffset(node.drift, now) : { x: 0, y: 0 };
@@ -108,7 +120,7 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 			const x = offset.x + pointer.x * 14 * depth;
 			const y = offset.y + pointer.y * 9 * depth;
 			node.pos = { x: node.base.x + x, y: node.base.y + y };
-			node.el.style.transform = `translate(-50%, -50%) translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+			applyNodeTransform(node, x, y);
 		}
 	}
 
@@ -201,8 +213,13 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 
 	function draw(now: number, moving: boolean): void {
 		const scroll = moving ? scrollTop : 0;
-		pointer.x += (pointerTarget.x - pointer.x) * POINTER_EASE;
-		pointer.y += (pointerTarget.y - pointer.y) * POINTER_EASE;
+		if (moving) {
+			pointer.x += (pointerTarget.x - pointer.x) * POINTER_EASE;
+			pointer.y += (pointerTarget.y - pointer.y) * POINTER_EASE;
+		} else {
+			pointer.x = 0;
+			pointer.y = 0;
+		}
 		ctx.clearRect(0, 0, width, height);
 		placeNodes(now, moving);
 		stars.draw(ctx, now, moving, { scroll, pointer });
@@ -213,12 +230,24 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 		ctx.globalAlpha = 1;
 	}
 
+	let lastDrawAt = 0;
+	let dirty = true;
 	const loop = (now: number): void => {
+		frame = 0;
 		const moving = motionAllowed();
+		if (moving && !dirty && now - lastDrawAt < IDLE_FRAME_MS) {
+			frame = requestAnimationFrame(loop);
+			return;
+		}
+		dirty = false;
+		lastDrawAt = now;
 		draw(now, moving);
-		frame = onScreen && !document.hidden && moving ? requestAnimationFrame(loop) : 0;
+		if (onScreen && !document.hidden && moving) {
+			frame = requestAnimationFrame(loop);
+		}
 	};
 	const start = (): void => {
+		dirty = true;
 		if (!frame) frame = requestAnimationFrame(loop);
 	};
 
@@ -239,14 +268,16 @@ export function bindHeroUniverse(root: HTMLElement): (() => void) | null {
 
 	// Pointer lean on mouse and trackpad only: a finger has no hover position.
 	const onPointerMove = (event: PointerEvent): void => {
-		if (event.pointerType !== 'mouse') return;
+		if (event.pointerType !== 'mouse' || !motionAllowed()) return;
 		const box = scene.getBoundingClientRect();
 		pointerTarget.x = ((event.clientX - box.left) / box.width - 0.5) * 2;
 		pointerTarget.y = ((event.clientY - box.top) / Math.min(box.height, window.innerHeight) - 0.5) * 2;
+		if (onScreen) start();
 	};
 	scene.addEventListener('pointermove', onPointerMove, { passive: true });
 	const onScroll = (): void => {
 		scrollTop = window.scrollY;
+		if (onScreen && motionAllowed()) start();
 	};
 	window.addEventListener('scroll', onScroll, { passive: true });
 
