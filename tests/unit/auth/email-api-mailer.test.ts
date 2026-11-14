@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEmailApiMailer, DEFAULT_MAIL_TIMEOUT_MS, resolveMailTimeoutMs } from '../../../scripts/auth/email-api-mailer.mjs';
+import { createEmailApiMailer, DEFAULT_MAIL_TIMEOUT_MS, QUEUED_MAIL, resolveMailTimeoutMs } from '../../../scripts/auth/email-api-mailer.mjs';
 
 const KEY = 'planted-service-key-DO-NOT-LEAK-0123456789';
 const message = { to: 'ines@arlet.test', subject: 'Hello', html: '<p>Hi</p>', text: 'Hi' };
@@ -64,6 +64,28 @@ describe('createEmailApiMailer', () => {
 		const { calls, fetchImpl } = sequence({ status: 429, headers: { 'retry-after': '3600' } });
 		const assertion = expect(mailer(fetchImpl).send(message)).rejects.toThrow('email service answered HTTP 429');
 		await vi.advanceTimersByTimeAsync(9_900);
+		expect(calls).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(200);
+		await assertion;
+		expect(calls).toHaveLength(2);
+	});
+
+	it('waits out the whole Retry-After for a queued sender, past the 10 s a live request gets', async () => {
+		vi.useFakeTimers();
+		const { calls, fetchImpl } = sequence({ status: 429, headers: { 'retry-after': '45' } }, 200);
+		const pending = mailer(fetchImpl).send(message, QUEUED_MAIL);
+		await vi.advanceTimersByTimeAsync(44_900);
+		expect(calls).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(200);
+		await expect(pending).resolves.toBeUndefined();
+		expect(calls).toHaveLength(2);
+	});
+
+	it('gives a queued sender one retry too, a minute at most, when the hourly bucket is spent', async () => {
+		vi.useFakeTimers();
+		const { calls, fetchImpl } = sequence({ status: 429, headers: { 'retry-after': '3600' } });
+		const assertion = expect(mailer(fetchImpl).send(message, QUEUED_MAIL)).rejects.toThrow('email service answered HTTP 429');
+		await vi.advanceTimersByTimeAsync(59_900);
 		expect(calls).toHaveLength(1);
 		await vi.advanceTimersByTimeAsync(200);
 		await assertion;
