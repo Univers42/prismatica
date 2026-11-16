@@ -7,7 +7,7 @@ summary: Three language planes — TypeScript, Go, Rust — and a shadow → par
 
 # Architecture
 
-Track Binocle follows a **three-language plane pattern**. Each plane owns a
+Osionos follows a **three-language plane pattern**. Each plane owns a
 concern and speaks a language chosen for it.
 
 ## The three planes

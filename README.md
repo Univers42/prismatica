@@ -7,7 +7,7 @@ Built with [Astro](https://astro.build). Deployed on Vercel:
 - Production: https://prismatica-eta.vercel.app
 - Beta (develop): https://prismatica-beta.vercel.app
 
-Part of the ft_transcendence / track-binocle ecosystem. Session bridge to the osionos BaaS.
+Part of the Osionos ecosystem. Session bridge to the osionos BaaS.
 
 ## Stack
 

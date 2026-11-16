@@ -2,12 +2,12 @@
 title: Welcome to Prismatica
 icon: ◆
 order: 0
-summary: The warm-editorial documentation shell for Track Binocle — authored in .xmd, rendered by our own markengine.
+summary: The warm-editorial documentation shell for Osionos — authored in .xmd, rendered by our own markengine.
 ---
 
 # Prismatica Docs
 
-Prismatica is the marketing-and-auth front door for **Track Binocle**, the
+Prismatica is the marketing-and-auth front door for **Osionos**, the
 Docker-first monorepo behind [osionos](reference/markengine.xmd) — a Notion-style
 block editor that grew into a full collaborative workspace.
 

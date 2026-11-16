@@ -2,12 +2,12 @@
 title: Security Model Overview
 icon: ⚿
 order: 1200
-summary: How Track Binocle defends itself end to end — identity, authorization, the data wall, secrets, and the gates that keep them honest.
+summary: How Osionos defends itself end to end — identity, authorization, the data wall, secrets, and the gates that keep them honest.
 ---
 
 # Security Model Overview
 
-Security in Track Binocle is not a single feature — it is a set of walls, each
+Security in Osionos is not a single feature — it is a set of walls, each
 independent, each verified by its own gate. If one wall is bypassed the next one
 still holds. This page is the map; every wall below has its own page.
 

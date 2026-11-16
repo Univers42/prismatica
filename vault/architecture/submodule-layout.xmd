@@ -7,7 +7,7 @@ summary: The monorepo is stitched from Git submodules, plus grobase — a nested
 
 # Submodule & Nested-Repo Layout
 
-Track Binocle looks like one monorepo but is stitched together from **Git
+Osionos looks like one monorepo but is stitched together from **Git
 submodules**. The root repo records each submodule's commit SHA; the actual code
 lives in its own repository. One member — **grobase** — goes further: it is a
 *nested independent repo* with its own remote and its own authoritative docs.

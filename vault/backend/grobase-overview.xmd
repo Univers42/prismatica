@@ -2,7 +2,7 @@
 title: The grobase BaaS
 icon: ⛁
 order: 1100
-summary: One backend, any frontend, no per-project server code — grobase is Track Binocle's self-hostable Backend-as-a-Service, spanning a Go control plane and a Rust data plane.
+summary: One backend, any frontend, no per-project server code — grobase is Osionos's self-hostable Backend-as-a-Service, spanning a Go control plane and a Rust data plane.
 ---
 
 # The grobase BaaS
@@ -14,11 +14,11 @@ from a ~5 MB single-file build to a 10K-tenant platform.
 
 It lives in the monorepo at `apps/grobase/` as a **nested independent repo**
 (its own `.git`, remote `github.com/Univers42/grobase`, its own authoritative
-`CLAUDE.md`). The root Track Binocle stack reaches it over an external Docker
+`CLAUDE.md`). The root Osionos stack reaches it over an external Docker
 network; grobase itself owns all backend state.
 
 > [!info] Where it sits in the three-plane pattern
-> grobase is the **control + data plane** of Track Binocle. The application
+> grobase is the **control + data plane** of Osionos. The application
 > plane (osionos, the website, the bridges) are pure clients that talk to it
 > through one gateway. See [Architecture](../guides/architecture.xmd).
 

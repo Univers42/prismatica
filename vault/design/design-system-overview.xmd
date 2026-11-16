@@ -2,12 +2,12 @@
 title: Design System Overview
 icon: ◆
 order: 900
-summary: One token file, one warm-editorial default, and two orthogonal theming axes — the shape of the Track Binocle design system.
+summary: One token file, one warm-editorial default, and two orthogonal theming axes — the shape of the Osionos design system.
 ---
 
 # Design System Overview
 
-Track Binocle's look is **warm and editorial** — a cream canvas, serif headings,
+Osionos's look is **warm and editorial** — a cream canvas, serif headings,
 a single terracotta accent. But the important thing is not the colours; it is
 that every colour, radius, shadow, and font in [osionos](../reference/markengine.xmd)
 resolves through **one layer of CSS custom properties**. Change the layer, and the
