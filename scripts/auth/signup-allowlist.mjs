@@ -1,16 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   signup-allowlist.mjs                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-
 // Who may start a signup or a newsletter subscription (AUTH_SIGNUP_ALLOWLIST, verdict SGN-1).
 //
 // Both flows make the gateway send mail from one shared mailbox, so an open form is a mail

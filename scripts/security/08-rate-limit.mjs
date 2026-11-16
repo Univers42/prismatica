@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   08-rate-limit.mjs                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import http from 'node:http';
 import https from 'node:https';
 import { assert, baasHeaders, config, fetchWithTimeout, passed, restUrl, runChecks } from './_shared.mjs';

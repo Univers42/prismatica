@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   store.mjs                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 // Pure unit tests for the bounded TTL store and RESP reply parser. No stack.
 // Proves the memory backend evicts (kills the unbounded-growth DoS) and that
 // the zero-dependency Redis reply parser frames integers, bulk strings, and

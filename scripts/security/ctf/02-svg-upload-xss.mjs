@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   02-svg-upload-xss.mjs                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur          #+#    #+#             */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import { readFileSync } from 'node:fs';
 import { assert, projectRoot, publicRoot, runChecks, srcRoot, summarize, walkFiles } from './_shared.mjs';
 import { sanitizeSvgMarkup } from '../../../src/lib/svg-security.mjs';

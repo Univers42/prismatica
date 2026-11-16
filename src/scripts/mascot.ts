@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                 :::      ::::::::   */
-/*   mascot.ts                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: dlesieur <dlesieur@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*   Updated: 2026/05/18 21:19:16 by dlesieur         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import { clamp, randomIndex, randomBetween } from '../lib/math';
 import { bindScrollLean } from '../lib/scroll-lean';
 import { queryElement, isButton, isHtmlElement, setTrustedInnerHTML } from '../lib/dom-utils';
