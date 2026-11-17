@@ -16,7 +16,22 @@ const activeLocale = normalizeLocale(locale, {
 	supportedLocales: SUPPORTED_LOCALES,
 }) as SupportedLocale;
 
-const tiers = [
+type Tier = {
+	readonly id: string;
+	readonly nameKey: string;
+	readonly priceKey: string;
+	readonly cadenceKey: string;
+	readonly summaryKey: string;
+	readonly featureKeys: readonly string[];
+	readonly cta: {
+		readonly labelKey: string;
+		readonly variant: string;
+		readonly action: 'open-docs' | 'open-portal-start';
+	};
+	readonly emphasized: boolean;
+};
+
+const tiers: readonly Tier[] = [
 	{
 		id: 'self',
 		nameKey: 'pricing.selfName',
@@ -32,7 +47,7 @@ const tiers = [
 		cta: { labelKey: 'pricing.selfCta', variant: 'primary', action: 'open-docs' },
 		emphasized: true,
 	},
-] as const;
+];
 ---
 
 <section class="section section--sunken pricing" id="pricing">
