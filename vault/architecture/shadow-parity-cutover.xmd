@@ -7,7 +7,7 @@ summary: The discipline behind every major change — new code runs beside old, 
 
 # Shadow → Parity → Cutover
 
-Track Binocle never flips a switch on a major change. New code runs **in
+Osionos never flips a switch on a major change. New code runs **in
 parallel** with the old, validation **precedes** any cutover, and **deletion is
 always last**. This is the single discipline that makes cross-plane changes safe.
 

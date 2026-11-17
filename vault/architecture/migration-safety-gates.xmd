@@ -8,7 +8,7 @@ summary: Legacy data-plane code is never deleted until three gates pass — live
 # Deletion & Migration Safety Gates
 
 The riskiest step in the whole [shadow → parity → cutover](shadow-parity-cutover.xmd)
-discipline is **deletion** — removing the legacy path for good. Track Binocle
+discipline is **deletion** — removing the legacy path for good. Osionos
 guards it with three explicit gates. All three must pass. If any is `UNKNOWN`, it
 counts as `FAIL`.
 

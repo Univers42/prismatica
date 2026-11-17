@@ -9,7 +9,7 @@ summary: Frozen lockfiles, no install-time scripts, and a release-age hold — h
 
 A modern app is mostly other people's code. The most likely way to get owned is
 not a bug in *your* code — it is a malicious version of a dependency you already
-trust. Track Binocle closes that door in three ways.
+trust. Osionos closes that door in three ways.
 
 ## 1. Frozen lockfiles, reproducible installs
 

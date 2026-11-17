@@ -7,7 +7,7 @@ summary: WCAG contrast is a build gate, not a hope — every palette pair is mac
 
 # Accessibility & Contrast
 
-Accessibility in Track Binocle is verified, not asserted. Contrast is checked by a
+Accessibility in Osionos is verified, not asserted. Contrast is checked by a
 script, a11y regressions show up in Lighthouse and pa11y, and the one colour that
 *can't* pass AA as text is structurally prevented from being used that way.
 

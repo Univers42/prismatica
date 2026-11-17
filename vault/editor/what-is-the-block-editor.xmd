@@ -10,7 +10,7 @@ summary: osionos is a Notion-style block editor that grew into a full collaborat
 **osionos** (npm name `osionos-playground`) is a Notion-style **block editor
 that grew into a full collaborative workspace**. It is a React 19 + Vite 6 +
 TypeScript app, served at `https://localhost:3001`, and it is one of the
-frontends of the Track Binocle monorepo.
+frontends of the Osionos monorepo.
 
 Every piece of content on a page is a **block**: a paragraph, a heading, a
 callout, a table, an embedded database view. Blocks nest into a tree, and the

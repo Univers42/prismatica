@@ -7,7 +7,7 @@ summary: What a machine needs before its first make all, and the clone-to-runnin
 
 # Installation & Prerequisites
 
-Track Binocle is **Docker-first**. Almost everything you need lives inside
+Osionos is **Docker-first**. Almost everything you need lives inside
 containers, so the host stays lean: no language toolchains, no `node_modules`, no
 database servers to install by hand.
 

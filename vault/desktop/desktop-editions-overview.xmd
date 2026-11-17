@@ -7,7 +7,7 @@ summary: osionos ships as a desktop app in three shapes — Electron over Docker
 
 # Desktop Editions Overview
 
-osionos runs in the browser as part of the Track Binocle stack, but it also ships
+osionos runs in the browser as part of the Osionos stack, but it also ships
 as a **click-the-icon desktop app**. There is not one desktop build — there are
 **three shapes**, each trading convenience against how much of the backend the
 machine has to carry.

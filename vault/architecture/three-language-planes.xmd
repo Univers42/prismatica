@@ -2,12 +2,12 @@
 title: The Three Language Planes
 icon: ◈
 order: 200
-summary: Why Track Binocle splits into a TypeScript application plane, a Go control plane, and a Rust data plane — one language per concern.
+summary: Why Osionos splits into a TypeScript application plane, a Go control plane, and a Rust data plane — one language per concern.
 ---
 
 # The Three Language Planes
 
-Track Binocle is a Docker-first monorepo that deliberately spans **three
+Osionos is a Docker-first monorepo that deliberately spans **three
 languages**. Each language owns a *plane* — a horizontal slice of the system with
 one clear responsibility. The rule of thumb: pick the language that best fits the
 concern, not the concern that best fits one language.

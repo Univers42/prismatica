@@ -127,7 +127,7 @@ function renderNode(n) {
     '<span class="tree__glyph">▾</span><span class="tree__label">' + esc(n.name) + '<span class="tree__ext">/</span></span></button>' + renderTree(n.children) + "</li>";
 }
 function heroHtml(home, stats) {
-  return '<div class="hero"><div class="hero__eyebrow">Prismatica · Track Binocle</div>' +
+  return '<div class="hero"><div class="hero__eyebrow">Prismatica · Osionos</div>' +
     '<h1 class="hero__title">' + esc(home.title) + "</h1>" +
     '<p class="hero__sub">' + esc(home.summary || "") + "</p>" +
     '<div class="hero__stats">' + stats.map((s) => '<div class="hero__stat"><b>' + esc(s.n) + "</b><span>" + esc(s.label) + "</span></div>").join("") + "</div></div>";
