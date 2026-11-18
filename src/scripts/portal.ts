@@ -1,7 +1,6 @@
-import { insertTrustedHTML, queryElement, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, isHtmlElement } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
-import { type RegisterProfile, useAuth } from '../hooks/useAuth';
-import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
+import { useAuth } from '../hooks/useAuth';
 import { setMountedMascotMood, notifyWithMascot } from './mascot';
 import { announce, ensureButtonLabels } from './theme';
 import { readConsentPreferences } from './consent';
@@ -13,6 +12,38 @@ import { createPortalMarkup } from './portal-markup';
 import { bindPortalOAuth } from './portal-oauth';
 import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
 
+import {
+	LOCAL_TURNSTILE_TOKEN,
+	type PortalFormElements,
+	portalFormElements,
+	readTurnstileToken,
+	clearPortalFieldErrors,
+	showPortalFieldError,
+	portalRegistrationProfile,
+	clearPortalAuthErrors,
+	validateRegistrationIdentity,
+	validatePortalPasswordFields,
+	validatePortalProfileFields,
+	emailValidationResult,
+	hasValidEmailFormat,
+	showInlineFieldMessage,
+	showInlineFieldError,
+	clearInlineFieldError,
+	validateEmailField,
+	usernameValidationState,
+	bindEmailFieldValidation,
+	updatePortalSubmitAvailability,
+	validateRegistrationAvailability,
+	validatePortalAuth,
+} from './portal-validation';
+
+import {
+	STRENGTH_LABELS,
+	renderPasswordStrength,
+	syncPasswordMatchStatus,
+	syncPortalPasswordFeedback,
+} from './portal-strength';
+
 export type PortalMode = 'start' | 'connect';
 
 type TurnstileApi = {
@@ -20,103 +51,118 @@ type TurnstileApi = {
 	reset?: (widgetId?: string) => void;
 };
 
-
-
 type AuthModeControls = {
-	title: Element | null;
-	note: Element | null;
-	registerBtn: Element | null;
-	loginBtn: Element | null;
-	submitBtn: Element | null;
-	usernameWrap: Element | null;
-	confirmPasswordWrap: Element | null;
-	termsConsent: Element | null;
-	emailVerification: Element | null;
-	email: Element | null;
-	username: Element | null;
-	emailVerificationConsent: Element | null;
-	password: Element | null;
-	confirmPassword: Element | null;
+	title: HTMLElement | null;
+	note: HTMLElement | null;
+	registerBtn: HTMLElement | null;
+	loginBtn: HTMLElement | null;
+	submitBtn: HTMLButtonElement | null;
+	usernameWrap: HTMLElement | null;
+	confirmPasswordWrap: HTMLElement | null;
+	termsConsent: HTMLInputElement | null;
+	emailVerification: HTMLElement | null;
+	email: HTMLInputElement;
+	username: HTMLInputElement;
+	emailVerificationConsent: HTMLInputElement | null;
+	password: HTMLInputElement;
+	confirmPassword: HTMLInputElement | null;
 };
 
-declare global {
-	var turnstile: TurnstileApi | undefined;
+const ACCESS_TOKEN_KEY = 'auth_token';
+
+export function getAccessToken(): string | null {
+	return readStorage(ACCESS_TOKEN_KEY);
 }
 
-let accessToken: string | null = null;
-export function getAccessToken(): string | null {
-	return accessToken;
-}
 export function setAccessToken(token: string | null): void {
-	accessToken = token && token.length > 0 ? token : null;
+	if (token) {
+		sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+	} else {
+		sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+	}
 }
+
 export function clearAccessToken(): void {
-	accessToken = null;
+	setAccessToken(null);
 }
 
 const authClient = useAuth();
 let portalPreviousFocus: HTMLElement | null = null;
 let portalReleaseFocusTrap: (() => void) | null = null;
 
-// The one value scripts/auth-gateway.mjs (verifyTurnstile) admits under TURNSTILE_BYPASS_LOCAL.
-const LOCAL_TURNSTILE_TOKEN = 'localhost-turnstile-token';
-
-export function readTurnstileToken(portal: HTMLElement): string {
-	const token = portal.querySelector('[data-turnstile-token]');
-	if (token instanceof HTMLInputElement && token.value) {
-		return token.value;
-	}
-	return authConfig.turnstileSiteKey ? '' : LOCAL_TURNSTILE_TOKEN;
-}
-
 export function mountTurnstile(portal: HTMLElement): void {
 	const container = portal.querySelector('[data-turnstile-slot]');
 	if (!(container instanceof HTMLElement)) return;
-	const sitekey = authConfig.turnstileSiteKey;
-	if (!sitekey) {
+
+	if (!authConfig.turnstileSiteKey) {
 		const tokenInput = portal.querySelector('[data-turnstile-token]');
 		if (tokenInput instanceof HTMLInputElement) {
 			tokenInput.value = LOCAL_TURNSTILE_TOKEN;
 		}
 		return;
 	}
-	if (typeof globalThis.turnstile === 'undefined') {
-		const interval = globalThis.setInterval(() => {
-			if (typeof globalThis.turnstile !== 'undefined') {
-				globalThis.clearInterval(interval);
-				mountTurnstile(portal);
+
+	const render = (): void => {
+		const turnstile = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+		if (!turnstile) return;
+		try {
+			turnstile.render(container, {
+				sitekey: authConfig.turnstileSiteKey,
+				callback: (token: string) => {
+					const tokenInput = portal.querySelector('[data-turnstile-token]');
+					if (tokenInput instanceof HTMLInputElement) tokenInput.value = token;
+					const form = portal.querySelector('form.portal-login');
+					if (form instanceof HTMLFormElement) {
+						const elements = portalFormElements(portal);
+						if (elements) updatePortalSubmitAvailability(portal, elements);
+					}
+				},
+				'error-callback': () => {
+					notifyWithMascot({ kind: 'error', title: 'Verification error', message: 'Turnstile check failed. Please refresh.' });
+				},
+				'expired-callback': () => {
+					const tokenInput = portal.querySelector('[data-turnstile-token]');
+					if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
+					const form = portal.querySelector('form.portal-login');
+					if (form instanceof HTMLFormElement) {
+						const elements = portalFormElements(portal);
+						if (elements) updatePortalSubmitAvailability(portal, elements);
+					}
+				},
+			});
+		} catch {
+			// Container already rendered or widget reset
+		}
+	};
+
+	if ((window as unknown as { turnstile?: TurnstileApi }).turnstile) {
+		render();
+	} else {
+		const check = setInterval(() => {
+			if ((window as unknown as { turnstile?: TurnstileApi }).turnstile) {
+				clearInterval(check);
+				render();
 			}
 		}, 100);
-		return;
+		setTimeout(() => clearInterval(check), 10000);
 	}
-	const widgetId = globalThis.turnstile.render(container, {
-		sitekey,
-		callback: (token: string) => {
-			const tokenInput = portal.querySelector('[data-turnstile-token]');
-			if (tokenInput instanceof HTMLInputElement) tokenInput.value = token;
-		},
-		'error-callback': () => notifyWithMascot({ kind: 'error', title: 'Captcha failed', message: 'Could not verify browser. Please try again.' }),
-		'expired-callback': () => notifyWithMascot({ kind: 'warning', title: 'Captcha expired', message: 'Verification expired. Please try again.' }),
-	});
-	container.dataset.turnstileWidgetId = widgetId;
 }
 
 export function bindPasswordToggles(root: ParentNode = document): void {
-	Array.from(root.querySelectorAll('[data-password-toggle]')).filter(isButton).forEach((button) => {
-		button.addEventListener('click', () => {
-			const input = button.closest('.field')?.querySelector('input');
+	root.querySelectorAll('[data-toggle-password]').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const targetId = btn.getAttribute('data-toggle-password');
+			const input = targetId ? root.querySelector(`#${targetId}`) : null;
 			if (!(input instanceof HTMLInputElement)) return;
 			const isPassword = input.type === 'password';
 			input.type = isPassword ? 'text' : 'password';
-			button.setAttribute('aria-pressed', String(isPassword));
-			button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-			button.title = isPassword ? 'Hide password' : 'Show password';
-			const icon = button.querySelector('.header-icon--toggle');
+			btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+			btn.setAttribute('aria-pressed', String(isPassword));
+			const icon = btn.querySelector('.portal-toggle-text');
 			if (icon instanceof HTMLElement) icon.textContent = isPassword ? 'Hide' : 'Show';
 		});
 	});
 }
-
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const preferences = readConsentPreferences();
@@ -137,132 +183,6 @@ async function syncStoredConsents(_token: string, email?: string): Promise<void>
 	}
 }
 
-type PortalFormElements = {
-	form: HTMLFormElement;
-	username: HTMLInputElement;
-	email: HTMLInputElement;
-	password: HTMLInputElement;
-	confirmPassword: HTMLInputElement | null;
-	termsConsent: HTMLInputElement | null;
-	emailVerificationConsent: HTMLInputElement | null;
-	newsletterConsent: HTMLInputElement | null;
-	turnstileToken: HTMLInputElement | null;
-	submitButton: HTMLButtonElement | null;
-	error: HTMLOutputElement;
-	resendVerification: HTMLButtonElement | null;
-};
-
-function portalFormElements(portal: HTMLElement): PortalFormElements | null {
-	const form = portal.querySelector('form.portal-login');
-	if (!(form instanceof HTMLFormElement)) return null;
-	const username = form.elements.namedItem('username');
-	const email = form.elements.namedItem('email');
-	const password = form.elements.namedItem('password');
-	const confirmPassword = form.elements.namedItem('confirmPassword');
-	const termsConsent = form.elements.namedItem('termsConsent');
-	const emailVerificationConsent = form.elements.namedItem('emailVerificationConsent');
-	const newsletterConsent = form.elements.namedItem('newsletterConsent');
-	const turnstileToken = form.querySelector('[data-turnstile-token]');
-	const submitButton = form.querySelector('button[type="submit"]');
-	const error = form.querySelector('.portal-form-error');
-	const resendVerification = form.querySelector('[data-resend-verification]');
-
-	if (!(username instanceof HTMLInputElement) || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(error instanceof HTMLOutputElement)) {
-		return null;
-	}
-	return {
-		form,
-		username,
-		email,
-		password,
-		confirmPassword: confirmPassword instanceof HTMLInputElement ? confirmPassword : null,
-		termsConsent: termsConsent instanceof HTMLInputElement ? termsConsent : null,
-		emailVerificationConsent: emailVerificationConsent instanceof HTMLInputElement ? emailVerificationConsent : null,
-		newsletterConsent: newsletterConsent instanceof HTMLInputElement ? newsletterConsent : null,
-		turnstileToken: turnstileToken instanceof HTMLInputElement ? turnstileToken : null,
-		submitButton: submitButton instanceof HTMLButtonElement ? submitButton : null,
-		error,
-		resendVerification: resendVerification instanceof HTMLButtonElement ? resendVerification : null,
-	};
-}
-
-function clearPortalFieldErrors(...fields: (HTMLInputElement | null)[]): void {
-	fields.forEach((field) => {
-		if (field) {
-			field.removeAttribute('aria-invalid');
-			field.removeAttribute('aria-describedby');
-		}
-	});
-}
-
-function showPortalFieldError(error: HTMLOutputElement, field: HTMLInputElement, message: string): void {
-	error.textContent = message;
-	error.removeAttribute('hidden');
-	field.setAttribute('aria-invalid', 'true');
-	field.focus();
-}
-
-function portalRegistrationProfile(elements: PortalFormElements): RegisterProfile {
-	return {
-		username: elements.username.value.trim(),
-		confirmPassword: elements.confirmPassword?.value ?? '',
-		emailVerificationConsent: authConfig.requireEmailVerification ? (elements.emailVerificationConsent?.checked ?? true) : Boolean(elements.emailVerificationConsent?.checked),
-		newsletterConsent: Boolean(elements.newsletterConsent?.checked),
-	};
-}
-
-function clearPortalAuthErrors(elements: PortalFormElements): void {
-	elements.error.textContent = '';
-	elements.error.setAttribute('hidden', '');
-	elements.resendVerification?.setAttribute('hidden', '');
-	clearPortalFieldErrors(elements.email, elements.password, elements.confirmPassword, elements.username, elements.emailVerificationConsent, elements.termsConsent);
-}
-
-function validateRegistrationIdentity(elements: PortalFormElements, isRegister: boolean): boolean {
-	const { username, email, error } = elements;
-	if (isRegister && (username.value.trim().length < 3 || username.value.trim().length > 32)) {
-		showPortalFieldError(error, username, 'Error: Choose a username with 3–32 letters, numbers, dots, underscores, or hyphens.');
-		return false;
-	}
-	if (!email.value.trim() || !validateEmailField(email, 'Please enter your email address')) {
-		showPortalFieldError(error, email, 'Please enter a valid email address (e.g. you@example.com)');
-		return false;
-	}
-	return true;
-}
-
-function validatePortalPasswordFields(elements: PortalFormElements, isRegister: boolean): boolean {
-	const { password, confirmPassword, error } = elements;
-	if (isRegister) {
-		const checks = passwordRuleResults(password.value);
-		if (!checks.every((c) => c.passed)) {
-			showPortalFieldError(error, password, 'Error: Your password does not meet the security requirements.');
-			return false;
-		}
-		if (confirmPassword && password.value !== confirmPassword.value) {
-			showPortalFieldError(error, confirmPassword, 'Error: Repeat the same password.');
-			return false;
-		}
-	} else if (!password.value) {
-		showPortalFieldError(error, password, 'Error: Enter your password.');
-		return false;
-	}
-	return true;
-}
-
-function validatePortalProfileFields(elements: PortalFormElements, isRegister: boolean): boolean {
-	const { emailVerificationConsent, error, termsConsent } = elements;
-	if (isRegister && termsConsent && !termsConsent.checked) {
-		showPortalFieldError(error, termsConsent, 'Error: Accept the Terms of Service and Privacy Policy to create an account.');
-		return false;
-	}
-	if (authConfig.requireEmailVerification && isRegister && emailVerificationConsent && !emailVerificationConsent.checked) {
-		showPortalFieldError(error, emailVerificationConsent, 'Error: Email verification must stay enabled for account security.');
-		return false;
-	}
-	return true;
-}
-
 function humanAuthMessage(message: string): string {
 	const trimmed = message.trim();
 	if (!trimmed) return 'Please check the form and try again.';
@@ -280,186 +200,6 @@ function humanAuthMessage(message: string): string {
 function messageMentions(message: string, ...keywords: string[]): boolean {
 	const lower = message.toLowerCase();
 	return keywords.some((k) => lower.includes(k.toLowerCase()));
-}
-
-export function emailValidationResult(field: HTMLInputElement): { valid: boolean; message: string } {
-	const val = field.value.trim();
-	if (!val) return { valid: false, message: 'Please enter your email address' };
-	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	if (!emailRegex.test(val)) return { valid: false, message: 'Please enter a valid email address (e.g. you@example.com)' };
-	return { valid: true, message: 'Looks good!' };
-}
-
-export function hasValidEmailFormat(field: HTMLInputElement): boolean {
-	return emailValidationResult(field).valid;
-}
-
-function describedByValues(field: HTMLInputElement): string[] {
-	return (field.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
-}
-
-function ensureInlineFieldMessage(field: HTMLInputElement, messageId: string): HTMLElement {
-	let message = document.getElementById(messageId);
-	if (!message) {
-		message = document.createElement('p');
-		message.id = messageId;
-		message.className = 'field-validation-message';
-		message.setAttribute('aria-live', 'polite');
-		field.parentElement?.appendChild(message);
-	}
-	return message;
-}
-
-function showInlineFieldMessage(field: HTMLInputElement, messageId: string, text: string, state: 'idle' | 'checking' | 'valid' | 'invalid'): void {
-	const message = ensureInlineFieldMessage(field, messageId);
-	message.textContent = text;
-	message.dataset.validationState = state;
-	const ids = new Set(describedByValues(field));
-	ids.add(messageId);
-	field.setAttribute('aria-describedby', Array.from(ids).join(' '));
-}
-
-function showInlineFieldError(field: HTMLInputElement, messageId: string, text: string): void {
-	field.setAttribute('aria-invalid', 'true');
-	showInlineFieldMessage(field, messageId, text, 'invalid');
-}
-
-function clearInlineFieldError(field: HTMLInputElement, messageId: string, idleText = ''): void {
-	field.removeAttribute('aria-invalid');
-	const message = document.getElementById(messageId);
-	if (!message) return;
-	if (idleText) {
-		message.textContent = idleText;
-		message.dataset.validationState = 'idle';
-	} else {
-		message.textContent = '';
-		message.dataset.validationState = 'idle';
-		const ids = describedByValues(field).filter((id) => id !== messageId);
-		if (ids.length > 0) field.setAttribute('aria-describedby', ids.join(' '));
-		else field.removeAttribute('aria-describedby');
-	}
-}
-
-export function validateEmailField(field: HTMLInputElement, emptyMessage = 'Please enter your email address'): boolean {
-	const messageId = `${field.id || 'field'}-inline-error`;
-	const result = emailValidationResult(field);
-	if (!field.value.trim()) {
-		showInlineFieldError(field, messageId, emptyMessage);
-		return false;
-	}
-	if (!result.valid) {
-		showInlineFieldError(field, messageId, result.message);
-		return false;
-	}
-	clearInlineFieldError(field, messageId, 'Looks good!');
-	return true;
-}
-
-function updateEmailFieldFeedback(field: HTMLInputElement): boolean {
-	if (!field.value.trim()) {
-		clearInlineFieldError(field, `${field.id || 'field'}-inline-error`, 'Work or personal email.');
-		return false;
-	}
-	return validateEmailField(field);
-}
-
-function usernameValidationState(field: HTMLInputElement): { valid: boolean; message: string } {
-	const val = field.value.trim();
-	if (!val) return { valid: false, message: 'Choose a unique username.' };
-	if (val.length < 3 || val.length > 32) return { valid: false, message: 'Username must be 3–32 characters.' };
-	if (!/^[a-zA-Z0-9_.-]+$/.test(val)) return { valid: false, message: 'Only letters, numbers, dots, hyphens, and underscores.' };
-	return { valid: true, message: 'Username looks good.' };
-}
-
-
-function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
-	return portal.dataset.emailAvailability !== 'taken' && portal.dataset.usernameAvailability !== 'taken';
-}
-
-export function bindEmailFieldValidation(scope: ParentNode = document): void {
-	Array.from(scope.querySelectorAll('input[type="email"]')).filter(isInput).forEach((input) => {
-		input.addEventListener('blur', () => updateEmailFieldFeedback(input));
-		input.addEventListener('input', () => {
-			if (input.getAttribute('aria-invalid') === 'true') updateEmailFieldFeedback(input);
-		});
-	});
-}
-
-const STRENGTH_LABELS: Record<ReturnType<typeof checkPasswordStrength>['level'], string> = {
-	empty: 'Enter a strong password',
-	weak: 'Weak: add length, case, digits or a symbol',
-	fair: 'Fair: one more rule makes it good',
-	good: 'Good password',
-	strong: 'Strong password',
-};
-
-function renderPasswordStrength(root: ParentNode): void {
-	const container = root.querySelector('[data-password-strength-container]');
-	if (!container) return;
-	const input = root.querySelector('#portal-password');
-	if (!(input instanceof HTMLInputElement)) return;
-	const strength = checkPasswordStrength(input.value);
-	// DOM nodes, not markup: the CSP requires Trusted Types, so a string assigned to
-	// innerHTML throws, and its style-src refuses a style="" attribute. CSSOM is allowed.
-	const meter = document.createElement('div');
-	meter.className = 'password-meter';
-	meter.dataset.score = String(strength.score);
-	const bar = document.createElement('div');
-	bar.className = 'password-meter__bar';
-	bar.style.width = `${(strength.score / 4) * 100}%`;
-	meter.append(bar);
-	const label = document.createElement('span');
-	label.className = 'password-meter__label';
-	label.textContent = STRENGTH_LABELS[strength.level];
-	container.replaceChildren(meter, label);
-}
-
-function syncPasswordMatchStatus(match: boolean, confirmPassword: HTMLInputElement | null): void {
-	if (!confirmPassword) return;
-	const messageId = `${confirmPassword.id}-inline-error`;
-	if (confirmPassword.value.length === 0) {
-		clearInlineFieldError(confirmPassword, messageId, 'Passwords must match.');
-		return;
-	}
-	if (match) {
-		clearInlineFieldError(confirmPassword, messageId, 'Passwords match.');
-		const msg = document.getElementById(messageId);
-		if (msg) msg.dataset.validationState = 'valid';
-	} else {
-		showInlineFieldError(confirmPassword, messageId, 'Passwords do not match.');
-	}
-}
-
-function syncPortalPasswordFeedback(portal: HTMLElement, elements: PortalFormElements): boolean {
-	const isRegister = portal.dataset.authMode === 'register';
-	if (!isRegister) return elements.password.value.length > 0;
-	renderPasswordStrength(portal);
-	const strength = checkPasswordStrength(elements.password.value);
-	const match = Boolean(elements.confirmPassword && elements.password.value === elements.confirmPassword.value);
-	syncPasswordMatchStatus(match, elements.confirmPassword);
-	return strength.score >= 2 && match;
-}
-
-function updatePortalSubmitAvailability(portal: HTMLElement, elements: PortalFormElements): void {
-	if (portal.dataset.portalMode === 'recovery') {
-		if (elements.submitButton) elements.submitButton.disabled = elements.email.value.trim().length === 0;
-		return;
-	}
-	const isRegister = portal.dataset.authMode === 'register';
-	const passwordReady = syncPortalPasswordFeedback(portal, elements);
-	const termsReady = !(elements.termsConsent instanceof HTMLInputElement) || elements.termsConsent.checked;
-	const verificationReady = !authConfig.requireEmailVerification || !(elements.emailVerificationConsent instanceof HTMLInputElement) || elements.emailVerificationConsent.checked;
-	const emailReady = hasValidEmailFormat(elements.email);
-	const usernameReady = !isRegister || usernameValidationState(elements.username).valid;
-	const availabilityReady = !isRegister || availabilityStateAllowsSubmit(portal);
-
-	const canSubmit = isRegister
-		? passwordReady && termsReady && verificationReady && emailReady && usernameReady && availabilityReady
-		: elements.email.value.trim().length > 0 && elements.password.value.length > 0;
-
-	if (elements.submitButton) {
-		elements.submitButton.disabled = !canSubmit;
-	}
 }
 
 async function submitPortalResendVerification(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
@@ -499,36 +239,6 @@ async function submitPortalRecovery(portal: HTMLElement, elements: PortalFormEle
 		setPortalSubmitBusy(elements.submitButton, false, false);
 		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
 	}
-}
-
-function validateRegistrationAvailability(portal: HTMLElement, elements: PortalFormElements, isRegister: boolean): boolean {
-	if (!isRegister) return true;
-	if (portal.dataset.usernameAvailability === 'taken') {
-		showPortalFieldError(elements.error, elements.username, 'Error: This username is already taken.');
-		return false;
-	}
-	if (portal.dataset.emailAvailability === 'taken') {
-		showPortalFieldError(elements.error, elements.email, 'Error: This email is already registered.');
-		return false;
-	}
-	return true;
-}
-
-export function validatePortalAuth(portal: HTMLElement, elements: PortalFormElements, isRegister: boolean): string | null {
-	clearPortalAuthErrors(elements);
-	if (!validateRegistrationIdentity(elements, isRegister) || !validatePortalPasswordFields(elements, isRegister) || !validatePortalProfileFields(elements, isRegister)) {
-		return null;
-	}
-	if (!validateRegistrationAvailability(portal, elements, isRegister)) {
-		return null;
-	}
-	const turnstileToken = readTurnstileToken(portal);
-	if (!turnstileToken) {
-		elements.error.textContent = 'Please complete the verification check before submitting.';
-		elements.error.removeAttribute('hidden');
-		return null;
-	}
-	return turnstileToken;
 }
 
 function setPortalSubmitBusy(button: HTMLButtonElement | null, busy: boolean, isRegister: boolean): void {
@@ -763,8 +473,6 @@ export function closePortal(): void {
 
 export function openPortal(mode: PortalMode): void {
 	closePortal();
-	// closePortal leaves the closed dialog in the DOM; queryElement('.portal') would then bind this
-	// open's listeners to that stale copy and every reopen would stack one more submit handler.
 	document.querySelectorAll('.portal').forEach((stale) => stale.remove());
 	portalPreviousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 	insertTrustedHTML(document.body, 'beforeend', createPortalMarkup(mode));
@@ -780,7 +488,6 @@ export function openPortal(mode: PortalMode): void {
 
 	if (portal instanceof HTMLDialogElement) {
 		portal.addEventListener('close', () => {
-			// A removed dialog still fires 'close' later; it must not undo the portal opened since.
 			if (!portal.isConnected) return;
 			document.body.classList.remove('portal-open');
 			portalPreviousFocus?.focus({ preventScroll: true });
@@ -892,3 +599,34 @@ export function openPortal(mode: PortalMode): void {
 	applyAuthMode(mode === 'connect' ? 'login' : 'register');
 	elements.email.focus();
 }
+
+export {
+	type PortalFormElements,
+	portalFormElements,
+	readTurnstileToken,
+	clearPortalFieldErrors,
+	showPortalFieldError,
+	portalRegistrationProfile,
+	clearPortalAuthErrors,
+	validateRegistrationIdentity,
+	validatePortalPasswordFields,
+	validatePortalProfileFields,
+	emailValidationResult,
+	hasValidEmailFormat,
+	showInlineFieldMessage,
+	showInlineFieldError,
+	clearInlineFieldError,
+	validateEmailField,
+	usernameValidationState,
+	bindEmailFieldValidation,
+	updatePortalSubmitAvailability,
+	validateRegistrationAvailability,
+	validatePortalAuth,
+} from './portal-validation';
+
+export {
+	STRENGTH_LABELS,
+	renderPasswordStrength,
+	syncPasswordMatchStatus,
+	syncPortalPasswordFeedback,
+} from './portal-strength';
