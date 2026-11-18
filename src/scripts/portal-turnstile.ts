@@ -19,6 +19,14 @@ export function mountTurnstile(portal: HTMLElement): void {
 		return;
 	}
 
+	const updateAvailability = (): void => {
+		const form = portal.querySelector('form.portal-login');
+		if (form instanceof HTMLFormElement) {
+			const elements = portalFormElements(portal);
+			if (elements) updatePortalSubmitAvailability(portal, elements);
+		}
+	};
+
 	const render = (): void => {
 		const turnstile = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
 		if (!turnstile) return;
@@ -28,11 +36,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 				callback: (token: string) => {
 					const tokenInput = portal.querySelector('[data-turnstile-token]');
 					if (tokenInput instanceof HTMLInputElement) tokenInput.value = token;
-					const form = portal.querySelector('form.portal-login');
-					if (form instanceof HTMLFormElement) {
-						const elements = portalFormElements(portal);
-						if (elements) updatePortalSubmitAvailability(portal, elements);
-					}
+					updateAvailability();
 				},
 				'error-callback': () => {
 					notifyWithMascot({ kind: 'error', title: 'Verification error', message: 'Turnstile check failed. Please refresh.' });
@@ -40,11 +44,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 				'expired-callback': () => {
 					const tokenInput = portal.querySelector('[data-turnstile-token]');
 					if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
-					const form = portal.querySelector('form.portal-login');
-					if (form instanceof HTMLFormElement) {
-						const elements = portalFormElements(portal);
-						if (elements) updatePortalSubmitAvailability(portal, elements);
-					}
+					updateAvailability();
 				},
 			});
 		} catch {
@@ -56,6 +56,10 @@ export function mountTurnstile(portal: HTMLElement): void {
 		render();
 	} else {
 		const check = setInterval(() => {
+			if (!portal.isConnected || !container.isConnected) {
+				clearInterval(check);
+				return;
+			}
 			if ((window as unknown as { turnstile?: TurnstileApi }).turnstile) {
 				clearInterval(check);
 				render();
