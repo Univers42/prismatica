@@ -3,6 +3,7 @@ import { bindScrollLean } from '../lib/scroll-lean';
 import { queryElement, isButton, isHtmlElement, setTrustedInnerHTML } from '../lib/dom-utils';
 import { notify, type NotificationKind, type NotificationOptions } from './notifications';
 import { type MascotMood, type MascotState, mascotState } from './mascot-state';
+import { resetMascotState } from './mascot-state';
 import { characterMarkup, prepareMascotSvg } from './mascot-svg';
 import {
 	stopMascotEffects,
@@ -13,6 +14,7 @@ import {
 	createPing,
 } from './mascot-effects';
 
+export { resetMascotState };
 export type { MascotMood, MascotState };
 
 export function setMascotMood(mascot: HTMLButtonElement, mood: MascotMood, duration = 0, locked = false): void {
