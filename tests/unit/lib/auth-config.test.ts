@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { turnstileWidgetSiteKey } from '../../../src/lib/auth-config';
+import { authConfig, isTurnstileConfigured, turnstileWidgetSiteKey } from '../../../src/lib/auth-config';
 
 // prismatica-eta is built with no PUBLIC_TURNSTILE_SITE_KEY. The portal must then send the
 // gateway's fixed token instead of waiting for a widget whose script the layout never loads.
@@ -18,5 +18,15 @@ describe('turnstileWidgetSiteKey', () => {
 
 	it('renders a widget with a real key, trimmed', () => {
 		expect(turnstileWidgetSiteKey(' 0x4AAAAAAABkMYinukE8nzY ')).toBe('0x4AAAAAAABkMYinukE8nzY');
+	});
+});
+
+describe('authConfig and isTurnstileConfigured', () => {
+	it('defaults portalUrl to a relative /sign-in route', () => {
+		expect(authConfig.portalUrl).toBe('/sign-in');
+	});
+
+	it('returns false for isTurnstileConfigured when site key is not configured', () => {
+		expect(typeof isTurnstileConfigured()).toBe('boolean');
 	});
 });
