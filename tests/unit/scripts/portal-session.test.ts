@@ -28,7 +28,7 @@ describe('portal-session module', () => {
 	});
 
 	it('syncs newsletter consent with a single fetch when consent is stored', async () => {
-		const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+		const fetchMock = vi.fn<typeof fetch>(async () => new Response('{}', { status: 200 }));
 		vi.stubGlobal('fetch', fetchMock);
 
 		// No email -> no fetch
@@ -49,7 +49,7 @@ describe('portal-session module', () => {
 		await syncStoredConsents('tok', 'user@example.com');
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 
-		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
 		expect(url).toBe('/api/newsletter/subscribe');
 		expect(JSON.parse(String(init.body))).toEqual({
 			email: 'user@example.com',
