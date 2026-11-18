@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-	ACCESS_TOKEN_KEY,
 	clearAccessToken,
 	getAccessToken,
 	setAccessToken,
@@ -12,19 +11,18 @@ describe('portal-session module', () => {
 	afterEach(() => {
 		sessionStorage.clear();
 		localStorage.clear();
+		clearAccessToken();
 		vi.restoreAllMocks();
 	});
 
-	it('manages access token lifecycle in session storage', () => {
+	it('manages access token lifecycle in memory', () => {
 		expect(getAccessToken()).toBeNull();
 
 		setAccessToken('test-jwt-token-abc');
-		expect(sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBe('test-jwt-token-abc');
 		expect(getAccessToken()).toBe('test-jwt-token-abc');
 
 		clearAccessToken();
 		expect(getAccessToken()).toBeNull();
-		expect(sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
 	});
 
 	it('syncs newsletter consent with a single fetch when consent is stored', async () => {
