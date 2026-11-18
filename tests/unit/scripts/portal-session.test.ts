@@ -6,6 +6,7 @@ import {
 	setAccessToken,
 	syncStoredConsents,
 } from '../../../src/scripts/portal-session';
+import { CONSENT_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../../../src/data/legal';
 
 describe('portal-session module', () => {
 	afterEach(() => {
@@ -35,7 +36,16 @@ describe('portal-session module', () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 
 		// Consent in preferences -> 1 fetch call
-		localStorage.setItem('prismatica_consent_preferences', JSON.stringify({ newsletter: true }));
+		localStorage.setItem(
+			CONSENT_STORAGE_KEY,
+			JSON.stringify({
+				analytics: false,
+				newsletter: true,
+				marketing: false,
+				policyVersion: POLICY_VERSION,
+				savedAt: new Date().toISOString(),
+			}),
+		);
 		await syncStoredConsents('tok', 'user@example.com');
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -48,9 +58,15 @@ describe('portal-session module', () => {
 
 		// Both preferences and newsletter intent set -> still only 1 fetch call (no duplicates)
 		fetchMock.mockClear();
-		sessionStorage.setItem('prismatica_newsletter_intent', 'true');
+		localStorage.setItem(NEWSLETTER_INTENT_KEY, 'true');
 		await syncStoredConsents('tok', 'user@example.com');
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+
+		// Neither set -> 0 fetch calls
+		localStorage.clear();
+		fetchMock.mockClear();
+		await syncStoredConsents('tok', 'user@example.com');
+		expect(fetchMock).not.toHaveBeenCalled();
 
 		vi.unstubAllGlobals();
 	});
