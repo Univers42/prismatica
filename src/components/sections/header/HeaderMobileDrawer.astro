@@ -1,0 +1,36 @@
+---
+import Button from '../../ui/Button.astro';
+import type { SupportedLocale } from '../../../lib/i18n';
+import { t } from '../../../lib/i18n';
+
+type Props = {
+	readonly navItems: Array<{ href: string; i18nKey: string; label: string }>;
+	readonly locale?: string;
+	readonly activeLocale: SupportedLocale;
+};
+
+const { navItems, activeLocale } = Astro.props;
+---
+
+<div class="header-new__drawer" id="header-new-menu" hidden>
+	<ul class="header-new__list header-new__list--mobile">
+		{navItems.map((item) => (
+			<li><a class="header-new__link" href={item.href} data-i18n={item.i18nKey}>{item.label}</a></li>
+		))}
+	</ul>
+	<div class="header-new__drawer-actions">
+		<slot />
+		<button
+			class="header-new__theme header-new__theme--drawer"
+			type="button"
+			aria-label="Theme: Solar. Switch to Solar palette"
+			title="Switch to Solar theme"
+			data-theme-toggle
+		>
+			<svg class="header-icon--theme" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12 3.75a8.25 8.25 0 0 1 0 16.5z" fill="currentColor" /><circle class="header-icon__swatch" cx="12" cy="12" r="3.4" /></svg>
+			<span data-theme-label>Theme: Solar</span>
+		</button>
+		<Button variant="ghost" size="md" data-open-connect full data-i18n="auth.signIn">{t(activeLocale, 'auth.signIn')}</Button>
+		<Button variant="primary" size="md" data-open-portal full data-i18n="auth.startFree">{t(activeLocale, 'auth.startFree')}</Button>
+	</div>
+</div>
