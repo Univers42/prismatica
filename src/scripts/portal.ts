@@ -21,28 +21,10 @@ import {
 	showPortalFieldError,
 	portalRegistrationProfile,
 	clearPortalAuthErrors,
-	validateRegistrationIdentity,
-	validatePortalPasswordFields,
-	validatePortalProfileFields,
-	emailValidationResult,
-	hasValidEmailFormat,
-	showInlineFieldMessage,
-	showInlineFieldError,
-	clearInlineFieldError,
 	validateEmailField,
-	usernameValidationState,
-	bindEmailFieldValidation,
 	updatePortalSubmitAvailability,
-	validateRegistrationAvailability,
 	validatePortalAuth,
 } from './portal-validation';
-
-import {
-	STRENGTH_LABELS,
-	renderPasswordStrength,
-	syncPasswordMatchStatus,
-	syncPortalPasswordFeedback,
-} from './portal-strength';
 
 export type PortalMode = 'start' | 'connect';
 
