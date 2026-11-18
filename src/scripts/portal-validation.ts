@@ -143,7 +143,7 @@ export function validatePortalProfileFields(elements: PortalFormElements, isRegi
 export function emailValidationResult(field: HTMLInputElement): { valid: boolean; message: string } {
 	const val = field.value.trim();
 	if (!val) return { valid: false, message: 'Please enter your email address' };
-	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	const emailRegex = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 	if (!emailRegex.test(val)) return { valid: false, message: 'Please enter a valid email address (e.g. you@example.com)' };
 	return { valid: true, message: 'Looks good!' };
 }
