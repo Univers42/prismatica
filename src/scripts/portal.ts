@@ -149,19 +149,22 @@ export function mountTurnstile(portal: HTMLElement): void {
 }
 
 export function bindPasswordToggles(root: ParentNode = document): void {
-	root.querySelectorAll('[data-toggle-password]').forEach((btn) => {
-		btn.addEventListener('click', () => {
-			const targetId = btn.getAttribute('data-toggle-password');
-			const input = targetId ? root.querySelector(`#${targetId}`) : null;
+	const toggles = root.querySelectorAll('[data-password-toggle]');
+	for (let i = 0; i < toggles.length; i++) {
+		const button = toggles[i];
+		if (!(button instanceof HTMLButtonElement)) continue;
+		button.addEventListener('click', () => {
+			const input = button.closest('.field')?.querySelector('input');
 			if (!(input instanceof HTMLInputElement)) return;
 			const isPassword = input.type === 'password';
 			input.type = isPassword ? 'text' : 'password';
-			btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-			btn.setAttribute('aria-pressed', String(isPassword));
-			const icon = btn.querySelector('.portal-toggle-text');
+			button.setAttribute('aria-pressed', String(isPassword));
+			button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+			button.title = isPassword ? 'Hide password' : 'Show password';
+			const icon = button.querySelector('.portal-toggle-text');
 			if (icon instanceof HTMLElement) icon.textContent = isPassword ? 'Hide' : 'Show';
 		});
-	});
+	}
 }
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
