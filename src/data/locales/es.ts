@@ -241,16 +241,4 @@ export const es: UIStrings = {
     selfFeature4: 'Soporte de pago opcional',
     selfCta: 'Ver la documentación',
   },
-  docsTeaser: {
-    eyebrow: 'Construido para ingenieros',
-    title: 'Lee la documentación. Entrega en una tarde.',
-    lede: 'Guías completas, diagramas arquitectónicos y ejemplos listos para copiar y pegar de cada módulo del sistema.',
-    openDocs: 'Abrir la documentación',
-    copy: 'Copiar',
-    copied: '¡Copiado!',
-    linkQuickstart: 'Guía rápida de 5 minutos',
-    linkAuth: 'Autenticación y sesiones',
-    linkPostgrest: 'Referencia de la API PostgREST',
-    linkGdpr: 'Guía de arquitectura RGPD',
-  },
-};
+  };
