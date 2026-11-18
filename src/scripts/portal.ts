@@ -1,14 +1,12 @@
-import { trustedHTML, insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
-import { type AuthResult, type AvailabilityFieldResult, type RegisterProfile, useAuth, validatePassword } from '../hooks/useAuth';
+import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
 import { setMountedMascotMood, notifyWithMascot } from './mascot';
 import { announce, ensureButtonLabels } from './theme';
 import { readConsentPreferences } from './consent';
 import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 import { readStorage } from '../lib/storage';
-import { MiniBaasError } from '@grobase/js';
-import { createPublicBaasClient } from '../lib/baas-client';
 import { bindLoginCodeStep, showLoginCodeStep } from './portal-login-code';
 import { bindLoginApproveStep, showLoginApproveStep } from './portal-login-approve';
 import { createPortalMarkup } from './portal-markup';
@@ -24,10 +22,6 @@ type TurnstileApi = {
 
 type TrustedHtmlPolicy = {
 	createHTML: (markup: string) => unknown;
-};
-
-type TrustedTypesFactory = {
-	createPolicy: (name: string, rules: { createHTML: (markup: string) => string }) => TrustedHtmlPolicy;
 };
 
 type AuthModeControls = {
@@ -110,7 +104,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 }
 
 export function bindPasswordToggles(root: ParentNode = document): void {
-	queryElements('[data-password-toggle]', isButton).forEach((button) => {
+	Array.from(root.querySelectorAll('[data-password-toggle]')).filter(isButton).forEach((button) => {
 		button.addEventListener('click', () => {
 			const input = button.closest('.field')?.querySelector('input');
 			if (!(input instanceof HTMLInputElement)) return;
@@ -125,14 +119,6 @@ export function bindPasswordToggles(root: ParentNode = document): void {
 	});
 }
 
-function readAuthToken(): string | null {
-	return getAccessToken();
-}
-
-type RpcStatus = {
-	ok: boolean;
-	status: number;
-};
 
 async function syncStoredConsents(_token: string, email?: string): Promise<void> {
 	const preferences = readConsentPreferences();
@@ -387,27 +373,13 @@ function usernameValidationState(field: HTMLInputElement): { valid: boolean; mes
 	return { valid: true, message: 'Username looks good.' };
 }
 
-function setPortalAvailabilityState(portal: HTMLElement, field: 'email' | 'username', state: 'unknown' | 'checking' | 'available' | 'taken'): void {
-	portal.dataset[`${field}Availability`] = state;
-}
-
-function showAvailabilityResult(field: HTMLInputElement, available: boolean, takenMessage: string, availableMessage: string): void {
-	const messageId = `${field.id || 'field'}-inline-error`;
-	if (available) {
-		clearInlineFieldError(field, messageId, availableMessage);
-		const message = document.getElementById(messageId);
-		if (message) message.dataset.validationState = 'valid';
-	} else {
-		showInlineFieldError(field, messageId, takenMessage);
-	}
-}
 
 function availabilityStateAllowsSubmit(portal: HTMLElement): boolean {
 	return portal.dataset.emailAvailability !== 'taken' && portal.dataset.usernameAvailability !== 'taken';
 }
 
 export function bindEmailFieldValidation(scope: ParentNode = document): void {
-	queryElements('input[type="email"]', isInput).forEach((input) => {
+	Array.from(scope.querySelectorAll('input[type="email"]')).filter(isInput).forEach((input) => {
 		input.addEventListener('blur', () => updateEmailFieldFeedback(input));
 		input.addEventListener('input', () => {
 			if (input.getAttribute('aria-invalid') === 'true') updateEmailFieldFeedback(input);
