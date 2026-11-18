@@ -2,22 +2,18 @@ import { readStorage } from '../lib/storage';
 import { readConsentPreferences } from './consent';
 import { NEWSLETTER_INTENT_KEY } from '../data/legal';
 
-export const ACCESS_TOKEN_KEY = 'auth_token';
+let accessToken: string | null = null;
 
 export function getAccessToken(): string | null {
-	return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+	return accessToken;
 }
 
 export function setAccessToken(token: string | null): void {
-	if (token) {
-		sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-	} else {
-		sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-	}
+	accessToken = token && token.length > 0 ? token : null;
 }
 
 export function clearAccessToken(): void {
-	setAccessToken(null);
+	accessToken = null;
 }
 
 export async function syncStoredConsents(_token: string, email?: string): Promise<void> {
