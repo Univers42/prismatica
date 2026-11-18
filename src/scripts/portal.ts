@@ -1,4 +1,4 @@
-import { insertTrustedHTML, queryElement, queryElements, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
+import { insertTrustedHTML, queryElement, isButton, isHtmlElement, isInput } from '../lib/dom-utils';
 import { authConfig } from '../lib/auth-config';
 import { type RegisterProfile, useAuth } from '../hooks/useAuth';
 import { checkPasswordStrength, passwordRuleResults } from '../lib/auth-validation';
@@ -20,9 +20,7 @@ type TurnstileApi = {
 	reset?: (widgetId?: string) => void;
 };
 
-type TrustedHtmlPolicy = {
-	createHTML: (markup: string) => unknown;
-};
+
 
 type AuthModeControls = {
 	title: Element | null;
