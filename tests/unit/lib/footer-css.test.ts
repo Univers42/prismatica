@@ -26,4 +26,16 @@ describe('Footer CSS alignment', () => {
 		expect(content).toMatch(/\.footer-new\s*\{[^}]*position:\s*relative/);
 		expect(content).toMatch(/\.footer-new\s*\{[^}]*z-index:\s*10/);
 	});
+
+	it('imports extracted footer layout styles from dedicated scss module', () => {
+		const filePath = path.join(process.cwd(), 'src/components/sections/FooterNew.astro');
+		const content = fs.readFileSync(filePath, 'utf-8');
+		expect(content).toContain("import '../../styles/sections/_footer-new.scss'");
+
+		const scssPath = path.join(process.cwd(), 'src/styles/sections/_footer-new.scss');
+		const scssContent = fs.readFileSync(scssPath, 'utf-8');
+		expect(scssContent).toContain('.footer-new__inner');
+		expect(scssContent).toContain('.footer-new__nav');
+		expect(scssContent).toContain('.footer-new__social');
+	});
 });
