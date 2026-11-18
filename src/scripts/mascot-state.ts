@@ -43,6 +43,42 @@ export type MascotState = {
 	frame: number | undefined;
 };
 
+export function resetMascotState(): void {
+	if (mascotState.heartTimer !== undefined) {
+		globalThis.clearInterval(mascotState.heartTimer);
+		mascotState.heartTimer = undefined;
+	}
+	if (mascotState.zTimer !== undefined) {
+		globalThis.clearInterval(mascotState.zTimer);
+		mascotState.zTimer = undefined;
+	}
+	if (mascotState.laughTimer !== undefined) {
+		globalThis.clearInterval(mascotState.laughTimer);
+		mascotState.laughTimer = undefined;
+	}
+	if (mascotState.moodTimer !== undefined) {
+		globalThis.clearTimeout(mascotState.moodTimer);
+		mascotState.moodTimer = undefined;
+	}
+	mascotState.targetX = 0;
+	mascotState.targetY = 0;
+	mascotState.targetHeadX = 0;
+	mascotState.targetHeadY = 0;
+	mascotState.depthX = 5;
+	mascotState.depthY = 4;
+	mascotState.eyeX = 0;
+	mascotState.eyeY = 0;
+	mascotState.headX = 0;
+	mascotState.headY = 0;
+	mascotState.lastPointerAngle = undefined;
+	mascotState.orbitTravel = 0;
+	mascotState.lastBrowLift = 0;
+	mascotState.lastMove = Date.now();
+	mascotState.lockedUntil = 0;
+	mascotState.idleMoodShown = false;
+	mascotState.frame = undefined;
+}
+
 export const mascotState: MascotState = {
 	targetX: 0,
 	targetY: 0,
