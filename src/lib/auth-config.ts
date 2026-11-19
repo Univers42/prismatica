@@ -25,7 +25,7 @@ const rawRequireEmailVerification = String(import.meta.env.PUBLIC_AUTH_REQUIRE_E
 export const authConfig = {
 	gatewayUrl: import.meta.env.PUBLIC_AUTH_GATEWAY_URL ?? '/api/auth',
 	turnstileSiteKey: turnstileWidgetSiteKey(rawTurnstileSiteKey),
-	portalUrl: import.meta.env.PUBLIC_PORTAL_URL ?? 'https://portal.example.com/sign-in',
+	portalUrl: import.meta.env.PUBLIC_PORTAL_URL ?? '/sign-in',
 	requireEmailVerification: rawRequireEmailVerification !== 'false',
 } as const;
 
