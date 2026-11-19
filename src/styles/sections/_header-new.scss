@@ -1,0 +1,213 @@
+.header-new {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	background: var(--header-bg);
+	border-bottom: 1px solid var(--brand-canvas-line-strong);
+	box-shadow: var(--brand-shadow-header-drop);
+	view-transition-name: site-header;
+}
+
+@supports (animation-timeline: scroll()) {
+	@media (prefers-reduced-motion: no-preference) {
+		.header-new {
+			animation-name: header-lift;
+			animation-timing-function: linear;
+			animation-fill-mode: both;
+			animation-timeline: scroll(root block);
+			animation-range: 0 96px;
+		}
+	}
+}
+
+@keyframes header-lift {
+	from { box-shadow: 0 0 0 transparent; }
+	to { box-shadow: 0 14px 30px -22px rgb(0 0 0 / 50%); }
+}
+
+.header-new__inner {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	width: min(1180px, 92vw);
+	margin: 0 auto;
+	padding: 0.85rem 0;
+}
+
+.header-new__brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	color: var(--system-text-strong);
+	font-family: var(--brand-font-display);
+	font-weight: 400;
+	font-size: 1.28rem;
+	text-decoration: none;
+}
+
+.header-new__logo {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	color: var(--system-text-strong);
+}
+
+.header-new__logo .prismatica-logo {
+	width: 32px;
+	height: 32px;
+	display: block;
+}
+
+.header-new__nav {
+	flex: 1;
+}
+
+.header-new__list {
+	display: flex;
+	gap: 0.4rem;
+	justify-content: center;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.header-new__link {
+	display: inline-flex;
+	align-items: center;
+	min-height: 40px;
+	padding: 0.45rem 0.85rem;
+	border-radius: var(--system-radius-sm);
+	color: var(--system-text);
+	font-weight: 600;
+	text-decoration: none;
+	position: relative;
+}
+.header-new__link:hover {
+	background: var(--system-action-secondary-bg-hover);
+	color: var(--system-text-strong);
+}
+.header-new__link::after {
+	content: '';
+	position: absolute;
+	right: 0.85rem;
+	bottom: 0.3rem;
+	left: 0.85rem;
+	height: 2px;
+	background: var(--brand-palette-primary);
+	scale: 0 1;
+	transform-origin: left;
+	transition: scale 380ms var(--ease-premium);
+}
+.header-new__link:hover::after,
+.header-new__link[aria-current]::after {
+	scale: 1;
+}
+.header-new__link[aria-current] {
+	color: var(--system-text-strong);
+}
+.header-new__link:focus-visible {
+	outline: 3px solid var(--system-focus-ring);
+	outline-offset: 2px;
+}
+
+.header-new__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.header-new__theme {
+	display: inline-grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	border: 1px solid var(--system-border);
+	border-radius: var(--system-radius-sm);
+	background: color-mix(in srgb, var(--brand-canvas-surface-2) 70%, transparent);
+	color: var(--system-text-strong);
+	font: inherit;
+	cursor: pointer;
+	transition: background 120ms ease, border-color 120ms ease;
+}
+.header-new__theme:hover {
+	background: color-mix(in srgb, var(--brand-palette-primary) 16%, var(--brand-canvas-surface));
+	border-color: var(--system-border-strong);
+}
+.header-new__theme:focus-visible {
+	outline: 3px solid var(--system-focus-ring);
+	outline-offset: 2px;
+}
+.header-icon--theme {
+	width: 20px;
+	height: 20px;
+}
+.header-icon__swatch {
+	fill: var(--brand-palette-primary);
+	stroke: var(--system-surface);
+	stroke-width: 1.4;
+}
+.header-new__theme--drawer {
+	display: inline-flex;
+	justify-content: center;
+	gap: 0.5rem;
+	width: 100%;
+}
+
+.header-new__menu {
+	display: none;
+	flex-direction: column;
+	gap: 4px;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	justify-content: center;
+	align-items: center;
+	background: transparent;
+	border: 1px solid var(--system-border);
+	border-radius: var(--system-radius-sm);
+	color: var(--system-text-strong);
+}
+.header-new__menu span {
+	display: block;
+	width: 22px;
+	height: 2px;
+	background: currentColor;
+}
+.header-new__menu:focus-visible {
+	outline: 3px solid var(--system-focus-ring);
+	outline-offset: 2px;
+}
+
+.header-new__drawer {
+	display: none;
+}
+
+@media (max-width: 800px) {
+	.header-new__inner { gap: 0.6rem; }
+	.header-new__nav,
+	.header-new__actions > :not([data-open-portal]) {
+		display: none;
+	}
+	.header-new__actions { margin-left: auto; }
+	.header-new__menu {
+		display: inline-flex;
+		flex: none;
+	}
+	.header-new__drawer:not([hidden]) {
+		display: grid;
+		gap: 1rem;
+		padding: 1rem;
+		border-top: 1px solid var(--system-border);
+		background: var(--header-frame-bg);
+	}
+	.header-new__list--mobile {
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	.header-new__drawer-actions {
+		display: grid;
+		gap: 0.5rem;
+	}
+}

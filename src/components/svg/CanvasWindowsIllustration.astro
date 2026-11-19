@@ -1,9 +1,11 @@
 ---
-type Props = {
+interface Props {
 	class?: string;
-};
+}
+
+const { class: className = '' } = Astro.props;
 ---
-<svg class="canvas-windows__svg {props.class}" viewBox="-20 0 1180 640" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-labelledby="canvas-windows-title canvas-windows-desc">
+<svg class={`canvas-windows__svg ${className}`.trim()} viewBox="-20 0 1180 640" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-labelledby="canvas-windows-title canvas-windows-desc">
 	<title id="canvas-windows-title">One Prismatica canvas with several product windows</title>
 	<desc id="canvas-windows-desc">A hand-drawn dashboard showing notes, charts, assistant context, Postgres rows, privacy panels, sharing controls, and code extensions.</desc>
 	<defs>

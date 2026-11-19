@@ -8,7 +8,7 @@ import { readStorage, writeStorage } from '../lib/storage';
 import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
 import { fetchSeededUsers, createPublicBaasClient } from "../lib/baas-client";
-import { queryElement, queryElements, isButton, isHtmlElement, isInput } from "../lib/dom-utils";
+import { queryElement, queryElements, isButton, isHtmlElement } from "../lib/dom-utils";
 import { MiniBaasError } from "@grobase/js";
 import "./premium";
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, announce, ensureButtonLabels, MOTION_KEY } from "./theme";
