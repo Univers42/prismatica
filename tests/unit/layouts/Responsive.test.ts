@@ -2,10 +2,15 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const read = (relative: string): string =>
-	fs.readFileSync(path.resolve(process.cwd(), relative), 'utf-8');
-
 describe('Frontend responsiveness (#15)', () => {
+	const read = (relative: string): string =>
+		fs.readFileSync(path.resolve(process.cwd(), relative), 'utf-8');
+
+	const headerNew = read('src/components/sections/HeaderNew.astro');
+	const headerMobileDrawer = read('src/components/sections/header/HeaderMobileDrawer.astro');
+	const headerScss = read('src/styles/sections/_header-new.scss');
+	const footerScss = read('src/styles/sections/_footer-new.scss');
+
 	describe('desktop + mobile foundations', () => {
 		it('Layout ships a device-width viewport meta (mobile browsers scale correctly)', () => {
 			const layout = read('src/layouts/Layout.astro');
@@ -13,20 +18,18 @@ describe('Frontend responsiveness (#15)', () => {
 		});
 
 		it('Header adapts at max-width 800px: desktop nav hides, hamburger + drawer appear', () => {
-			const header = read('src/components/sections/HeaderNew.astro');
-			expect(header).toContain('@media (max-width: 800px)');
-			expect(header).toContain('data-header-toggle');
-			expect(header).toContain('id="header-new-menu"');
-			expect(header).toContain('header-new__list--mobile');
-			expect(header).toContain("aria-controls=\"header-new-menu\"");
-			expect(header).toContain('aria-expanded');
+			expect(headerScss).toContain('@media (max-width: 800px)');
+			expect(headerNew).toContain('data-header-toggle');
+			expect(headerMobileDrawer).toContain('id="header-new-menu"');
+			expect(headerMobileDrawer).toContain('header-new__list--mobile');
+			expect(headerNew).toContain('aria-controls="header-new-menu"');
+			expect(headerNew).toContain('aria-expanded');
 		});
 
 		it('Header drawer closes after a mobile nav choice and on Escape', () => {
-			const header = read('src/components/sections/HeaderNew.astro');
-			expect(header).toContain("drawer.querySelectorAll('a[href]')");
-			expect(header).toContain("event.key === 'Escape'");
-			expect(header).toContain('setOpen(false)');
+			expect(headerNew).toContain("drawer.querySelectorAll('a[href]')");
+			expect(headerNew).toContain("event.key === 'Escape'");
+			expect(headerNew).toContain('setOpen(false)');
 		});
 	});
 
@@ -42,9 +45,8 @@ describe('Frontend responsiveness (#15)', () => {
 		});
 
 		it('Footer collapses to a single column under 820px', () => {
-			const footer = read('src/components/sections/FooterNew.astro');
-			expect(footer).toContain('@media (max-width: 820px)');
-			expect(footer).toMatch(/\.footer-new__inner\s*\{\s*grid-template-columns:\s*1fr/);
+			expect(footerScss).toContain('@media (max-width: 820px)');
+			expect(footerScss).toMatch(/\.footer-new__inner\s*\{\s*grid-template-columns:\s*1fr/);
 		});
 	});
 });
