@@ -144,10 +144,11 @@ async function checkPassword(deps, request, { email, password }) {
 }
 
 // Only the failure count is cleared: a lock a concurrent attempt set during the grant stays (VP12).
+// The revoke goes first: a stalled store must not keep a refresh token nobody holds alive.
 async function verified(attempt, session) {
 	const { store, audit } = attempt.deps;
-	await store.del(attempt.keys.fail);
 	const revoked = await revokeMinted(attempt, session);
+	await store.del(attempt.keys.fail);
 	await audit('sudo_password_verified', attempt.request, { email: attempt.email, ip_address: attempt.ip, revoked });
 	return VERIFIED;
 }

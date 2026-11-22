@@ -230,6 +230,13 @@ describe('VP8/VP11/VP15 — the minted session is revoked with scope local', () 
 		expect(gate.events()).toContainEqual({ type: 'sudo_password_verified', details: expect.objectContaining({ revoked: true }) });
 	});
 
+	it('revokes before clearing the failure count: a stalled store never delays the revoke', async () => {
+		const gate = harness();
+		vi.spyOn(gate.store, 'del').mockReturnValue(new Promise<never>(() => undefined));
+		void gate.handle(stepUp());
+		await vi.waitFor(() => expect(gate.gotrue.logout).toHaveBeenCalledWith(MINTED, 'local'));
+	});
+
 	it('still answers 200 when the revoke fails, and audits the session for an operator to delete', async () => {
 		const gate = harness({ logout: async () => fail(500) });
 		expect(await gate.handle(stepUp())).toEqual({ status: 200, body: { valid: true } });
