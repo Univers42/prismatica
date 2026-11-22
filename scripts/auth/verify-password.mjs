@@ -198,10 +198,7 @@ async function revokeMinted(attempt, session) {
 async function refused(attempt, grant) {
 	const failure = classifyLoginFailure(grant.status, grant.body);
 	if (failure === 'unconfirmed') return UNCONFIRMED;
-	if (failure !== 'credentials') {
-		console.error(`[auth-gateway] verify-password: the auth service answered HTTP ${grant.status}; the password was not checked`);
-		return UNAVAILABLE;
-	}
+	if (failure !== 'credentials') return unchecked(attempt, grant.status);
 	await countFailure(attempt);
 	// Caveat: the alert names the address and browser of the request it is given, which for a
 	// step-up is the bridge's call (the gateway's own hop count, the bridge's user agent), not the
@@ -209,6 +206,16 @@ async function refused(attempt, grant) {
 	attempt.deps.alertFailed(attempt.request, attempt.email);
 	await attempt.deps.audit('sudo_password_failed', attempt.request, { email: attempt.email, ip_address: attempt.ip, status: grant.status });
 	return INVALID;
+}
+
+// Status 0 is the gateway's own timeout or a dropped connection, audited so an operator can look
+// for the session.
+// Caveat: GoTrue may still have checked the password and minted a session the gateway never saw.
+// Nothing revokes it; its refresh token, held by nobody, lives until GoTrue expires it.
+async function unchecked({ deps, request, email, ip }, status) {
+	console.error(`[auth-gateway] verify-password: the auth service answered HTTP ${status}; the password was not checked`);
+	if (status === 0) await deps.audit('sudo_password_grant_timeout', request, { email, ip_address: ip });
+	return UNAVAILABLE;
 }
 
 async function countFailure({ deps, request, email, ip, keys }) {
