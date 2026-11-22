@@ -213,6 +213,32 @@ describe('VP6 — the per-account lockout is the login one', () => {
 	});
 });
 
+describe('one grant in flight per account: parallel guesses cannot outrun the lockout', () => {
+	const slowWrong = async () => {
+		await new Promise((done) => setTimeout(done, 5));
+		return fail(400, { error: 'invalid_grant' });
+	};
+
+	it('30 parallel wrong passwords reach the grant at most threshold times; the rest answer 429', async () => {
+		const gate = harness({ grant: slowWrong });
+		const start = now();
+		const results = await Promise.all(Array.from({ length: 30 }, (_, index) => gate.handle(stepUp({ timestamp: String(start - index) }))));
+		const grants = gate.gotrue.passwordGrant.mock.calls.length;
+		expect(grants).toBeLessThanOrEqual(10);
+		const refused = results.filter((result) => result.status === 429);
+		expect(refused).toHaveLength(30 - grants);
+		for (const result of refused) expect(result).toMatchObject({ body: { error: 'busy' }, headers: { 'retry-after': '1' } });
+	});
+
+	it('gives the turn back after each attempt, even when the grant throws', async () => {
+		let calls = 0;
+		const gate = harness({ grant: async () => (calls++ === 0 ? Promise.reject(new Error('socket hang up')) : ok({ access_token: MINTED, user: { id: 'user-1' } })) });
+		const start = now();
+		expect(await gate.handle(stepUp({ timestamp: String(start) }))).toEqual(UNAVAILABLE);
+		expect(await gate.handle(stepUp({ timestamp: String(start - 1) }))).toEqual({ status: 200, body: { valid: true } });
+	});
+});
+
 describe('VP9/VP10 — the user\'s address, one hop left of the bridge', () => {
 	it('takes the client two trusted hops plus the bridge\'s own from the right of the live chain', () => {
 		const request = { headers: { 'x-forwarded-for': LIVE_CHAIN }, socket: { remoteAddress: '172.18.0.5' } };

@@ -12,8 +12,8 @@
 // can ask about any account's password, within the per-account lockout. Single-use of a signature
 // holds across replicas only with Redis; the in-memory store is per process.
 
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { EMAIL_REGEX, loginLockKeys, normalizeEmail } from './identity.mjs';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { EMAIL_REGEX, keyHash, loginLockKeys, normalizeEmail } from './identity.mjs';
 import { classifyLoginFailure } from './login-failure.mjs';
 import { deriveClientIp } from './net-ip.mjs';
 
@@ -27,6 +27,8 @@ const TIMESTAMP_HEADER = 'x-osionos-sudo-timestamp';
 const SIGNATURE_HEADER = 'x-osionos-sudo-signature';
 const WINDOW_SEC = 60;
 const REPLAY_TTL_SEC = 2 * WINDOW_SEC;
+// Covers the grant's timeout (3.5 s) plus the failure count.
+const TURN_TTL_SEC = 5;
 const WARN_EVERY_SEC = 60;
 const TIMESTAMP = /^\d{1,12}$/;
 const SIGNATURE = /^[0-9a-f]{64}$/;
@@ -35,6 +37,7 @@ const BAD_SIGNATURE = { status: 400, body: { error: 'bad_signature' } };
 const BAD_REQUEST = { status: 400, body: { error: 'bad_request' } };
 const INVALID = { status: 401, body: { valid: false } };
 const UNCONFIRMED = { status: 403, body: { valid: false } };
+const BUSY = { status: 429, body: { error: 'busy' }, headers: { 'retry-after': '1' } };
 const TOO_LARGE = { status: 413, body: { error: 'body_too_large' } };
 const UNAVAILABLE = { status: 503, body: { error: 'verify_unavailable' } };
 const VERIFIED = { status: 200, body: { valid: true } };
@@ -137,16 +140,39 @@ async function verify(deps, request) {
 	return checkPassword(deps, request, credentials);
 }
 
-/** The lockout-gated GoTrue check behind a valid signature. */
+/** The lockout-gated GoTrue check behind a valid signature, one attempt per account at a time. */
 async function checkPassword(deps, request, { email, password }) {
 	const attempt = { deps, request, email, ip: stepUpClientIp(request, deps.trustedProxyHops), keys: loginLockKeys(email) };
-	const lockRemainingMs = await deps.store.pttl(attempt.keys.lock);
-	if (lockRemainingMs > 0) {
-		await deps.audit('sudo_password_locked', request, { email, ip_address: attempt.ip });
-		return { status: 429, body: { error: 'locked' }, headers: { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) } };
+	return inTurn(attempt, async () => {
+		const locked = await lockedAnswer(attempt);
+		if (locked) return locked;
+		const grant = await deps.gotrue.passwordGrant(email, password);
+		return grant.ok ? verified(attempt, grant.body) : refused(attempt, grant);
+	});
+}
+
+async function lockedAnswer({ deps, request, email, ip, keys }) {
+	const lockRemainingMs = await deps.store.pttl(keys.lock);
+	if (lockRemainingMs <= 0) return null;
+	await deps.audit('sudo_password_locked', request, { email, ip_address: ip });
+	return { status: 429, body: { error: 'locked' }, headers: { 'retry-after': String(Math.ceil(lockRemainingMs / 1000)) } };
+}
+
+// Parallel attempts all read "not locked" before the first failure is counted: 30 parallel guesses
+// all reached GoTrue past a threshold of 10. So an account has one attempt in flight, and the lock is
+// read inside the turn, after the previous attempt counted its failure.
+// Caveat: the turn expires after TURN_TTL_SEC, so a grant plus failure count slower than that (a
+// store stalled past ~1.5 s) lets a second attempt overlap. /login does not take the turn: a /login
+// guess can still race a step-up on the same account, within that route's own race.
+async function inTurn({ deps, email }, run) {
+	const key = `inflight:login:${keyHash(email)}`;
+	const owner = randomUUID();
+	if (!(await deps.store.setIfAbsent(key, owner, TURN_TTL_SEC))) return BUSY;
+	try {
+		return await run();
+	} finally {
+		await deps.store.delIfEquals(key, owner).catch(() => deps.warn(`[auth-gateway] verify-password: an account's turn was not released; it expires in ${TURN_TTL_SEC}s`));
 	}
-	const grant = await deps.gotrue.passwordGrant(email, password);
-	return grant.ok ? verified(attempt, grant.body) : refused(attempt, grant);
 }
 
 // Only the failure count is cleared: a lock a concurrent attempt set during the grant stays (VP12).
