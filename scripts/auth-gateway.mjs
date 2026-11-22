@@ -28,6 +28,7 @@ import { enabledOauthProviders, isS256Challenge, oauthAuthorizeUrl } from './aut
 import { createMailDailyCap, resolveMailDailyCap } from './auth/mail-daily-cap.mjs';
 import { isNewsletterAllowed, isSignupAllowed, parseSignupAllowlist } from './auth/signup-allowlist.mjs';
 import { createStore } from './auth/store.mjs';
+import { createVerifyPassword, VERIFY_PASSWORD_GOTRUE_TIMEOUT_MS } from './auth/verify-password.mjs';
 import { parseVerificationExempt, isVerificationExempt, withExemptSuppression } from './auth/verification-exempt.mjs';
 import { createWorkQueue } from './auth/work-queue.mjs';
 
@@ -1257,10 +1258,28 @@ async function handleMfaEmailResend(request, response) {
 	});
 }
 
+// The bridge's sudo step-up (osionos #234). Its own GoTrue client: a shorter timeout keeps the
+// grant plus the revoke inside the bridge's 8 s.
+const verifyPassword = createVerifyPassword({
+	secret: config.osionosBridgeSecret,
+	store,
+	gotrue: createGotrueApi({ baseUrl: config.baasUrl, anonKey: config.anonKey, timeoutMs: VERIFY_PASSWORD_GOTRUE_TIMEOUT_MS }),
+	lockout: { threshold: config.loginLockoutThreshold, windowSec: config.loginLockoutWindowSec, lockSec: config.loginLockoutSec },
+	trustedProxyHops: config.trustedProxyHops,
+	audit,
+	alertFailed: (request, email) => scheduleLoginAlert(request, email, 'failed'),
+});
+
+async function handleVerifyPassword(request, response) {
+	const result = await verifyPassword.handle(request);
+	json(response, result.status, result.body, result.headers);
+}
+
 const routes = new Map([
 	['GET /api/auth/health', handleHealth],
 	['POST /api/auth/register', handleRegister],
 	['POST /api/auth/login', handleLogin],
+	['POST /api/auth/verify-password', handleVerifyPassword],
 	['POST /api/auth/recover', handleRecover],
 	['POST /api/auth/resend-verification', handleResendVerification],
 	['POST /api/auth/verify', handleVerify],
