@@ -194,6 +194,7 @@ async function countFailure({ deps, request, email, ip, keys }) {
  */
 export function createVerifyPassword(options) {
 	const deps = { warn: console.warn, nowSec: () => Math.floor(Date.now() / 1000), ...options, refusals: { count: 0, lastWarnSec: Number.NEGATIVE_INFINITY } };
+	/** @returns {Promise<{ status: number, body: { valid: boolean } | { error: string }, headers?: Record<string, string> }>} */
 	async function handle(request) {
 		try {
 			return await verify(deps, request);

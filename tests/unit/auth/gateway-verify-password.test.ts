@@ -32,7 +32,7 @@ type StepUp = { email?: string; password?: string; secret?: string; timestamp?: 
 async function stepUp(target: Gateway, init: StepUp = {}) {
 	const body = JSON.stringify({ email: init.email ?? 'ok@arlet.test', password: init.password ?? 'Right-Pass-1!' });
 	const timestamp = init.timestamp ?? String(now());
-	const signature = init.signed === false ? {} : { 'x-osionos-sudo-timestamp': timestamp, 'x-osionos-sudo-signature': bridgeSign(init.secret ?? SECRET, timestamp, body) };
+	const signature: Record<string, string> = init.signed === false ? {} : { 'x-osionos-sudo-timestamp': timestamp, 'x-osionos-sudo-signature': bridgeSign(init.secret ?? SECRET, timestamp, body) };
 	const response = await fetch(`${target.base}${PATH}`, {
 		method: 'POST',
 		headers: { accept: 'application/json', 'content-type': 'application/json', 'x-forwarded-for': LIVE_CHAIN, ...signature },
@@ -114,7 +114,9 @@ describe('one lockout for /login and /verify-password (VP6)', () => {
 
 	it('ten wrong step-up passwords lock /login', async () => {
 		upstream.passwordStatus = 400;
-		for (let attempt = 1; attempt <= 10; attempt += 1) expect((await stepUp(gateway, { email: 'lock-b@arlet.test', timestamp: String(now() - attempt) })).status).toBe(401);
+		// One clock read: a second ticking mid-loop would repeat a timestamp, and so a signature (a replay, 400).
+		const start = now();
+		for (let attempt = 1; attempt <= 10; attempt += 1) expect((await stepUp(gateway, { email: 'lock-b@arlet.test', timestamp: String(start - attempt) })).status).toBe(401);
 		upstream.passwordStatus = 200;
 		expect((await call(gateway, '/api/auth/login', { body: loginBody('lock-b@arlet.test') })).status).toBe(429);
 	});

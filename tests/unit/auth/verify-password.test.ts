@@ -37,7 +37,7 @@ function stepUp(init: Init = {}) {
 	return Object.assign(request, { url: init.url ?? PATH, headers, socket: { remoteAddress: '172.18.0.5' } });
 }
 
-function harness(options: { secret?: string | undefined; grant?: () => Promise<Result>; logout?: () => Promise<Result> } = {}) {
+function harness(options: { secret?: string | undefined; grant?: () => Promise<Result>; logout?: () => Promise<Result>; nowSec?: () => number } = {}) {
 	const store = memoryStore();
 	const gotrue = {
 		passwordGrant: vi.fn(options.grant ?? (async () => ok({ access_token: MINTED, refresh_token: 'rt-minted', user: { id: 'user-1' } }))),
@@ -47,7 +47,7 @@ function harness(options: { secret?: string | undefined; grant?: () => Promise<R
 	const alertFailed = vi.fn();
 	const warn = vi.fn();
 	const lockout = { threshold: 10, windowSec: 900, lockSec: 900 };
-	const verifier = createVerifyPassword({ secret: 'secret' in options ? options.secret : SECRET, store, gotrue, lockout, trustedProxyHops: 2, audit, alertFailed, warn });
+	const verifier = createVerifyPassword({ secret: 'secret' in options ? options.secret : SECRET, store, gotrue, lockout, trustedProxyHops: 2, audit, alertFailed, warn, nowSec: options.nowSec ?? now });
 	const events = () => audit.mock.calls.map((call: unknown[]) => ({ type: call[0], details: call[2] as Record<string, unknown> }));
 	return { ...verifier, store, gotrue, audit, alertFailed, warn, events };
 }
@@ -115,8 +115,10 @@ describe('VP3/VP4 — every signature failure is a cheap, silent 400', () => {
 		expect(gate.store.map.size).toBe(0);
 	});
 
+	// The clock is pinned: on the real one, a second ticking between signing and checking makes it 61 s.
 	it('accepts a timestamp exactly 60 s old', async () => {
-		expect((await harness().handle(stepUp({ timestamp: String(now() - 60) }))).status).toBe(200);
+		const clock = now();
+		expect((await harness({ nowSec: () => clock }).handle(stepUp({ timestamp: String(clock - 60) }))).status).toBe(200);
 	});
 
 	it('accepts one signature once: a replay is a 400 and the password is checked once', async () => {
@@ -191,7 +193,8 @@ describe('VP6 — the per-account lockout is the login one', () => {
 	it('locks the account at the tenth wrong password, then answers 429', async () => {
 		const gate = harness({ grant: async () => fail(400, { error: 'invalid_grant' }) });
 		// Ten distinct timestamps sign ten distinct requests; a repeated one would be refused as a replay.
-		for (let attempt = 1; attempt <= 10; attempt += 1) expect(await gate.handle(stepUp({ timestamp: String(now() - attempt) }))).toEqual(INVALID);
+		const start = now();
+		for (let attempt = 1; attempt <= 10; attempt += 1) expect(await gate.handle(stepUp({ timestamp: String(start - attempt) }))).toEqual(INVALID);
 		expect(await gate.store.pttl(loginLockKeys(EMAIL).lock)).toBeGreaterThan(0);
 		expect((await gate.handle(stepUp())).status).toBe(429);
 		expect(gate.gotrue.passwordGrant).toHaveBeenCalledTimes(10);
