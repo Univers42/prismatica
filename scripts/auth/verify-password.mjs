@@ -22,6 +22,7 @@ export const VERIFY_PASSWORD_BODY_CAP = 8 * 1024;
 // Caveat: a guess at "GoTrue is down". Grant plus revoke (7 s) must fit the bridge's 8 s timeout,
 // so a grant slower than 3.5 s reads as unavailable (503), never as a wrong password.
 export const VERIFY_PASSWORD_GOTRUE_TIMEOUT_MS = 3_500;
+const MIN_SECRET_LENGTH = 32;
 const TIMESTAMP_HEADER = 'x-osionos-sudo-timestamp';
 const SIGNATURE_HEADER = 'x-osionos-sudo-signature';
 const WINDOW_SEC = 60;
@@ -49,6 +50,11 @@ const VERIFIED = { status: 200, body: { valid: true } };
  */
 export function stepUpClientIp(request, trustedProxyHops) {
 	return deriveClientIp(request, { trustedProxyHops: Number(trustedProxyHops) + 1 });
+}
+
+/** True when OSIONOS_BRIDGE_SHARED_SECRET is too short to sign with: a guessable key forges any step-up. */
+export function isWeakBridgeSecret(secret) {
+	return String(secret ?? '').trim().length < MIN_SECRET_LENGTH;
 }
 
 /** The body's exact bytes, never decoded chunk by chunk: a code point split across two chunks stays whole. */
@@ -119,7 +125,7 @@ function refuseSignature(deps, reason) {
 }
 
 async function verify(deps, request) {
-	if (!deps.secret) return UNAVAILABLE;
+	if (isWeakBridgeSecret(deps.secret)) return UNAVAILABLE;
 	const signed = signedHeaders(request, deps.nowSec());
 	if (!signed) return refuseSignature(deps, 'header');
 	const raw = await readRawBody(request);

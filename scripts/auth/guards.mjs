@@ -13,6 +13,7 @@
 
 import { parseSignupAllowlist } from './signup-allowlist.mjs';
 import { parseVerificationExempt } from './verification-exempt.mjs';
+import { isWeakBridgeSecret } from './verify-password.mjs';
 
 export function isProductionOrigin(siteUrl) {
 	let url;
@@ -116,6 +117,11 @@ export function collectStartupViolations(config) {
 	// no account e-mail can be sent, so production refuses to boot rather than degrade.
 	if (config.linkSigningKeyProblem) {
 		violations.push(`${config.linkSigningKeyProblem} Set a dedicated AUTH_LINK_SIGNING_KEY of at least 32 characters.`);
+	}
+	// Unset is allowed (the b2b public gateway runs without a bridge); a set but short key signs bridge
+	// sessions and step-ups anyone could forge.
+	if (config.osionosBridgeSecret && isWeakBridgeSecret(config.osionosBridgeSecret)) {
+		violations.push('OSIONOS_BRIDGE_SHARED_SECRET is set but shorter than 32 characters — bridge sessions and step-ups could be forged. Generate a longer one or leave it unset.');
 	}
 	return violations;
 }

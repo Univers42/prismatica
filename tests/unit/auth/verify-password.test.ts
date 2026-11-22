@@ -65,6 +65,18 @@ describe('VP1 — no secret, no check', () => {
 		expect(gate.store.map.size).toBe(0);
 		expect(gate.audit).not.toHaveBeenCalled();
 	});
+
+	it.each([[' '], [' '.repeat(40)], ['x'.repeat(31)]])('weak secret %j: 503 before the HMAC, even to a signature made with that key', async (secret) => {
+		const gate = harness({ secret });
+		expect(await gate.handle(stepUp({ secret }))).toEqual(UNAVAILABLE);
+		expect(gate.gotrue.passwordGrant).not.toHaveBeenCalled();
+		expect(gate.store.map.size).toBe(0);
+	});
+
+	it('accepts a secret of exactly 32 characters', async () => {
+		const secret = 'x'.repeat(32);
+		expect((await harness({ secret }).handle(stepUp({ secret }))).status).toBe(200);
+	});
 });
 
 describe('VP2 — the signature covers the raw bytes', () => {
