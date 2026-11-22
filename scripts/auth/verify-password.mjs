@@ -22,6 +22,10 @@ export const VERIFY_PASSWORD_BODY_CAP = 8 * 1024;
 // Caveat: a guess at "GoTrue is down". Grant plus revoke (7 s) must fit the bridge's 8 s timeout,
 // so a grant slower than 3.5 s reads as unavailable (503), never as a wrong password.
 export const VERIFY_PASSWORD_GOTRUE_TIMEOUT_MS = 3_500;
+// The audit RPC goes through serviceBaas, whose default timeout is 15 s (grobase-js core/http.js:28),
+// so one slow row could push a right password past the bridge's 8 s.
+export const VERIFY_PASSWORD_AUDIT_TIMEOUT_MS = 1_500;
+const LATE = Symbol('late');
 const MIN_SECRET_LENGTH = 32;
 const TIMESTAMP_HEADER = 'x-osionos-sudo-timestamp';
 const SIGNATURE_HEADER = 'x-osionos-sudo-signature';
@@ -226,6 +230,23 @@ async function countFailure({ deps, request, email, ip, keys }) {
 	await deps.audit('sudo_password_lockout_triggered', request, { email, ip_address: ip, failures });
 }
 
+// Caveat: bounded, not cancelled. A row slower than the bound is no longer awaited: it can land
+// late or be lost, and the answer goes out without it. The worst success path (grant and revoke
+// both at their 3.5 s timeout, then two rows at the bound) is still 10 s against the bridge's 8 s.
+function boundedAudit(audit, warn) {
+	return async (event, request, details) => {
+		let timer;
+		const late = new Promise((resolve) => {
+			timer = setTimeout(resolve, VERIFY_PASSWORD_AUDIT_TIMEOUT_MS, LATE);
+		});
+		try {
+			if ((await Promise.race([audit(event, request, details), late])) === LATE) warn(`[auth-gateway] verify-password: audit "${event}" took over ${VERIFY_PASSWORD_AUDIT_TIMEOUT_MS} ms; answered without it`);
+		} finally {
+			clearTimeout(timer);
+		}
+	};
+}
+
 /**
  * The route's handler: `handle(request)` resolves to `{ status, body, headers? }` and never
  * throws. Bodies are `{ valid }` or `{ error }` only; no answer carries a token, a user or a cookie.
@@ -234,6 +255,7 @@ async function countFailure({ deps, request, email, ip, keys }) {
  */
 export function createVerifyPassword(options) {
 	const deps = { warn: console.warn, nowSec: () => Math.floor(Date.now() / 1000), ...options, refusals: { count: 0, lastWarnSec: Number.NEGATIVE_INFINITY } };
+	deps.audit = boundedAudit(options.audit, deps.warn);
 	/** @returns {Promise<{ status: number, body: { valid: boolean } | { error: string }, headers?: Record<string, string> }>} */
 	async function handle(request) {
 		try {

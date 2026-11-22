@@ -8,6 +8,7 @@ import { loginLockKeys } from '../../../scripts/auth/identity.mjs';
 import {
 	createVerifyPassword,
 	stepUpClientIp,
+	VERIFY_PASSWORD_AUDIT_TIMEOUT_MS,
 	VERIFY_PASSWORD_BODY_CAP,
 	VERIFY_PASSWORD_GOTRUE_TIMEOUT_MS,
 } from '../../../scripts/auth/verify-password.mjs';
@@ -283,6 +284,33 @@ describe('VP8/VP11/VP15 — the minted session is revoked with scope local', () 
 		expect(gate.events()).toContainEqual({ type: 'sudo_password_verified', details: expect.objectContaining({ revoked: false }) });
 		expect(JSON.stringify(gate.audit.mock.calls)).not.toMatch(/rt-minted|h\.ey/);
 	});
+});
+
+describe('VP8 — an audit row never holds the answer', () => {
+	const withFakeTimeouts = async (run: () => Promise<void>) => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		try {
+			await run();
+		} finally {
+			vi.useRealTimers();
+		}
+	};
+
+	it('answers a verified step-up within 1.5 s when the audit never resolves, and logs the late row', () => withFakeTimeouts(async () => {
+		const gate = harness();
+		gate.audit.mockImplementation(() => new Promise<undefined>(() => undefined));
+		let answer: unknown;
+		void gate.handle(stepUp()).then((result) => { answer = result; });
+		await vi.advanceTimersByTimeAsync(1_500);
+		expect(answer).toEqual({ status: 200, body: { valid: true } });
+		expect(gate.warn).toHaveBeenCalledWith(expect.stringMatching(/sudo_password_verified/));
+	}));
+
+	it('bounds each audit at 1.5 s or less and clears the timer when the row lands', () => withFakeTimeouts(async () => {
+		expect(VERIFY_PASSWORD_AUDIT_TIMEOUT_MS).toBeLessThanOrEqual(1_500);
+		await harness().handle(stepUp());
+		expect(vi.getTimerCount()).toBe(0);
+	}));
 });
 
 describe('VP12 — what each GoTrue answer means', () => {
