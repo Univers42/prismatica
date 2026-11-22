@@ -35,6 +35,19 @@ describe('createGotrueApi', () => {
 		expect(calls[1].url).toBe('http://kong:8000/auth/v1/logout?scope=global');
 	});
 
+	it('checks a password with a stateless grant: anon key, no stored session, a fresh call each time', async () => {
+		const { calls, fetchImpl } = recorder(200, { access_token: 'at', refresh_token: 'rt' });
+		const gotrue = createGotrueApi({ ...base, fetch: fetchImpl });
+		const first = await gotrue.passwordGrant('ana@arlet.test', 'Pass-1!é');
+		await gotrue.passwordGrant('ana@arlet.test', 'Pass-1!é');
+		expect(first).toEqual({ ok: true, status: 200, body: { access_token: 'at', refresh_token: 'rt' } });
+		expect(calls[0].url).toBe('http://kong:8000/auth/v1/token?grant_type=password');
+		expect(calls[0].init.method).toBe('POST');
+		expect(calls[0].init.headers).toMatchObject({ apikey: 'anon', authorization: 'Bearer anon' });
+		expect(calls[1].init.headers).toMatchObject({ authorization: 'Bearer anon' });
+		expect(JSON.parse(String(calls[0].init.body))).toEqual({ email: 'ana@arlet.test', password: 'Pass-1!é' });
+	});
+
 	it('calls admin routes with the service key only', async () => {
 		const { calls, fetchImpl } = recorder(200, [{ id: 'f1' }]);
 		const gotrue = createGotrueApi({ ...base, fetch: fetchImpl });
