@@ -138,7 +138,7 @@ describe('VP12 — what each GoTrue answer means', () => {
 		const gate = harness({ grant: async () => fail(0) });
 		expect(await gate.handle(stepUp())).toEqual(UNAVAILABLE);
 		expect(gate.events()).toEqual([{ type: 'sudo_password_grant_timeout', details: { email: EMAIL, ip_address: '198.51.100.7' } }]);
-		expect(gate.audit.mock.calls[0][1]).toHaveProperty('headers');
+		expect((gate.audit.mock.calls[0] as unknown[])[1]).toHaveProperty('headers');
 	});
 
 	it('a success clears the failure count and never the lock a concurrent attempt set', async () => {
