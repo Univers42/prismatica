@@ -8,7 +8,7 @@ import { createClient, MiniBaasError } from '@grobase/js';
 import { createAccountMail, REGISTER_ACCEPTED } from './auth/account-mail.mjs';
 import { createGotrueApi } from './auth/gotrue-api.mjs';
 import { enforceStartupGuards, isProductionOrigin } from './auth/guards.mjs';
-import { EMAIL_REGEX, keyHash, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
+import { EMAIL_REGEX, keyHash, loginLockKeys, PASSWORD_REGEX, USERNAME_REGEX } from './auth/identity.mjs';
 import { createLinkFlows } from './auth/link-flows.mjs';
 import { approveRoutes } from './auth/approve-routes.mjs';
 import { acceptBridgeProof, BRIDGE_PROOF_HEADER, stableStringify } from './auth/bridge-proof.mjs';
@@ -509,12 +509,6 @@ const accountMail = createAccountMail({
 
 const writeCutoff = createSessionCutoffWriter({ baasUrl: config.baasUrl, serviceKey: config.serviceKey });
 const utcNow = () => `${new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} (UTC)`;
-
-// One account's sign-in lockout: the lock and the failure count, keyed as the login handler reads them.
-const loginLockKeys = (email) => {
-	const hashed = keyHash(String(email ?? '').trim().toLowerCase());
-	return { lock: `lock:login:${hashed}`, fail: `fail:login:${hashed}` };
-};
 
 async function clearLoginLockout(email) {
 	const { lock, fail } = loginLockKeys(email);

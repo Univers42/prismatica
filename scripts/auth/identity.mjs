@@ -20,3 +20,9 @@ export function normalizeEmail(value) {
 export function keyHash(value) {
 	return createHash('sha256').update(String(value ?? '')).digest('hex').slice(0, 32);
 }
+
+/** One account's sign-in lockout: the lock and the failure count. /login and /verify-password share them. */
+export function loginLockKeys(email) {
+	const hashed = keyHash(normalizeEmail(email));
+	return { lock: `lock:login:${hashed}`, fail: `fail:login:${hashed}` };
+}
