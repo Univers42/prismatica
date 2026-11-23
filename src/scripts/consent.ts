@@ -1,5 +1,5 @@
 import { CONSENT_MAX_AGE_MONTHS, CONSENT_STORAGE_KEY, POLICY_VERSION } from '../data/legal';
-import { readStorage, writeStorage } from '../lib/storage';
+import { readStorage, removeStorage, writeStorage } from '../lib/storage';
 import { queryElement, queryElements, isButton, isHtmlElement } from '../lib/dom-utils';
 import { announce } from './theme';
 
@@ -33,6 +33,15 @@ export function storeConsentPreferences(preferences: ConsentChoices): ConsentPre
 	};
 	writeStorage(CONSENT_STORAGE_KEY, JSON.stringify(record));
 	return record;
+}
+
+// prismatica#87: the footer form used to keep the subscriber's email under this key for a
+// post-login sync that never succeeded. Nothing reads it any more, so a returning visitor's
+// copy is dropped instead of keeping an email in their storage indefinitely.
+const RETIRED_NEWSLETTER_INTENT_KEY = 'prismatica-newsletter-intent-v1';
+
+export function clearRetiredNewsletterIntent(): void {
+	removeStorage(RETIRED_NEWSLETTER_INTENT_KEY);
 }
 
 export function readConsentPreferences(): ConsentPreferences | null {

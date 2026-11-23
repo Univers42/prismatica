@@ -5,7 +5,7 @@ import { announce } from './theme';
 import { showLoginCodeStep } from './portal-login-code';
 import { showLoginApproveStep } from './portal-login-approve';
 import { isTrustedOsionosRedirect } from '../lib/osionos-redirect';
-import { setAccessToken, syncStoredConsents } from './portal-session';
+import { setAccessToken } from './portal-session';
 import {
 	type PortalFormElements,
 	readTurnstileToken,
@@ -85,10 +85,7 @@ export async function processPortalRegistration(elements: PortalFormElements, tu
 	const result = await authClient.register({ email: elements.email.value.trim(), password: elements.password.value, turnstileToken, profile: portalRegistrationProfile(elements) });
 	const message = humanAuthMessage(result.message);
 	if (result.ok) {
-		if (result.accessToken) {
-			setAccessToken(result.accessToken);
-			await syncStoredConsents(result.accessToken, elements.email.value.trim());
-		}
+		if (result.accessToken) setAccessToken(result.accessToken);
 		notifyWithMascot({
 			kind: 'success',
 			title: 'Welcome to Prismatica!',
@@ -138,11 +135,8 @@ export async function processPortalRegistration(elements: PortalFormElements, tu
 	announce('Registration failed. Check the form and try again.');
 }
 
-export async function completePortalLogin(sessionToken: string | undefined, email: string, onClose: () => void = () => undefined): Promise<void> {
-	if (sessionToken) {
-		setAccessToken(sessionToken);
-		await syncStoredConsents(sessionToken, email);
-	}
+export async function completePortalLogin(sessionToken: string | undefined, onClose: () => void = () => undefined): Promise<void> {
+	if (sessionToken) setAccessToken(sessionToken);
 	const osionosBridge = sessionToken
 		? await authClient.osionosSession(sessionToken).catch(() => null)
 		: null;
@@ -233,7 +227,7 @@ export async function processPortalLogin(portal: HTMLElement, elements: PortalFo
 		showLoginCodeStep(portal, elements.form);
 		return;
 	}
-	await completePortalLogin(authenticated.accessToken, elements.email.value.trim(), onClose);
+	await completePortalLogin(authenticated.accessToken, onClose);
 }
 
 export async function submitPortalLogin(portal: HTMLElement, elements: PortalFormElements, onClose: () => void = () => undefined): Promise<void> {

@@ -7,6 +7,15 @@ export function readStorage(key: string): string | null {
 	}
 }
 
+/** Safely deletes a persisted value. */
+export function removeStorage(key: string): void {
+	try {
+		globalThis.localStorage.removeItem(key);
+	} catch {
+		return;
+	}
+}
+
 /** Safely writes a persisted value. */
 export function writeStorage(key: string, value: string): void {
 	try {

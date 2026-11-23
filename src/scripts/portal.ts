@@ -214,13 +214,13 @@ export function openPortal(mode: PortalMode): void {
 	bindLoginCodeStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
-		onSession: (token) => completePortalLogin(token, elements.email.value.trim(), closePortal),
+		onSession: (token) => completePortalLogin(token, closePortal),
 	});
 
 	bindLoginApproveStep(portal, {
 		auth: authClient,
 		passwordForm: elements.form,
-		onSession: (token) => completePortalLogin(token, elements.email.value.trim(), closePortal),
+		onSession: (token) => completePortalLogin(token, closePortal),
 	});
 
 	void bindPortalOAuth(portal, authConfig.gatewayUrl);

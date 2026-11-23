@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { readStorage, writeStorage } from '../../../src/lib/storage';
 import { CONSENT_MAX_AGE_MONTHS, CONSENT_STORAGE_KEY, POLICY_VERSION } from '../../../src/data/legal';
-import { type ConsentPreferences, storeConsentPreferences, readConsentPreferences, bindConsentBanner, needsConsentRenewal, hasConsent } from '../../../src/scripts/consent';
+import { type ConsentPreferences, storeConsentPreferences, readConsentPreferences, bindConsentBanner, needsConsentRenewal, hasConsent, clearRetiredNewsletterIntent } from '../../../src/scripts/consent';
 
 describe('Consent Preferences', () => {
 	afterEach(() => {
@@ -29,6 +29,14 @@ describe('Consent Preferences', () => {
 			writeStorage(CONSENT_STORAGE_KEY, '{broken json');
 			expect(readConsentPreferences()).toBeNull();
 		});
+	});
+
+	it('drops the retired newsletter intent key and leaves the consent record alone', () => {
+		writeStorage('prismatica-newsletter-intent-v1', JSON.stringify({ email: 'ines@arlet.test', pendingDoubleOptIn: true }));
+		const preferences = storeConsentPreferences({ analytics: false, newsletter: true, marketing: false });
+		clearRetiredNewsletterIntent();
+		expect(readStorage('prismatica-newsletter-intent-v1')).toBeNull();
+		expect(readConsentPreferences()).toEqual(preferences);
 	});
 
 	describe('storeConsentPreferences', () => {

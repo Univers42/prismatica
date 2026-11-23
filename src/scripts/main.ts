@@ -5,7 +5,7 @@ import { bindDataRightsForm, type GdprRpcResult } from "../lib/gdpr-form";
 import { bindAccountPrivacy, browserDownload } from "../lib/gdpr-account";
 import { useAuth } from "../hooks/useAuth";
 import { readStorage, writeStorage } from '../lib/storage';
-import { CSRF_STORAGE_KEY, NEWSLETTER_INTENT_KEY, POLICY_VERSION } from '../data/legal';
+import { CSRF_STORAGE_KEY, POLICY_VERSION } from '../data/legal';
 import { dismissAll } from "./notifications";
 import { fetchSeededUsers, createPublicBaasClient } from "../lib/baas-client";
 import { queryElement, queryElements, isButton, isHtmlElement } from "../lib/dom-utils";
@@ -13,7 +13,7 @@ import { MiniBaasError } from "@grobase/js";
 import "./premium";
 import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, announce, ensureButtonLabels, MOTION_KEY } from "./theme";
 import { initialLocale, applyLocale, bindLanguageControls } from "./language";
-import { bindConsentBanner } from "./consent";
+import { bindConsentBanner, clearRetiredNewsletterIntent } from "./consent";
 import { mountMascot, setMountedMascotMood, notifyWithMascot } from "./mascot";
 import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, setAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
 
@@ -148,7 +148,6 @@ function bindNewsletterSignup(): void {
 			try {
 				const response = await requestNewsletterSubscription(email.value, readTurnstileToken(form));
 				if (response.ok) {
-					writeStorage(NEWSLETTER_INTENT_KEY, JSON.stringify({ email: email.value.trim(), pendingDoubleOptIn: true, policyVersion: POLICY_VERSION, savedAt: new Date().toISOString() }));
 					status.textContent = response.message;
 					notifyWithMascot({ kind: 'success', title: 'Almost there!', message: response.message, duration: 0 });
 					return;
@@ -178,6 +177,7 @@ function whenIdle(fn: () => void): void {
 /** Starts all client-side page behavior. */
 function init(): void {
 	dismissAll();
+	clearRetiredNewsletterIntent();
 	applyTheme(initialTheme());
 	applyMotionPreference(readStorage(MOTION_KEY) === 'true');
 	ensureButtonLabels();

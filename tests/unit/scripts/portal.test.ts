@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { passwordRuleResults } from '../../../src/lib/auth-validation';
+import { CONSENT_STORAGE_KEY, POLICY_VERSION } from '../../../src/data/legal';
 import { openPortal, closePortal, bindPasswordToggles, readTurnstileToken } from '../../../src/scripts/portal';
 
 describe('Portal Script Module', () => {
@@ -174,6 +175,7 @@ describe('Portal login code step', () => {
 	afterEach(() => {
 		closePortal();
 		document.body.innerHTML = '';
+		localStorage.clear();
 		vi.unstubAllGlobals();
 	});
 
@@ -237,6 +239,68 @@ describe('Portal login code step', () => {
 		expect((verify?.[1] as RequestInit).credentials).toBe('include');
 		const bridge = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/osionos-session'));
 		expect((bridge?.[1]?.headers as Record<string, string>).Authorization).toBe('Bearer at-1');
+	});
+
+	// prismatica#87: a sign-in used to post the stored newsletter choice without a Turnstile token,
+	// which the gateway always refused; a working version would re-mail subscribers on every sign-in.
+	describe('sends no newsletter subscribe on sign-in (prismatica#87)', () => {
+		const subscribeCalls = (fetchMock: ReturnType<typeof gateway>) => fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/api/newsletter/subscribe'));
+		const bridgeCalled = (fetchMock: ReturnType<typeof gateway>) => fetchMock.mock.calls.some(([url]) => String(url).endsWith('/osionos-session'));
+
+		beforeEach(() => {
+			// The bridge answers an untrusted redirect on purpose: the hand-off is reached and stops there.
+			vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics: false, newsletter: true, marketing: false, policyVersion: POLICY_VERSION, savedAt: new Date().toISOString() }));
+			localStorage.setItem('prismatica-newsletter-intent-v1', JSON.stringify({ email: 'ines@arlet.test', pendingDoubleOptIn: true }));
+		});
+
+		afterEach(() => {
+			vi.restoreAllMocks();
+		});
+
+		it('after a password sign-in', async () => {
+			const fetchMock = gateway({
+				'/login': () => json(200, { access_token: 'at-1', expires_in: 3600 }),
+				'/osionos-session': () => json(200, { redirectUrl: 'https://evil.example/x' }),
+			});
+			openPortal('connect');
+			document.querySelector<HTMLInputElement>('#portal-email')!.value = 'ines@arlet.test';
+			document.querySelector<HTMLInputElement>('#portal-password')!.value = 'Abcdefgh12!';
+			document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
+			await vi.waitFor(() => expect(bridgeCalled(fetchMock)).toBe(true));
+			expect(subscribeCalls(fetchMock)).toHaveLength(0);
+		});
+
+		it('after the email-code sign-in', async () => {
+			const fetchMock = gateway({
+				'/login': () => json(200, { mfa_required: 'email_otp' }),
+				'/mfa/email/verify': () => json(200, { access_token: 'at-1', expires_in: 3600 }),
+				'/osionos-session': () => json(200, { redirectUrl: 'https://evil.example/x' }),
+			});
+			await signInIntoCodeStep();
+			codeInput().value = '123456';
+			codeForm().dispatchEvent(new Event('submit', { cancelable: true }));
+			await vi.waitFor(() => expect(bridgeCalled(fetchMock)).toBe(true));
+			expect(subscribeCalls(fetchMock)).toHaveLength(0);
+		});
+	});
+
+	// The sign-up checkbox is the portal's only newsletter opt-in path left after prismatica#87.
+	it('sends a ticked sign-up newsletter box as newsletterConsent in the register body', async () => {
+		const fetchMock = gateway({ '/register': () => json(200, { message: 'Check your inbox.' }) });
+		openPortal('start');
+		const field = (id: string) => document.querySelector<HTMLInputElement>(`#${id}`)!;
+		field('portal-username').value = 'ines.arlet';
+		field('portal-email').value = 'ines@arlet.test';
+		field('portal-password').value = 'Abcdefgh12!';
+		field('portal-confirm-password').value = 'Abcdefgh12!';
+		field('portal-terms-consent').checked = true;
+		field('portal-email-verification-consent').checked = true;
+		field('portal-newsletter-consent').checked = true;
+		document.querySelector<HTMLFormElement>('form.portal-login')?.dispatchEvent(new Event('submit', { cancelable: true }));
+		await vi.waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/register'))).toBe(true));
+		const register = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/register'));
+		expect(JSON.parse(String(register?.[1]?.body)).profile.newsletterConsent).toBe(true);
 	});
 
 	it('refuses a malformed code in the browser without calling the gateway', async () => {

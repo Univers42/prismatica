@@ -17,5 +17,4 @@ export const LEGAL_LINKS = [
 ] as const;
 
 export const CONSENT_STORAGE_KEY = 'prismatica-consent-v1';
-export const NEWSLETTER_INTENT_KEY = 'prismatica-newsletter-intent-v1';
 export const CSRF_STORAGE_KEY = 'prismatica-csrf-token-v1';
