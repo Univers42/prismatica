@@ -248,6 +248,7 @@ export {
 
 export {
 	mountTurnstile,
+	resetTurnstile,
 	type TurnstileApi,
 } from './portal-turnstile';
 

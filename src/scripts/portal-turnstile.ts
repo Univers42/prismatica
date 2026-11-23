@@ -7,6 +7,16 @@ export type TurnstileApi = {
 	reset?: (widgetId?: string) => void;
 };
 
+const widgetResets = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * A Turnstile token verifies once: the gateway spends it on the first request, so a retry
+ * with the same token is refused. Call this after every request that sent one.
+ */
+export function resetTurnstile(portal: HTMLElement): void {
+	widgetResets.get(portal)?.();
+}
+
 export function mountTurnstile(portal: HTMLElement): void {
 	const container = portal.querySelector('[data-turnstile-slot]');
 	if (!(container instanceof HTMLElement)) return;
@@ -31,7 +41,7 @@ export function mountTurnstile(portal: HTMLElement): void {
 		const turnstile = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
 		if (!turnstile) return;
 		try {
-			turnstile.render(container, {
+			const widgetId = turnstile.render(container, {
 				sitekey: authConfig.turnstileSiteKey,
 				callback: (token: string) => {
 					const tokenInput = portal.querySelector('[data-turnstile-token]');
@@ -46,6 +56,12 @@ export function mountTurnstile(portal: HTMLElement): void {
 					if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
 					updateAvailability();
 				},
+			});
+			widgetResets.set(portal, () => {
+				const tokenInput = portal.querySelector('[data-turnstile-token]');
+				if (tokenInput instanceof HTMLInputElement) tokenInput.value = '';
+				updateAvailability();
+				turnstile.reset?.(widgetId);
 			});
 		} catch {
 			// Container already rendered or widget reset

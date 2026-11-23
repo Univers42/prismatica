@@ -15,7 +15,7 @@ import { initialTheme, applyTheme, applyMotionPreference, bindThemeControls, ann
 import { initialLocale, applyLocale, bindLanguageControls } from "./language";
 import { bindConsentBanner, clearRetiredNewsletterIntent } from "./consent";
 import { mountMascot, setMountedMascotMood, notifyWithMascot } from "./mascot";
-import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, setAccessToken, mountTurnstile, readTurnstileToken } from "./portal";
+import { openPortal, closePortal, bindPasswordToggles, bindEmailFieldValidation, validateEmailField, clearAccessToken, getAccessToken, setAccessToken, mountTurnstile, resetTurnstile, readTurnstileToken } from "./portal";
 
 /** Renders subtle noise over paper containers for hand-drawn grain. */
 function renderPaperGrain(): void {
@@ -158,6 +158,7 @@ function bindNewsletterSignup(): void {
 				status.textContent = message;
 				notifyWithMascot({ kind: 'error', title: 'Could not send', message, duration: 8000 });
 			} finally {
+				resetTurnstile(form);
 				button.disabled = false;
 				button.textContent = previousText;
 			}

@@ -15,6 +15,7 @@ import {
 	validateEmailField,
 	validatePortalAuth,
 } from './portal-validation';
+import { resetTurnstile } from './portal-turnstile';
 
 export const authClient = useAuth();
 export const RECOVERY_SUBMIT_LABEL = 'Send reset link';
@@ -46,6 +47,7 @@ export function setPortalSubmitBusy(button: HTMLButtonElement | null, busy: bool
 
 export async function submitPortalResendVerification(portal: HTMLElement, elements: PortalFormElements): Promise<void> {
 	const result = await authClient.resendVerification({ email: elements.email.value.trim(), turnstileToken: readTurnstileToken(portal) });
+	resetTurnstile(portal);
 	const succeeded = result.ok;
 	elements.error.textContent = succeeded ? 'A new confirmation link is on its way. Check your inbox.' : humanAuthMessage(result.message);
 	elements.error.removeAttribute('hidden');
@@ -76,6 +78,7 @@ export async function submitPortalRecovery(portal: HTMLElement, elements: Portal
 		elements.error.removeAttribute('hidden');
 		notifyWithMascot({ kind: 'error', title: 'Recovery failed', message: elements.error.textContent });
 	} finally {
+		resetTurnstile(portal);
 		setPortalSubmitBusy(elements.submitButton, false, false);
 		if (elements.submitButton) elements.submitButton.textContent = RECOVERY_SUBMIT_LABEL;
 	}
@@ -244,6 +247,7 @@ export async function submitPortalLogin(portal: HTMLElement, elements: PortalFor
 		elements.error.removeAttribute('hidden');
 		notifyWithMascot({ kind: 'error', title: 'Authentication error', message: elements.error.textContent });
 	} finally {
+		resetTurnstile(portal);
 		setPortalSubmitBusy(elements.submitButton, false, portal.dataset.authMode === 'register');
 	}
 }
